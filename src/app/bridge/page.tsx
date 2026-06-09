@@ -43,10 +43,9 @@ export default function Bridge() {
       setStatus("Confirm bridge in MetaMask…");
       await (kit as any).bridge({
         from: { adapter, chain: fromChain },
-        to:   { chain: toChain },
+        to:   { chain: toChain, address: recipient || account },
         amount: parseFloat(amount).toFixed(2),
         token: "USDC",
-        ...(recipient ? { destinationAddress: recipient } : {}),
       });
 
       const entry = { from: fromChain, to: toChain, amount, token: "USDC", ts: Date.now(), status: "completed" };
