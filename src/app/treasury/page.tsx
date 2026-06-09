@@ -30,7 +30,7 @@ export default function Treasury() {
       const eth = (window as any).ethereum;
 
       setSwapStatus("Creating adapter from MetaMask…");
-      const adapter = await createAdapterFromProvider({ provider: eth, chain: "Arc_Testnet" });
+      const adapter = await (createAdapterFromProvider as any)({ provider: eth });
 
       setSwapStatus("Confirm swap in MetaMask…");
       const result = await kit.swap({
@@ -38,7 +38,7 @@ export default function Treasury() {
         tokenIn: swapFrom as "USDC" | "EURC",
         tokenOut: swapFrom === "USDC" ? "EURC" : "USDC",
         amountIn: parseFloat(swapAmount).toFixed(2),
-        config: { kitKey: KIT_KEY },
+        config: { kitKey: `KIT_KEY:${KIT_KEY}` },
       });
 
       setSwapStatus(`✅ Swap complete! ${swapAmount} ${swapFrom} → ${swapFrom === "USDC" ? "EURC" : "USDC"}`);
