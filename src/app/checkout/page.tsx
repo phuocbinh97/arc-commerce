@@ -41,24 +41,24 @@ function CheckoutContent() {
   if (step === "success") {
     return (
       <div className="min-h-screen bg-bg flex items-center justify-center p-6">
-        <div className="bg-white border border-gray-200 rounded-xl p-8 w-full max-w-md text-center shadow-2xl">
+        <div className="bg-surface border border-white/8 rounded-xl p-8 w-full max-w-md text-center shadow-2xl">
           <div className="text-5xl mb-3">✅</div>
-          <h1 className="text-2xl font-bold text-green-700 mb-1">Payment Confirmed!</h1>
-          <p className="text-gray-500 text-sm mb-6">Confirmed on Arc Testnet · {new Date().toLocaleTimeString()}</p>
-          <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-left mb-6">
-            <div className="flex justify-between text-sm mb-2"><span className="text-gray-500">Amount</span><strong>{amount} USDC</strong></div>
-            <div className="flex justify-between text-sm mb-2"><span className="text-gray-500">Order ID</span><strong>{orderId}</strong></div>
+          <h1 className="text-2xl font-bold text-green mb-1">Payment Confirmed!</h1>
+          <p className="text-muted text-sm mb-6">Confirmed on Arc Testnet · {new Date().toLocaleTimeString()}</p>
+          <div className="bg-surface2 border border-white/8 rounded-xl p-4 text-left mb-6">
+            <div className="flex justify-between text-sm mb-2"><span className="text-muted">Amount</span><strong className="text-ink">{amount} USDC</strong></div>
+            <div className="flex justify-between text-sm mb-2"><span className="text-muted">Order ID</span><strong className="text-ink">{orderId}</strong></div>
             <div className="flex justify-between text-sm items-center">
-              <span className="text-gray-500">Transaction</span>
+              <span className="text-muted">Transaction</span>
               <div className="flex items-center gap-2">
-                <strong className="font-mono text-xs">{txHash.slice(0,10)}…</strong>
-                <button onClick={() => navigator.clipboard?.writeText(txHash)} className="text-xs text-gray-400 hover:text-gray-600">Copy</button>
+                <strong className="font-mono text-xs text-ink">{txHash.slice(0,10)}…</strong>
+                <button onClick={() => navigator.clipboard?.writeText(txHash)} className="text-xs text-muted hover:text-ink">Copy</button>
               </div>
             </div>
             <a href={`${ARC_EXPLORER}/tx/${txHash}`} target="_blank" rel="noreferrer"
-              className="block text-center mt-3 text-blue-600 font-semibold text-sm hover:underline">View on ArcScan →</a>
+              className="block text-center mt-3 text-accent font-semibold text-sm hover:underline">View on ArcScan →</a>
           </div>
-          <button onClick={reset} className="w-full py-3 border border-gray-200 rounded-lg font-semibold text-sm hover:bg-gray-50">← New Payment</button>
+          <button onClick={reset} className="w-full py-3 border border-white/8 rounded-lg font-semibold text-sm text-ink hover:bg-surface2">← New Payment</button>
         </div>
       </div>
     );
