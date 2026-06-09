@@ -30,19 +30,19 @@ export default function Bridge() {
     setBridging(true);
     setStatus("Connecting to Arc App Kit…");
     try {
-      // Dynamically import Arc App Kit
       const { AppKit } = await import("@circle-fin/app-kit");
       const { createAdapterFromProvider } = await import("@circle-fin/adapter-viem-v2");
       const kit = new AppKit();
       const eth = (window as any).ethereum;
 
       setStatus("Creating adapter…");
-      const adapter = await createAdapterFromProvider({ provider: eth, chain: fromChain });
+      // Only pass provider — no chain param
+      const adapter = await createAdapterFromProvider({ provider: eth });
 
       setStatus("Confirm bridge in MetaMask…");
       const opts: {
-        from: { adapter: any; chain: string };
-        to: { chain: string };
+        from: { adapter: unknown; chain: string };
+        to:   { chain: string };
         amount: string;
         token: string;
         destinationAddress?: `0x${string}`;
@@ -59,9 +59,9 @@ export default function Bridge() {
       const entry = { from: fromChain, to: toChain, amount, token: "USDC", ts: Date.now(), status: "completed" };
       saveBridgeEntry(entry);
       setHistory(getBridgeHistory());
-      setStatus(`✅ Bridge submitted! ${amount} USDC: ${fromChain.replace("_", " ")} → ${toChain.replace("_", " ")}`);
-    } catch (e: any) {
-      setStatus(`❌ ${e.message || "Bridge failed"}`);
+      setStatus(`✅ Bridge submitted! ${amount} USDC → ${toChain.replace("_", " ")}`);
+    } catch (e: unknown) {
+      setStatus(`❌ ${e instanceof Error ? e.message : "Bridge failed"}`);
     } finally {
       setBridging(false);
     }
@@ -71,7 +71,6 @@ export default function Bridge() {
     <>
       <Topbar title="Bridge" />
       <div className="p-7 flex-1 grid grid-cols-[480px_1fr] gap-5 items-start">
-        {/* Bridge form */}
         <div className="bg-surface border border-white/8 rounded-lg">
           <div className="px-5 py-4 border-b border-white/8">
             <div className="font-semibold text-sm">Bridge USDC</div>
@@ -92,20 +91,17 @@ export default function Bridge() {
                 </select>
               </div>
             </div>
-
             <div className="mb-4">
               <label className="text-[12.5px] font-semibold text-muted mb-1.5 block">Amount (USDC)</label>
               <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="100.00"
                 className="w-full bg-surface2 border border-white/14 rounded-lg px-3 py-2 text-[13.5px] text-ink outline-none focus:border-accent" />
             </div>
-
             <div className="mb-4">
               <label className="text-[12.5px] font-semibold text-muted mb-1.5 block">Recipient (optional)</label>
               <input value={recipient} onChange={e => setRecipient(e.target.value)}
                 placeholder="0x… (leave empty = connected wallet)"
                 className="w-full bg-surface2 border border-white/14 rounded-lg px-3 py-2 text-[13px] text-ink font-mono outline-none focus:border-accent" />
             </div>
-
             {estimate && (
               <div className="mb-4 bg-surface2 border border-white/8 rounded-lg p-3 text-[13px]">
                 <div className="flex justify-between mb-1.5"><span className="text-muted">You send</span><span className="font-semibold">{amount} USDC</span></div>
@@ -114,11 +110,7 @@ export default function Bridge() {
                 <div className="flex justify-between"><span className="text-muted">Est. time</span><span>{estimate.time}</span></div>
               </div>
             )}
-
-            {fromChain === toChain && (
-              <div className="mb-3 text-[12.5px] text-red">Source and destination must be different.</div>
-            )}
-
+            {fromChain === toChain && <div className="mb-3 text-[12.5px] text-red">Source and destination must be different.</div>}
             {status && (
               <div className={`mb-3 px-3 py-2 rounded-lg text-[12.5px] ${
                 status.startsWith("✅") ? "bg-green/10 text-green border border-green/20"
@@ -127,7 +119,6 @@ export default function Bridge() {
                 {status}
               </div>
             )}
-
             {!isConnected ? (
               <button onClick={connect} className="w-full py-2 bg-accent text-white rounded-lg text-[13px] font-semibold">⚡ Connect Wallet</button>
             ) : (
@@ -143,7 +134,6 @@ export default function Bridge() {
           </div>
         </div>
 
-        {/* Right column */}
         <div className="flex flex-col gap-4">
           <div className="bg-surface border border-white/8 rounded-lg">
             <div className="px-5 py-4 border-b border-white/8 font-semibold text-sm">How Bridge Works</div>
@@ -187,11 +177,11 @@ export default function Bridge() {
             <div className="p-4">
               {history.length === 0 ? (
                 <div className="text-center py-6 text-muted text-sm">No bridges yet</div>
-              ) : (history as any[]).map((h, i) => (
+              ) : (history as Array<{from:string;to:string;amount:string;token:string;ts:number;status:string}>).map((h, i) => (
                 <div key={i} className="flex items-center gap-3 py-2.5 border-b border-white/8 last:border-0">
                   <div className="w-8 h-8 rounded-lg bg-purple/10 grid place-items-center text-sm shrink-0">⇄</div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-[13px] font-medium">{String(h.from).replace("_"," ")} → {String(h.to).replace("_"," ")}</div>
+                    <div className="text-[13px] font-medium">{h.from.replace("_"," ")} → {h.to.replace("_"," ")}</div>
                     <div className="text-[11.5px] text-muted">{new Date(h.ts).toLocaleString()}</div>
                   </div>
                   <div className="text-right shrink-0">
