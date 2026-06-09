@@ -27,7 +27,7 @@ export default function Invoices() {
     setInvoices(invs);
   }, []);
 
-  const settings = typeof window !== "undefined" ? getSettings() : {};
+  const settings = typeof window !== "undefined" ? getSettings() : { businessName: "", merchantId: "", merchantWallet: "", hubContract: "" };
   const filtered = filter === "all" ? invoices : invoices.filter(i => i.status === filter);
   const total = invoices.reduce((s,i) => s+(parseFloat(i.amount)||0), 0);
   const paid = invoices.filter(i=>i.status==="paid").length;

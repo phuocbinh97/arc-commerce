@@ -26,7 +26,7 @@ function CheckoutContent() {
   const { account, isConnected, isArcNetwork, connect, switchToArc, getUsdcBalance } = useWallet();
   const { step, txHash, error, pay, reset } = useCheckout();
   const [balance, setBalance] = useState("—");
-  const settings = typeof window !== "undefined" ? getSettings() : {};
+  const settings = typeof window !== "undefined" ? getSettings() : { businessName: "", merchantId: "", merchantWallet: "", hubContract: "" };
 
   useEffect(() => { if (account) getUsdcBalance().then(setBalance); }, [account, getUsdcBalance]);
 
