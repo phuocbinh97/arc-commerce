@@ -113,7 +113,7 @@ function CheckoutContent() {
             {error && <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>}
 
             <div className="flex gap-2">
-              <button onClick={handlePay} disabled={step !== "idle" && step !== "error" && step !== "success"}
+              <button onClick={handlePay} disabled={!["idle","error","success"].includes(step)}
                 className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg font-semibold text-sm disabled:opacity-60 hover:bg-blue-700 transition-colors">
                 {STEP_LABELS[step]}
               </button>
