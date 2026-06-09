@@ -217,11 +217,11 @@ Font: `DM Sans` (UI), `DM Mono` (numbers, addresses)
 
 #### 1. Fix bridge/page.tsx — chain names ✅ DONE
 #### 2. Verify Swap — ⏸ BLOCKED (Circle Console lỗi, cần whitelist arcpay-desk.vercel.app)
-#### 3. Test toàn bộ flow trên Vercel
+#### 3. Test toàn bộ flow trên Vercel ✅ DONE
 - [x] Checkout: pay từ Demo Shop → success screen ✅
-- [ ] Invoice: tạo invoice → copy link → pay → invoice đổi Paid
-- [ ] Treasury: Swap USDC→EURC (blocked)
-- [ ] Bridge: Arc_Testnet → Ethereum_Sepolia
+- [x] Invoice: tạo invoice → copy link → pay → invoice đổi Paid ✅
+- [ ] Treasury: Swap USDC→EURC (blocked — chờ Circle Console)
+- [x] Bridge: Arc_Testnet → Ethereum_Sepolia ✅
 
 ---
 
