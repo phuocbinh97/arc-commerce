@@ -6,16 +6,16 @@ import { useWallet } from "@/hooks/useWallet";
 import { getBridgeHistory, saveBridgeEntry } from "@/lib/storage";
 
 const CHAINS = [
-  { id: "ARC",  label: "⚡ Arc Testnet",      gas: "USDC" },
-  { id: "ETH",  label: "Ξ Ethereum Sepolia",  gas: "ETH"  },
-  { id: "BASE", label: "🔵 Base Sepolia",      gas: "ETH"  },
-  { id: "ARB",  label: "🔷 Arbitrum Sepolia",  gas: "ETH"  },
+  { id: "Arc_Testnet",      label: "⚡ Arc Testnet",      gas: "USDC" },
+  { id: "Ethereum_Sepolia", label: "Ξ Ethereum Sepolia", gas: "ETH"  },
+  { id: "Base_Sepolia",     label: "🔵 Base Sepolia",     gas: "ETH"  },
+  { id: "Arbitrum_Sepolia", label: "🔷 Arbitrum Sepolia", gas: "ETH"  },
 ];
 
 export default function Bridge() {
   const { account, isConnected, connect } = useWallet();
-  const [fromChain, setFromChain] = useState("ARC");
-  const [toChain,   setToChain]   = useState("ETH");
+  const [fromChain, setFromChain] = useState("Arc_Testnet");
+  const [toChain,   setToChain]   = useState("Ethereum_Sepolia");
   const [amount,    setAmount]    = useState("");
   const [recipient, setRecipient] = useState("");
   const [status,    setStatus]    = useState("");
