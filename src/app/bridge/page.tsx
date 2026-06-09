@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import { useState } from "react";
 import Topbar from "@/components/Topbar";
@@ -5,10 +6,10 @@ import { useWallet } from "@/hooks/useWallet";
 import { getBridgeHistory, saveBridgeEntry } from "@/lib/storage";
 
 const CHAINS = [
-  { id: "Arc_Testnet",       label: "⚡ Arc Testnet",       gas: "USDC" },
-  { id: "Ethereum_Sepolia",  label: "Ξ Ethereum Sepolia",  gas: "ETH"  },
-  { id: "Base_Sepolia",      label: "🔵 Base Sepolia",      gas: "ETH"  },
-  { id: "Arbitrum_Sepolia",  label: "🔷 Arbitrum Sepolia",  gas: "ETH"  },
+  { id: "Arc_Testnet",      label: "⚡ Arc Testnet",      gas: "USDC" },
+  { id: "Ethereum_Sepolia", label: "Ξ Ethereum Sepolia", gas: "ETH"  },
+  { id: "Base_Sepolia",     label: "🔵 Base Sepolia",     gas: "ETH"  },
+  { id: "Arbitrum_Sepolia", label: "🔷 Arbitrum Sepolia", gas: "ETH"  },
 ];
 
 export default function Bridge() {
@@ -27,44 +28,34 @@ export default function Bridge() {
 
   async function doBridge() {
     if (!account || !amount || fromChain === toChain) return;
-    setBridging(true);
-    setStatus("Connecting to Arc App Kit…");
+    setBridging(true); setStatus("Connecting to Arc App Kit…");
     try {
-      const { AppKit } = await import("@circle-fin/app-kit");
-      const { createAdapterFromProvider } = await import("@circle-fin/adapter-viem-v2");
+      const appKitModule = await import("@circle-fin/app-kit");
+      const adapterModule = await import("@circle-fin/adapter-viem-v2");
+      const AppKit = (appKitModule as any).AppKit;
+      const createAdapterFromProvider = (adapterModule as any).createAdapterFromProvider;
       const kit = new AppKit();
       const eth = (window as any).ethereum;
 
       setStatus("Creating adapter…");
-      // Only pass provider — no chain param
       const adapter = await createAdapterFromProvider({ provider: eth });
 
       setStatus("Confirm bridge in MetaMask…");
-      const opts: {
-        from: { adapter: unknown; chain: string };
-        to:   { chain: string };
-        amount: string;
-        token: string;
-        destinationAddress?: `0x${string}`;
-      } = {
+      await (kit as any).bridge({
         from: { adapter, chain: fromChain },
         to:   { chain: toChain },
         amount: parseFloat(amount).toFixed(2),
         token: "USDC",
-      };
-      if (recipient) opts.destinationAddress = recipient as `0x${string}`;
-
-      await kit.bridge(opts);
+        ...(recipient ? { destinationAddress: recipient } : {}),
+      });
 
       const entry = { from: fromChain, to: toChain, amount, token: "USDC", ts: Date.now(), status: "completed" };
       saveBridgeEntry(entry);
       setHistory(getBridgeHistory());
-      setStatus(`✅ Bridge submitted! ${amount} USDC → ${toChain.replace("_", " ")}`);
-    } catch (e: unknown) {
-      setStatus(`❌ ${e instanceof Error ? e.message : "Bridge failed"}`);
-    } finally {
-      setBridging(false);
-    }
+      setStatus(`✅ Bridge submitted! ${amount} USDC → ${toChain.replace("_"," ")}`);
+    } catch (e: any) {
+      setStatus(`❌ ${e?.message || "Bridge failed"}`);
+    } finally { setBridging(false); }
   }
 
   return (
@@ -98,8 +89,7 @@ export default function Bridge() {
             </div>
             <div className="mb-4">
               <label className="text-[12.5px] font-semibold text-muted mb-1.5 block">Recipient (optional)</label>
-              <input value={recipient} onChange={e => setRecipient(e.target.value)}
-                placeholder="0x… (leave empty = connected wallet)"
+              <input value={recipient} onChange={e => setRecipient(e.target.value)} placeholder="0x…"
                 className="w-full bg-surface2 border border-white/14 rounded-lg px-3 py-2 text-[13px] text-ink font-mono outline-none focus:border-accent" />
             </div>
             {estimate && (
@@ -112,10 +102,7 @@ export default function Bridge() {
             )}
             {fromChain === toChain && <div className="mb-3 text-[12.5px] text-red">Source and destination must be different.</div>}
             {status && (
-              <div className={`mb-3 px-3 py-2 rounded-lg text-[12.5px] ${
-                status.startsWith("✅") ? "bg-green/10 text-green border border-green/20"
-                : status.startsWith("❌") ? "bg-red/10 text-red border border-red/20"
-                : "bg-surface2 text-muted"}`}>
+              <div className={`mb-3 px-3 py-2 rounded-lg text-[12.5px] ${status.startsWith("✅")?"bg-green/10 text-green border border-green/20":status.startsWith("❌")?"bg-red/10 text-red border border-red/20":"bg-surface2 text-muted"}`}>
                 {status}
               </div>
             )}
@@ -128,8 +115,7 @@ export default function Bridge() {
               </button>
             )}
             <div className="mt-2 text-center text-[12px] text-muted">
-              Uses <a href="https://developers.circle.com/cctp" target="_blank" rel="noreferrer" className="text-[#6ea8fe]">Circle CCTP</a>
-              {" · "}Powered by <a href="https://docs.arc.io/app-kit/bridge" target="_blank" rel="noreferrer" className="text-[#6ea8fe]">Arc App Kit</a>
+              Powered by <a href="https://docs.arc.io/app-kit/bridge" target="_blank" rel="noreferrer" className="text-[#6ea8fe]">Arc App Kit</a>
             </div>
           </div>
         </div>
@@ -138,35 +124,23 @@ export default function Bridge() {
           <div className="bg-surface border border-white/8 rounded-lg">
             <div className="px-5 py-4 border-b border-white/8 font-semibold text-sm">How Bridge Works</div>
             <div className="p-4 flex flex-col gap-2.5">
-              {[
-                { n:1, t:"Burn on source chain",  d:"USDC is burned on the source chain via CCTP" },
-                { n:2, t:"Attestation",            d:"Circle verifies the burn (~20s)" },
-                { n:3, t:"Mint on destination",    d:"USDC is minted on the destination chain" },
-              ].map(s => (
+              {[{n:1,t:"Burn on source chain",d:"USDC burned via CCTP"},{n:2,t:"Attestation",d:"Circle verifies (~20s)"},{n:3,t:"Mint on destination",d:"USDC minted on target chain"}].map(s=>(
                 <div key={s.n} className="flex items-start gap-3 p-3 bg-surface2 border border-white/8 rounded-lg">
                   <div className="w-7 h-7 rounded-full bg-accent/15 text-[#6ea8fe] grid place-items-center text-xs font-bold shrink-0">{s.n}</div>
-                  <div>
-                    <div className="text-[13px] font-semibold">{s.t}</div>
-                    <div className="text-[11.5px] text-muted">{s.d}</div>
-                  </div>
+                  <div><div className="text-[13px] font-semibold">{s.t}</div><div className="text-[11.5px] text-muted">{s.d}</div></div>
                 </div>
               ))}
-              <div className="p-3 bg-amber/10 border border-amber/30 rounded-lg text-[12.5px] text-amber">
-                ⚠️ Make sure you have native gas tokens on the destination chain.
-              </div>
+              <div className="p-3 bg-amber/10 border border-amber/30 rounded-lg text-[12.5px] text-amber">⚠️ Make sure you have native gas tokens on the destination chain.</div>
             </div>
           </div>
 
           <div className="bg-surface border border-white/8 rounded-lg">
             <div className="px-5 py-4 border-b border-white/8 font-semibold text-sm">Supported Chains</div>
             <div className="p-4 grid grid-cols-2 gap-2">
-              {CHAINS.map(c => (
+              {CHAINS.map(c=>(
                 <div key={c.id} className="flex items-center gap-2.5 p-3 bg-surface2 border border-white/8 rounded-lg">
                   <div className="text-lg">{c.label.split(" ")[0]}</div>
-                  <div>
-                    <div className="text-[13px] font-semibold">{c.label.substring(c.label.indexOf(" ")+1)}</div>
-                    <div className="text-[11px] text-muted">Gas: {c.gas}</div>
-                  </div>
+                  <div><div className="text-[13px] font-semibold">{c.label.substring(c.label.indexOf(" ")+1)}</div><div className="text-[11px] text-muted">Gas: {c.gas}</div></div>
                 </div>
               ))}
             </div>
@@ -175,13 +149,12 @@ export default function Bridge() {
           <div className="bg-surface border border-white/8 rounded-lg">
             <div className="px-5 py-4 border-b border-white/8 font-semibold text-sm">Bridge History</div>
             <div className="p-4">
-              {history.length === 0 ? (
-                <div className="text-center py-6 text-muted text-sm">No bridges yet</div>
-              ) : (history as Array<{from:string;to:string;amount:string;token:string;ts:number;status:string}>).map((h, i) => (
+              {history.length === 0 ? <div className="text-center py-6 text-muted text-sm">No bridges yet</div>
+              : (history as any[]).map((h,i)=>(
                 <div key={i} className="flex items-center gap-3 py-2.5 border-b border-white/8 last:border-0">
                   <div className="w-8 h-8 rounded-lg bg-purple/10 grid place-items-center text-sm shrink-0">⇄</div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-[13px] font-medium">{h.from.replace("_"," ")} → {h.to.replace("_"," ")}</div>
+                    <div className="text-[13px] font-medium">{String(h.from).replace("_"," ")} → {String(h.to).replace("_"," ")}</div>
                     <div className="text-[11.5px] text-muted">{new Date(h.ts).toLocaleString()}</div>
                   </div>
                   <div className="text-right shrink-0">
