@@ -44,7 +44,7 @@ export default function Bridge() {
     try {
       const eth = (window as any).ethereum;
       const srcChain = VIEM_CHAINS[fromChain];
-      const adapter = await createAdapterFromProvider(eth, { chain: fromChain });
+      const adapter = await createAdapterFromProvider({ provider: eth, chain: fromChain });
 
       setStatus("Confirm bridge in wallet…");
       const opts: any = {
