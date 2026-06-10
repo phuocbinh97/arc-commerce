@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useWallet } from "@/hooks/useWallet";
 import { useMerchantAuth } from "@/hooks/useMerchantAuth";
 import { shortAddr } from "@/lib/arc";
@@ -14,6 +14,14 @@ export default function Topbar({ title, action }: TopbarProps) {
   const { account, isConnected, isArcNetwork, connect, switchToArc, disconnect } = useWallet();
   const { session, login, logout, loading } = useMerchantAuth();
   const [showWalletMenu, setShowWalletMenu] = useState(false);
+  const [hasSavedMerchant, setHasSavedMerchant] = useState(false);
+
+  useEffect(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem("arcCommerceSettings") || "{}");
+      setHasSavedMerchant(!!s.merchantId);
+    } catch { /* ignore */ }
+  }, []);
 
   return (
     <header className="sticky top-0 z-40 bg-surface border-b border-white/8 px-7 h-14 flex items-center justify-between gap-4">
@@ -33,7 +41,7 @@ export default function Topbar({ title, action }: TopbarProps) {
           )
         )}
 
-        {/* Merchant session badge */}
+        {/* Merchant session — only show Login if connected but on a new device (no saved merchantId) */}
         {session ? (
           <div className="flex items-center gap-1.5">
             <div className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 border border-accent/30 rounded-full text-[12.5px] font-medium text-[#6ea8fe]">
@@ -45,12 +53,12 @@ export default function Topbar({ title, action }: TopbarProps) {
               Logout
             </button>
           </div>
-        ) : (
+        ) : isConnected && !hasSavedMerchant ? (
           <button onClick={login} disabled={loading}
             className="flex items-center gap-2 px-3 py-1.5 bg-surface2 border border-white/14 rounded-full text-[12.5px] font-medium hover:border-accent transition-colors disabled:opacity-50">
             🔑 {loading ? "Signing…" : "Merchant Login"}
           </button>
-        )}
+        ) : null}
 
         {/* Wallet status */}
         {!isConnected ? (

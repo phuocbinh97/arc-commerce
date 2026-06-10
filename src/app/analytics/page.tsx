@@ -25,7 +25,7 @@ export default function Analytics() {
     setHist(local);
     const settings = JSON.parse(localStorage.getItem("arcCommerceSettings") || "{}");
     const session = JSON.parse(localStorage.getItem("arcMerchantSession") || "{}");
-    const merchantId = session.merchantId;
+    const merchantId = session.merchantId || settings.merchantId;
     if (!merchantId) return;
     fetch(`/api/transactions?merchantId=${merchantId}`)
       .then(r => r.json())
