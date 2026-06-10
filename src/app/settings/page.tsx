@@ -17,13 +17,50 @@ export default function Settings() {
       setForm(f => ({ ...f, merchantWallet: "", businessName: "", merchantId: "" }));
       return;
     }
-    const s = getSettings();
-    setForm({
-      businessName: s.businessName || "",
-      merchantId: s.merchantId || "",
-      merchantWallet: account || s.merchantWallet || "",
-      hubContract: s.hubContract || "0xc7cb4f5ace70a4febc3b260591832af72563e988",
-    });
+    if (!account) return;
+
+    // Always auto-fill wallet
+    setForm(f => ({ ...f, merchantWallet: account }));
+
+    // Check Redis if this wallet is already registered
+    fetch(`/api/merchants/by-wallet/${account}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.merchant) {
+          // Wallet already registered — load from Redis and save locally
+          const m = data.merchant;
+          const newSettings = {
+            businessName: m.name,
+            merchantId: m.merchantId,
+            merchantWallet: m.wallet,
+            hubContract: "0xc7cb4f5ace70a4febc3b260591832af72563e988",
+          };
+          saveSettings(newSettings);
+          setForm(newSettings);
+          // Auto-set session
+          localStorage.setItem("arcMerchantSession", JSON.stringify({
+            merchantId: m.merchantId, name: m.name, wallet: m.wallet,
+          }));
+        } else {
+          // Not registered yet — load local settings as fallback
+          const s = getSettings();
+          setForm(f => ({
+            ...f,
+            businessName: s.businessName || "",
+            merchantId: s.merchantId || "",
+            hubContract: s.hubContract || "0xc7cb4f5ace70a4febc3b260591832af72563e988",
+          }));
+        }
+      })
+      .catch(() => {
+        const s = getSettings();
+        setForm(f => ({
+          ...f,
+          businessName: s.businessName || "",
+          merchantId: s.merchantId || "",
+          hubContract: s.hubContract || "0xc7cb4f5ace70a4febc3b260591832af72563e988",
+        }));
+      });
   }, [account]);
 
   function save() {
