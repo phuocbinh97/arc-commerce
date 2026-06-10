@@ -49,6 +49,7 @@ function CheckoutContent() {
 
   useEffect(() => { if (account) getUsdcBalance().then(setBalance); }, [account, getUsdcBalance]);
 
+  const isEmbed = params.get("embed") === "1";
   const displayName = merchantOverride ? (params.get("merchantName") || merchantParam) : (merchantName || settings.businessName || "Arc Commerce");
   const sufficient = balance !== "—" && parseFloat(balance) >= parseFloat(amount);
 
@@ -58,13 +59,19 @@ function CheckoutContent() {
     await pay({ amount, orderId, memo, merchantOverride }).catch(() => {});
   }
 
-  // After success: redirect if param provided
+  // After success: postMessage to parent (widget) + redirect
   useEffect(() => {
-    if (step === "success" && redirect) {
-      const timer = setTimeout(() => {
-        window.location.href = `${redirect}?order=${orderId}&tx=${txHash}`;
-      }, 3000);
-      return () => clearTimeout(timer);
+    if (step === "success") {
+      // Notify parent iframe
+      if (window.parent !== window) {
+        window.parent.postMessage({ type: "ARCPAY_SUCCESS", orderId, txHash }, "*");
+      }
+      if (redirect) {
+        const timer = setTimeout(() => {
+          window.location.href = `${redirect}?order=${orderId}&tx=${txHash}`;
+        }, 3000);
+        return () => clearTimeout(timer);
+      }
     }
   }, [step, redirect, orderId, txHash]);
 
@@ -98,8 +105,8 @@ function CheckoutContent() {
   }
 
   return (
-    <div className="min-h-screen bg-bg flex items-center justify-center p-6">
-      <div className="grid grid-cols-[1fr_360px] gap-5 w-full max-w-4xl items-start">
+    <div className={`min-h-screen bg-bg flex items-center justify-center ${isEmbed ? "p-3" : "p-6"}`}>
+      <div className={isEmbed ? "w-full max-w-md" : "grid grid-cols-[1fr_360px] gap-5 w-full max-w-4xl items-start"}>
         {/* Left: form */}
         <div className="bg-surface border border-white/8 rounded-xl shadow-lg">
           <div className="p-6">
@@ -157,8 +164,8 @@ function CheckoutContent() {
           </div>
         </div>
 
-        {/* Right: preview */}
-        <div className="bg-surface border border-white/8 rounded-xl shadow-lg p-6">
+        {/* Right: preview — hidden in embed mode */}
+        {!isEmbed && <div className="bg-surface border border-white/8 rounded-xl shadow-lg p-6">
           <h2 className="font-semibold text-ink mb-3">Payment preview</h2>
           <div className="text-5xl font-black tracking-tight mb-1 text-ink">${formatUsdc(amount)} <span className="text-xl text-muted font-semibold">USDC</span></div>
           <p className="text-muted text-sm mb-5">You will approve USDC first, then confirm the payment through the merchant checkout contract.</p>
@@ -177,7 +184,7 @@ function CheckoutContent() {
             Use testnet funds only. Get Arc Testnet USDC from the{" "}
             <a href="https://faucet.circle.com" target="_blank" rel="noreferrer" className="font-bold underline">Circle Faucet</a>.
           </div>
-        </div>
+        </div>}
       </div>
     </div>
   );

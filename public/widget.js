@@ -23,6 +23,7 @@
     url.searchParams.set("merchant", merchant);
     url.searchParams.set("amount",   amount);
     url.searchParams.set("order",    order);
+    url.searchParams.set("embed",    "1");
     if (redirect) url.searchParams.set("redirect", redirect);
 
     // Inject button + modal styles
