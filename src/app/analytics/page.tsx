@@ -29,7 +29,11 @@ export default function Analytics() {
       .then(r => r.json())
       .then(data => {
         if (!data.txns) return;
-        const merged = [...data.txns, ...local];
+        const normalized = data.txns.map((t: any) => ({
+          ...t,
+          merchant: t.buyerWallet || t.merchant || t.merchantWallet || "unknown",
+        }));
+        const merged = [...normalized, ...local];
         const seen = new Set<string>();
         const deduped = merged.filter(t => { if (seen.has(t.txHash)) return false; seen.add(t.txHash); return true; });
         deduped.sort((a, b) => b.ts - a.ts);

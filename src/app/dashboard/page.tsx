@@ -43,7 +43,12 @@ export default function Dashboard() {
       .then(data => {
         if (!data.txns) return;
         // Merge: Redis txns + local, dedupe by txHash
-        const merged = [...data.txns, ...local];
+        // Normalize Redis txns: map buyerWallet → merchant field
+        const normalized = data.txns.map((t: any) => ({
+          ...t,
+          merchant: t.buyerWallet || t.merchant || t.merchantWallet || "unknown",
+        }));
+        const merged = [...normalized, ...local];
         const seen = new Set<string>();
         const deduped = merged.filter(t => {
           if (seen.has(t.txHash)) return false;

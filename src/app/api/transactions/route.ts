@@ -7,6 +7,7 @@ export interface Transaction {
   orderId: string;
   merchantId: string;
   merchantWallet: string;
+  buyerWallet?: string;
   ts: number;
 }
 
