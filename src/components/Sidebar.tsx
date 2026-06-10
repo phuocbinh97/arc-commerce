@@ -22,11 +22,9 @@ export default function Sidebar() {
   let lastSection = "";
 
   useEffect(() => {
-    // Read from merchant session first, fall back to settings
     try {
       const session = JSON.parse(localStorage.getItem("arcMerchantSession") || "{}");
-      const settings = JSON.parse(localStorage.getItem("arcCommerceSettings") || "{}");
-      const name = session.name || settings.businessName || "";
+      const name = session.name || "";
       setShopName(name);
       setInitial((name.charAt(0) || "A").toUpperCase());
     } catch { /* ignore */ }

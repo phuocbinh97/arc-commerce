@@ -33,10 +33,10 @@ export default function Dashboard() {
     // Use Redis as source of truth (per-merchant isolation)
     const settings = JSON.parse(localStorage.getItem("arcCommerceSettings") || "{}");
     const session = JSON.parse(localStorage.getItem("arcMerchantSession") || "{}");
-    const merchantId = session.merchantId || settings.merchantId;
+    // Only use Redis when merchant session is active (requires wallet login)
+    const merchantId = session.merchantId;
 
     if (!merchantId) {
-      // Not logged in — show local only
       setHist(getPaymentHistory());
       return;
     }
