@@ -33,6 +33,9 @@ export default function Dashboard() {
     // Use Redis as source of truth (per-merchant isolation)
     const settings = JSON.parse(localStorage.getItem("arcCommerceSettings") || "{}");
     const session = JSON.parse(localStorage.getItem("arcMerchantSession") || "{}");
+    // Show nothing when wallet is explicitly disconnected
+    if (localStorage.getItem("arcWalletDisconnected") === "1") return;
+
     // Only use Redis when merchant session is active (requires wallet login)
     const merchantId = session.merchantId;
 
