@@ -63,10 +63,26 @@ export default function Settings() {
       });
   }, [account]);
 
-  function save() {
+  async function save() {
     if (form.merchantWallet && !/^0x[a-fA-F0-9]{40}$/.test(form.merchantWallet)) { setMsg("Invalid wallet address"); return; }
     if (form.hubContract && !/^0x[a-fA-F0-9]{40}$/.test(form.hubContract)) { setMsg("Invalid contract address"); return; }
-    saveSettings({ ...form, merchantId: form.merchantId.toLowerCase().replace(/\s+/g, "-") });
+    const updated = { ...form, merchantId: form.merchantId.toLowerCase().replace(/\s+/g, "-") };
+    saveSettings(updated);
+    // If already registered, update name in Redis too
+    if (updated.merchantId && updated.businessName) {
+      await fetch("/api/merchants/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: updated.businessName, wallet: updated.merchantWallet }),
+      }).catch(() => {});
+      // Update session name too
+      try {
+        const s = JSON.parse(localStorage.getItem("arcMerchantSession") || "{}");
+        if (s.merchantId) {
+          localStorage.setItem("arcMerchantSession", JSON.stringify({ ...s, name: updated.businessName }));
+        }
+      } catch { /* ignore */ }
+    }
     setSaved(true); setMsg("Settings saved!");
     setTimeout(() => { setSaved(false); setMsg(""); }, 2000);
   }

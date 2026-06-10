@@ -48,7 +48,7 @@ export default function Topbar({ title, action }: TopbarProps) {
               <span className="w-2 h-2 rounded-full bg-accent" />
               {session.name}
             </div>
-            <button onClick={logout}
+            <button onClick={() => { logout(); window.location.reload(); }}
               className="px-2.5 py-1.5 bg-surface2 border border-white/14 rounded-full text-[11.5px] text-muted hover:text-ink transition-colors">
               Logout
             </button>
