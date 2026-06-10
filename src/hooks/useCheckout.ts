@@ -62,6 +62,15 @@ export function useCheckout() {
         body: JSON.stringify({ txHash: payTx, amount, orderId, merchantId, merchantWallet: merchant, buyerWallet: account, ts: Date.now() }),
       }).catch(console.error);
 
+      // Mark invoice paid if orderId starts with INV-
+      if (orderId.startsWith("INV-")) {
+        fetch("/api/invoices", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ invoiceId: orderId, txHash: payTx }),
+        }).catch(console.error);
+      }
+
       setTxHash(payTx);
       setStep("success");
       return payTx;

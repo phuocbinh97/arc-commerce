@@ -40,6 +40,7 @@ export default function Invoices() {
     url.searchParams.set("order", inv.id);
     url.searchParams.set("memo", inv.memo || inv.description);
     url.searchParams.set("merchantName", settings.businessName || "Arc Commerce");
+    if (settings.merchantId) url.searchParams.set("merchant", settings.merchantId);
     return url.toString();
   }
 
@@ -54,6 +55,14 @@ export default function Invoices() {
     };
     const updated = [...invoices, inv];
     saveInvoices(updated); setInvoices(updated);
+    // Sync to Redis
+    if (settings.merchantId) {
+      fetch("/api/invoices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...inv, merchantId: settings.merchantId }),
+      }).catch(console.error);
+    }
     const url = buildUrl(inv);
     setGeneratedUrl(url);
     setQrSrc(`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(url)}&bgcolor=1c2330&color=e6edf3&margin=10`);
