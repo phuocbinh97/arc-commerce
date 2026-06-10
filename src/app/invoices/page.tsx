@@ -15,16 +15,39 @@ export default function Invoices() {
   const [qrSrc, setQrSrc] = useState("");
 
   useEffect(() => {
-    const invs = getInvoices();
-    // Check expiry
+    const local = getInvoices();
+    // Check expiry locally
     let changed = false;
-    invs.forEach(inv => {
+    local.forEach(inv => {
       if (inv.status === "pending" && inv.expiresAt && Date.now() > inv.expiresAt) {
         inv.status = "expired"; changed = true;
       }
     });
-    if (changed) saveInvoices(invs);
-    setInvoices(invs);
+    if (changed) saveInvoices(local);
+    setInvoices(local);
+
+    // Sync from Redis — Redis is source of truth for paid status
+    const s = JSON.parse(localStorage.getItem("arcCommerceSettings") || "{}");
+    if (!s.merchantId) return;
+    fetch(`/api/invoices?merchantId=${s.merchantId}`)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.invoices?.length) return;
+        // Merge: update local status from Redis
+        const redisMap: Record<string, string> = {};
+        data.invoices.forEach((inv: any) => { redisMap[inv.id] = inv.status; });
+        const merged = local.map(inv => ({
+          ...inv,
+          status: (redisMap[inv.id] || inv.status) as Invoice["status"],
+        }));
+        // Also add any Redis invoices not in local (paid from other device)
+        const localIds = new Set(local.map(i => i.id));
+        const extra = data.invoices.filter((i: any) => !localIds.has(i.id));
+        const final = [...merged, ...extra];
+        saveInvoices(final);
+        setInvoices(final);
+      })
+      .catch(console.error);
   }, []);
 
   const settings = typeof window !== "undefined" ? getSettings() : { businessName: "", merchantId: "", merchantWallet: "", hubContract: "" };
