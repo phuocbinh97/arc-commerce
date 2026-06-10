@@ -18,7 +18,24 @@ export default function Analytics() {
   const [range, setRange] = useState(30);
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => { setHist(getPaymentHistory()); setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    const local = getPaymentHistory();
+    setHist(local);
+    const settings = JSON.parse(localStorage.getItem("arcCommerceSettings") || "{}");
+    const merchantId = settings.merchantId;
+    if (!merchantId) return;
+    fetch(`/api/transactions?merchantId=${merchantId}`)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.txns) return;
+        const merged = [...data.txns, ...local];
+        const seen = new Set<string>();
+        const deduped = merged.filter(t => { if (seen.has(t.txHash)) return false; seen.add(t.txHash); return true; });
+        deduped.sort((a, b) => b.ts - a.ts);
+        setHist(deduped);
+      }).catch(console.error);
+  }, []);
 
   const filtered = range >= 90 ? hist : hist.filter(h => h.ts >= Date.now() - range * 86400000);
   const total = filtered.reduce((s,h) => s+(parseFloat(h.amount)||0), 0);

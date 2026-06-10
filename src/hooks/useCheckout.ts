@@ -54,7 +54,13 @@ export function useCheckout() {
       setStep("confirming-pay");
       await waitForReceipt(eth, payTx);
 
+      // Save to localStorage (same-origin) + Redis (cross-origin widget support)
       savePayment({ txHash: payTx, amount, orderId, merchant, ts: Date.now() });
+      fetch("/api/transactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ txHash: payTx, amount, orderId, merchantId, merchantWallet: merchant, ts: Date.now() }),
+      }).catch(console.error);
 
       setTxHash(payTx);
       setStep("success");

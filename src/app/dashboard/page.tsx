@@ -28,7 +28,32 @@ export default function Dashboard() {
   const [range, setRange] = useState(7);
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => { setHist(getPaymentHistory()); setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    // Merge localStorage + Redis transactions
+    const local = getPaymentHistory();
+    setHist(local);
+
+    const settings = JSON.parse(localStorage.getItem("arcCommerceSettings") || "{}");
+    const merchantId = settings.merchantId;
+    if (!merchantId) return;
+
+    fetch(`/api/transactions?merchantId=${merchantId}`)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.txns) return;
+        // Merge: Redis txns + local, dedupe by txHash
+        const merged = [...data.txns, ...local];
+        const seen = new Set<string>();
+        const deduped = merged.filter(t => {
+          if (seen.has(t.txHash)) return false;
+          seen.add(t.txHash); return true;
+        });
+        deduped.sort((a, b) => b.ts - a.ts);
+        setHist(deduped);
+      })
+      .catch(console.error);
+  }, []);
 
   const filtered = range >= 90 ? hist : hist.filter(h => h.ts >= Date.now() - range * 86400000);
   const total = hist.reduce((s, h) => s + (parseFloat(h.amount) || 0), 0);
