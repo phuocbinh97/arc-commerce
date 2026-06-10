@@ -94,16 +94,21 @@
           btn.disabled = true;
 
           // Close popup after short delay so user sees success screen
+          var _orderId = e.data.orderId;
+          var _txHash = e.data.txHash;
           setTimeout(function () {
             overlay.style.display = "none";
             overlay.remove();
-            if (redirect) {
-              window.location.href = redirect + "?order=" + e.data.orderId + "&tx=" + e.data.txHash;
-              return;
-            }
-            if (typeof window.arcPayOnSuccess === "function") {
-              window.arcPayOnSuccess({ orderId: e.data.orderId, txHash: e.data.txHash });
-            }
+            // Delay 100ms so browser repaints overlay gone BEFORE callback blocks render
+            setTimeout(function () {
+              if (redirect) {
+                window.location.href = redirect + "?order=" + _orderId + "&tx=" + _txHash;
+                return;
+              }
+              if (typeof window.arcPayOnSuccess === "function") {
+                window.arcPayOnSuccess({ orderId: _orderId, txHash: _txHash });
+              }
+            }, 100);
           }, 2500);
         }
       });
