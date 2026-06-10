@@ -13,6 +13,7 @@ export default function Invoices() {
   const [expiry, setExpiry] = useState("86400000");
   const [generatedUrl, setGeneratedUrl] = useState("");
   const [qrSrc, setQrSrc] = useState("");
+  const [copiedId, setCopiedId] = useState("");
 
   useEffect(() => {
     const local = getInvoices();
@@ -164,8 +165,10 @@ export default function Invoices() {
                       className="text-[13px] text-muted hover:text-ink">⎘</button>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => navigator.clipboard?.writeText(generatedUrl)}
-                      className="flex-1 py-1.5 bg-accent text-white rounded-lg text-[13px] font-semibold">Copy Link</button>
+                    <button onClick={() => { navigator.clipboard?.writeText(generatedUrl); setCopiedId("generated"); setTimeout(()=>setCopiedId(""),2000); }}
+                      className={`flex-1 py-1.5 rounded-lg text-[13px] font-semibold transition-colors ${copiedId==="generated" ? "bg-green text-white" : "bg-accent text-white"}`}>
+                      {copiedId==="generated" ? "✓ Copied!" : "Copy Link"}
+                    </button>
                     <a href={generatedUrl} target="_blank" rel="noreferrer"
                       className="px-4 py-1.5 bg-surface border border-white/14 rounded-lg text-[13px] font-semibold text-muted hover:text-ink">Open →</a>
                   </div>
@@ -202,8 +205,10 @@ export default function Invoices() {
                     {inv.status === "paid" ? "✓ Paid" : inv.status === "expired" ? "✗ Expired" : "● Pending"}
                   </span>
                   <div className="flex gap-1.5">
-                    <button onClick={() => navigator.clipboard?.writeText(buildUrl(inv))}
-                      className="p-1.5 bg-surface2 border border-white/8 rounded-md text-muted hover:text-ink text-[13px]">⎘</button>
+                    <button onClick={() => { navigator.clipboard?.writeText(buildUrl(inv)); setCopiedId(inv.id); setTimeout(()=>setCopiedId(""),2000); }}
+                      className={`p-1.5 border rounded-md text-[13px] transition-colors ${copiedId===inv.id ? "bg-green/10 border-green/20 text-green" : "bg-surface2 border-white/8 text-muted hover:text-ink"}`}>
+                      {copiedId===inv.id ? "✓" : "⎘"}
+                    </button>
                     <button onClick={() => del(inv.id)}
                       className="p-1.5 bg-surface2 border border-white/8 rounded-md text-red hover:bg-red/10 text-[13px]">✕</button>
                   </div>
