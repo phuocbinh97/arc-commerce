@@ -96,13 +96,16 @@
           // Close popup after short delay so user sees success screen
           setTimeout(function () {
             if (document.body.contains(overlay)) document.body.removeChild(overlay);
-            if (redirect) {
-              window.location.href = redirect + "?order=" + e.data.orderId + "&tx=" + e.data.txHash;
-            }
-            // Fire onSuccess callback if defined
-            if (typeof window.arcPayOnSuccess === "function") {
-              window.arcPayOnSuccess({ orderId: e.data.orderId, txHash: e.data.txHash });
-            }
+            // Wait for repaint before firing callback / redirect
+            requestAnimationFrame(function () {
+              if (redirect) {
+                window.location.href = redirect + "?order=" + e.data.orderId + "&tx=" + e.data.txHash;
+                return;
+              }
+              if (typeof window.arcPayOnSuccess === "function") {
+                window.arcPayOnSuccess({ orderId: e.data.orderId, txHash: e.data.txHash });
+              }
+            });
           }, 2500);
         }
       });
