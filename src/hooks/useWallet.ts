@@ -34,10 +34,13 @@ export function useWallet() {
   const connect = useCallback(async () => {
     const eth = (window as any).ethereum;
     if (!eth) throw new Error("Install MetaMask first.");
+    const wasDisconnected = localStorage.getItem("arcWalletDisconnected") === "1";
     localStorage.removeItem("arcWalletDisconnected");
     const accs = await eth.request({ method: "eth_requestAccounts" });
     const cid = await eth.request({ method: "eth_chainId" });
     setAccount(accs[0]); setChainId(cid); setIsConnected(true);
+    // Reload so dashboard and sidebar re-initialize with fresh state
+    if (wasDisconnected) { window.location.reload(); }
     return accs[0] as string;
   }, []);
 
