@@ -4,8 +4,7 @@ import {
   encodeApprove, encodeHubPay, fetchGasPrice,
   waitForReceipt, parseUsdcErc20, USDC_ADDRESS, HUB_CONTRACT, MERCHANT_WALLET
 } from "@/lib/arc";
-import { savePayment } from "@/lib/storage";
-import { getSettings } from "@/lib/storage";
+import { savePayment, getSettings } from "@/lib/storage";
 
 export type CheckoutStep = "idle" | "approving" | "confirming-approve" | "paying" | "confirming-pay" | "success" | "error";
 
@@ -15,15 +14,16 @@ export function useCheckout() {
   const [error, setError] = useState("");
 
   const pay = useCallback(async ({
-    amount, orderId, memo,
-  }: { amount: string; orderId: string; memo: string }) => {
+    amount, orderId, memo, merchantOverride,
+  }: { amount: string; orderId: string; memo: string; merchantOverride?: { wallet: string; merchantId: string } }) => {
     const eth = (window as any).ethereum;
     if (!eth) throw new Error("No wallet found.");
 
+    // Use override from URL param (external merchant) or fall back to local settings
     const settings = getSettings();
-    const merchant = settings.merchantWallet || MERCHANT_WALLET;
+    const merchant = merchantOverride?.wallet || settings.merchantWallet || MERCHANT_WALLET;
     const contract = settings.hubContract || HUB_CONTRACT;
-    const merchantId = settings.merchantId || "arc-commerce";
+    const merchantId = merchantOverride?.merchantId || settings.merchantId || "arc-commerce";
 
     setStep("approving"); setError(""); setTxHash("");
 
@@ -54,7 +54,6 @@ export function useCheckout() {
       setStep("confirming-pay");
       await waitForReceipt(eth, payTx);
 
-      // Save to history
       savePayment({ txHash: payTx, amount, orderId, merchant, ts: Date.now() });
 
       setTxHash(payTx);
