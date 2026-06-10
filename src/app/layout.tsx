@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import Sidebar from "@/components/Sidebar";
-import AIWidget from "@/components/AIWidget";
+import AppShell from "@/components/AppShell";
 
 export const metadata: Metadata = {
   title: "Arc Commerce",
@@ -12,11 +11,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className="dark">
       <body className="bg-bg text-ink font-sans antialiased">
-        <Sidebar />
-        <div className="ml-[220px] min-h-screen flex flex-col">
-          {children}
-        </div>
-        <AIWidget />
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );
