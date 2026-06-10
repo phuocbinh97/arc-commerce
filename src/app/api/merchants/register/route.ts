@@ -16,11 +16,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid wallet address" }, { status: 400 });
     }
 
-    // Check if wallet already registered
+    // Check if wallet already registered — update name if changed
     const existing: string | null = await redis.get(`wallet:${wallet.toLowerCase()}`);
     if (existing) {
       const merchant: Merchant | null = await redis.get(`merchant:${existing}`);
-      if (merchant) return NextResponse.json({ merchant });
+      if (merchant) {
+        if (merchant.name !== name) {
+          merchant.name = name;
+          await redis.set(`merchant:${existing}`, merchant);
+        }
+        return NextResponse.json({ merchant });
+      }
     }
 
     const merchantId = genId();

@@ -41,24 +41,13 @@ export default function Topbar({ title, action }: TopbarProps) {
           )
         )}
 
-        {/* Merchant session — only show Login if connected but on a new device (no saved merchantId) */}
-        {session ? (
-          <div className="flex items-center gap-1.5">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 border border-accent/30 rounded-full text-[12.5px] font-medium text-[#6ea8fe]">
-              <span className="w-2 h-2 rounded-full bg-accent" />
-              {session.name}
-            </div>
-            <button onClick={() => { logout(); window.location.reload(); }}
-              className="px-2.5 py-1.5 bg-surface2 border border-white/14 rounded-full text-[11.5px] text-muted hover:text-ink transition-colors">
-              Logout
-            </button>
+        {/* Show merchant name badge when session active */}
+        {session && (
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 border border-accent/30 rounded-full text-[12.5px] font-medium text-[#6ea8fe]">
+            <span className="w-2 h-2 rounded-full bg-accent" />
+            {session.name}
           </div>
-        ) : isConnected && !hasSavedMerchant ? (
-          <button onClick={login} disabled={loading}
-            className="flex items-center gap-2 px-3 py-1.5 bg-surface2 border border-white/14 rounded-full text-[12.5px] font-medium hover:border-accent transition-colors disabled:opacity-50">
-            🔑 {loading ? "Signing…" : "Merchant Login"}
-          </button>
-        ) : null}
+        )}
 
         {/* Wallet status */}
         {!isConnected ? (
