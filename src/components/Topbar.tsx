@@ -80,7 +80,12 @@ export default function Topbar({ title, action }: TopbarProps) {
                     <div className="text-[11px] text-muted">Connected wallet</div>
                     <div className="font-mono text-[12px] text-ink truncate">{shortAddr(account)}</div>
                   </div>
-                  <button onClick={() => { disconnect(); setShowWalletMenu(false); }}
+                  <button onClick={() => {
+                    disconnect();
+                    logout();
+                    setShowWalletMenu(false);
+                    window.location.reload();
+                  }}
                     className="w-full text-left px-3 py-2 text-[13px] text-red hover:bg-red/8 transition-colors">
                     Disconnect wallet
                   </button>
