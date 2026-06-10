@@ -17,10 +17,11 @@ export default function Settings() {
     setForm({
       businessName: s.businessName || "",
       merchantId: s.merchantId || "",
-      merchantWallet: s.merchantWallet || "0x5e86FCe1b94772Ff6a9632FA8BEc82BA59e24f02",
+      // Auto-fill connected wallet if no saved wallet (or saved was default placeholder)
+      merchantWallet: account || s.merchantWallet || "",
       hubContract: s.hubContract || "0xc7cb4f5ace70a4febc3b260591832af72563e988",
     });
-  }, []);
+  }, [account]);
 
   function save() {
     if (form.merchantWallet && !/^0x[a-fA-F0-9]{40}$/.test(form.merchantWallet)) { setMsg("Invalid wallet address"); return; }
@@ -36,10 +37,19 @@ export default function Settings() {
   }
 
   async function register() {
-    if (!form.businessName || !form.merchantWallet) {
-      setMsg("Enter Business Name and Wallet Address first"); return;
+    // Auto-connect wallet if not connected
+    let wallet = form.merchantWallet;
+    if (!wallet) {
+      try {
+        const addr = await connect();
+        wallet = addr;
+        setForm(f => ({ ...f, merchantWallet: addr }));
+      } catch { setMsg("Connect your wallet first"); return; }
     }
-    if (!/^0x[a-fA-F0-9]{40}$/.test(form.merchantWallet)) {
+    if (!form.businessName) {
+      setMsg("Enter your Business Name first"); return;
+    }
+    if (!/^0x[a-fA-F0-9]{40}$/.test(wallet)) {
       setMsg("Invalid wallet address"); return;
     }
     setRegistering(true); setMsg("");
@@ -47,7 +57,7 @@ export default function Settings() {
       const res = await fetch("/api/merchants/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: form.businessName, wallet: form.merchantWallet }),
+        body: JSON.stringify({ name: form.businessName, wallet }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -136,17 +146,11 @@ export default function Settings() {
               <label className="text-[12.5px] font-semibold text-muted mb-1.5 block">Merchant Wallet Address</label>
               <input value={form.merchantWallet} onChange={e => setForm(f => ({ ...f, merchantWallet: e.target.value }))}
                 placeholder="0x…" className="w-full bg-surface2 border border-white/14 rounded-lg px-3 py-2 text-[13px] text-ink font-mono outline-none focus:border-accent" />
-              <div className="text-[11.5px] text-muted mt-1">USDC payments go directly to this wallet — không qua trung gian.</div>
-            </div>
-            <div className="mb-4">
-              <label className="text-[12.5px] font-semibold text-muted mb-1.5 block">Hub Contract Address</label>
-              <input value={form.hubContract} onChange={e => setForm(f => ({ ...f, hubContract: e.target.value }))}
-                placeholder="0x…" className="w-full bg-surface2 border border-white/14 rounded-lg px-3 py-2 text-[13px] text-ink font-mono outline-none focus:border-accent" />
+              <div className="text-[11.5px] text-muted mt-1">
+                {account ? "Auto-filled from connected wallet. USDC payments go directly here." : "Connect your wallet — address will auto-fill."}
+              </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={autoFill} className="px-3.5 py-1.5 bg-surface2 border border-white/14 rounded-lg text-[13px] font-semibold text-muted hover:text-ink">
-                ⚡ Auto-fill from MetaMask
-              </button>
               <button onClick={register} disabled={registering}
                 className="px-3.5 py-1.5 bg-accent text-white rounded-lg text-[13px] font-semibold hover:bg-accent/90 disabled:opacity-50">
                 {registering ? "Registering…" : form.merchantId ? "Re-register" : "Register as Merchant"}
