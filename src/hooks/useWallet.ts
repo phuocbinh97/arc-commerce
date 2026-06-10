@@ -12,12 +12,21 @@ export function useWallet() {
   useEffect(() => {
     const eth = (window as any).ethereum;
     if (!eth) return;
-    eth.request({ method: "eth_accounts" }).then((accs: string[]) => {
-      if (accs[0]) { setAccount(accs[0]); setIsConnected(true); }
-    }).catch(() => {});
+    // Don't auto-connect if user explicitly disconnected
+    const manuallyDisconnected = localStorage.getItem("arcWalletDisconnected") === "1";
+    if (!manuallyDisconnected) {
+      eth.request({ method: "eth_accounts" }).then((accs: string[]) => {
+        if (accs[0]) { setAccount(accs[0]); setIsConnected(true); }
+      }).catch(() => {});
+    }
     eth.request({ method: "eth_chainId" }).then(setChainId).catch(() => {});
     eth.on?.("accountsChanged", (accs: string[]) => {
-      setAccount(accs[0] || ""); setIsConnected(!!accs[0]);
+      if (accs[0]) {
+        localStorage.removeItem("arcWalletDisconnected");
+        setAccount(accs[0]); setIsConnected(true);
+      } else {
+        setAccount(""); setIsConnected(false);
+      }
     });
     eth.on?.("chainChanged", setChainId);
   }, []);
@@ -25,6 +34,7 @@ export function useWallet() {
   const connect = useCallback(async () => {
     const eth = (window as any).ethereum;
     if (!eth) throw new Error("Install MetaMask first.");
+    localStorage.removeItem("arcWalletDisconnected");
     const accs = await eth.request({ method: "eth_requestAccounts" });
     const cid = await eth.request({ method: "eth_chainId" });
     setAccount(accs[0]); setChainId(cid); setIsConnected(true);
@@ -63,6 +73,7 @@ export function useWallet() {
   }, [account]);
 
   const disconnect = useCallback(() => {
+    localStorage.setItem("arcWalletDisconnected", "1");
     setAccount(""); setIsConnected(false);
   }, []);
 
