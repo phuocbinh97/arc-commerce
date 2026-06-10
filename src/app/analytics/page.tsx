@@ -20,10 +20,12 @@ export default function Analytics() {
 
   useEffect(() => {
     setMounted(true);
+    if (localStorage.getItem("arcWalletDisconnected") === "1") return;
     const local = getPaymentHistory();
     setHist(local);
     const settings = JSON.parse(localStorage.getItem("arcCommerceSettings") || "{}");
-    const merchantId = settings.merchantId;
+    const session = JSON.parse(localStorage.getItem("arcMerchantSession") || "{}");
+    const merchantId = session.merchantId;
     if (!merchantId) return;
     fetch(`/api/transactions?merchantId=${merchantId}`)
       .then(r => r.json())

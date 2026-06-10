@@ -10,11 +10,12 @@ export default function Customers() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (localStorage.getItem("arcWalletDisconnected") === "1") { setLoading(false); return; }
     const local = getPaymentHistory();
     setHist(local);
 
-    const settings = JSON.parse(localStorage.getItem("arcCommerceSettings") || "{}");
-    const merchantId = settings.merchantId;
+    const session = JSON.parse(localStorage.getItem("arcMerchantSession") || "{}");
+    const merchantId = session.merchantId;
     if (!merchantId) { setLoading(false); return; }
 
     fetch(`/api/transactions?merchantId=${merchantId}`)

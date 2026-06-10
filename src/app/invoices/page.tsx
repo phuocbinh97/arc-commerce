@@ -16,6 +16,7 @@ export default function Invoices() {
   const [copiedId, setCopiedId] = useState("");
 
   useEffect(() => {
+    if (localStorage.getItem("arcWalletDisconnected") === "1") return;
     const local = getInvoices();
     // Check expiry locally
     let changed = false;

@@ -13,11 +13,14 @@ export default function Settings() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    if (localStorage.getItem("arcWalletDisconnected") === "1") {
+      setForm(f => ({ ...f, merchantWallet: "", businessName: "", merchantId: "" }));
+      return;
+    }
     const s = getSettings();
     setForm({
       businessName: s.businessName || "",
       merchantId: s.merchantId || "",
-      // Auto-fill connected wallet if no saved wallet (or saved was default placeholder)
       merchantWallet: account || s.merchantWallet || "",
       hubContract: s.hubContract || "0xc7cb4f5ace70a4febc3b260591832af72563e988",
     });
