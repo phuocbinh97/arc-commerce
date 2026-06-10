@@ -54,6 +54,9 @@ export default function Settings() {
       const newForm = { ...form, merchantId: data.merchant.merchantId };
       setForm(newForm);
       saveSettings({ ...newForm });
+      // Auto-login: set merchant session so Topbar shows name + Logout
+      const session = { merchantId: data.merchant.merchantId, name: data.merchant.name, wallet: form.merchantWallet };
+      localStorage.setItem("arcMerchantSession", JSON.stringify(session));
       setSaved(true); setMsg(`✅ Registered! Your Merchant ID: ${data.merchant.merchantId}`);
       setTimeout(() => { setSaved(false); setMsg(""); }, 5000);
     } catch (e: unknown) {

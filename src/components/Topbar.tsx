@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import { useWallet } from "@/hooks/useWallet";
 import { useMerchantAuth } from "@/hooks/useMerchantAuth";
 import { shortAddr } from "@/lib/arc";
@@ -10,8 +11,9 @@ interface TopbarProps {
 }
 
 export default function Topbar({ title, action }: TopbarProps) {
-  const { account, isConnected, isArcNetwork, connect, switchToArc } = useWallet();
+  const { account, isConnected, isArcNetwork, connect, switchToArc, disconnect } = useWallet();
   const { session, login, logout, loading } = useMerchantAuth();
+  const [showWalletMenu, setShowWalletMenu] = useState(false);
 
   return (
     <header className="sticky top-0 z-40 bg-surface border-b border-white/8 px-7 h-14 flex items-center justify-between gap-4">
@@ -63,9 +65,28 @@ export default function Topbar({ title, action }: TopbarProps) {
             ⚠ Switch to Arc
           </button>
         ) : (
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-surface2 border border-white/14 rounded-full text-[12.5px] font-medium">
-            <span className="w-2 h-2 rounded-full bg-green" />
-            {shortAddr(account)}
+          <div className="relative">
+            <button onClick={() => setShowWalletMenu(v => !v)}
+              className="flex items-center gap-2 px-3 py-1.5 bg-surface2 border border-white/14 rounded-full text-[12.5px] font-medium hover:border-white/30 transition-colors">
+              <span className="w-2 h-2 rounded-full bg-green" />
+              {shortAddr(account)}
+              <span className="text-muted text-[10px]">▾</span>
+            </button>
+            {showWalletMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowWalletMenu(false)} />
+                <div className="absolute right-0 top-full mt-1.5 z-50 bg-surface border border-white/14 rounded-lg shadow-xl w-44 py-1 overflow-hidden">
+                  <div className="px-3 py-2 border-b border-white/8">
+                    <div className="text-[11px] text-muted">Connected wallet</div>
+                    <div className="font-mono text-[12px] text-ink truncate">{shortAddr(account)}</div>
+                  </div>
+                  <button onClick={() => { disconnect(); setShowWalletMenu(false); }}
+                    className="w-full text-left px-3 py-2 text-[13px] text-red hover:bg-red/8 transition-colors">
+                    Disconnect wallet
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>

@@ -62,5 +62,9 @@ export function useWallet() {
     } catch { return "0.00"; }
   }, [account]);
 
-  return { account, chainId, isConnected, isArcNetwork, connect, switchToArc, getUsdcBalance };
+  const disconnect = useCallback(() => {
+    setAccount(""); setIsConnected(false);
+  }, []);
+
+  return { account, chainId, isConnected, isArcNetwork, connect, switchToArc, getUsdcBalance, disconnect };
 }
