@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 const NAV = [
   { href: "/dashboard",  icon: "▦", label: "Overview",    section: "Main" },
@@ -16,14 +17,31 @@ const NAV = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const [shopName, setShopName] = useState("");
+  const [initial, setInitial] = useState("A");
   let lastSection = "";
+
+  useEffect(() => {
+    // Read from merchant session first, fall back to settings
+    try {
+      const session = JSON.parse(localStorage.getItem("arcMerchantSession") || "{}");
+      const settings = JSON.parse(localStorage.getItem("arcCommerceSettings") || "{}");
+      const name = session.name || settings.businessName || "";
+      setShopName(name);
+      setInitial((name.charAt(0) || "A").toUpperCase());
+    } catch { /* ignore */ }
+  }, []);
 
   return (
     <aside className="fixed top-0 left-0 bottom-0 w-[220px] bg-surface border-r border-white/8 flex flex-col z-50">
       <div className="px-[18px] py-5 border-b border-white/8 flex items-center gap-3">
-        <div className="w-8 h-8 bg-accent rounded-lg grid place-items-center font-bold text-[15px] text-white shrink-0">A</div>
-        <div>
-          <div className="font-bold text-[15px] tracking-tight">Arc Commerce</div>
+        <div className="w-8 h-8 bg-accent rounded-lg grid place-items-center font-bold text-[15px] text-white shrink-0">
+          {initial}
+        </div>
+        <div className="min-w-0">
+          <div className="font-bold text-[15px] tracking-tight truncate">
+            {shopName || "Arc Commerce"}
+          </div>
           <div className="text-[11px] text-muted">Merchant Dashboard</div>
         </div>
       </div>

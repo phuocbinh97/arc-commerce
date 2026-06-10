@@ -86,11 +86,24 @@
       window.addEventListener("message", function handler(e) {
         if (e.origin !== BASE) return;
         if (e.data && e.data.type === "ARCPAY_SUCCESS") {
-          document.body.removeChild(overlay);
           window.removeEventListener("message", handler);
-          if (redirect) {
-            window.location.href = redirect + "?order=" + e.data.orderId + "&tx=" + e.data.txHash;
-          }
+
+          // Show success state on button before closing
+          btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Payment Confirmed!`;
+          btn.style.background = "#3fb950";
+          btn.disabled = true;
+
+          // Close popup after short delay so user sees success screen
+          setTimeout(function () {
+            if (document.body.contains(overlay)) document.body.removeChild(overlay);
+            if (redirect) {
+              window.location.href = redirect + "?order=" + e.data.orderId + "&tx=" + e.data.txHash;
+            }
+            // Fire onSuccess callback if defined
+            if (typeof window.arcPayOnSuccess === "function") {
+              window.arcPayOnSuccess({ orderId: e.data.orderId, txHash: e.data.txHash });
+            }
+          }, 2500);
         }
       });
 

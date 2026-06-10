@@ -30,25 +30,26 @@ export default function Dashboard() {
 
   useEffect(() => {
     setMounted(true);
-    // Merge localStorage + Redis transactions
-    const local = getPaymentHistory();
-    setHist(local);
-
+    // Use Redis as source of truth (per-merchant isolation)
     const settings = JSON.parse(localStorage.getItem("arcCommerceSettings") || "{}");
-    const merchantId = settings.merchantId;
-    if (!merchantId) return;
+    const session = JSON.parse(localStorage.getItem("arcMerchantSession") || "{}");
+    const merchantId = session.merchantId || settings.merchantId;
+
+    if (!merchantId) {
+      // Not logged in — show local only
+      setHist(getPaymentHistory());
+      return;
+    }
 
     fetch(`/api/transactions?merchantId=${merchantId}`)
       .then(r => r.json())
       .then(data => {
         if (!data.txns) return;
-        // Merge: Redis txns + local, dedupe by txHash
-        // Normalize Redis txns: map buyerWallet → merchant field
         const normalized = data.txns.map((t: any) => ({
           ...t,
           merchant: t.buyerWallet || t.merchant || t.merchantWallet || "unknown",
         }));
-        const merged = [...normalized, ...local];
+        const merged = [...normalized];
         const seen = new Set<string>();
         const deduped = merged.filter(t => {
           if (seen.has(t.txHash)) return false;
