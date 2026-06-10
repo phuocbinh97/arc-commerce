@@ -51,7 +51,8 @@ export default function Shop() {
     url.searchParams.set("amount", total.toFixed(2));
     url.searchParams.set("order", orderId);
     url.searchParams.set("memo", memo);
-    url.searchParams.set("merchantName", settings.businessName || "Môc Craft");
+    url.searchParams.set("merchantName", "Môc Craft");
+    url.searchParams.set("merchantWallet", "0x5e86FCe1b94772Ff6a9632FA8BEc82BA59e24f02");
     url.searchParams.set("redirect", returnUrl);
     router.push(url.pathname + url.search);
   }

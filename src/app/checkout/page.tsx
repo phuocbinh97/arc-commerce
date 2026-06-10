@@ -23,6 +23,7 @@ function CheckoutContent() {
   const memo = params.get("memo") || "";
   const merchantName = params.get("merchantName") || "Arc Commerce";
   const merchantParam = params.get("merchant") || ""; // merchantId from external shop
+  const merchantWalletParam = params.get("merchantWallet") || ""; // direct wallet override
   const redirect = params.get("redirect") || "";
 
   const { account, isConnected, isArcNetwork, connect, switchToArc, getUsdcBalance } = useWallet();
@@ -31,6 +32,12 @@ function CheckoutContent() {
   const [merchantOverride, setMerchantOverride] = useState<{ wallet: string; merchantId: string } | undefined>();
   const [loadingMerchant, setLoadingMerchant] = useState(false);
   const settings = typeof window !== "undefined" ? getSettings() : { businessName: "", merchantId: "", merchantWallet: "", hubContract: "" };
+
+  // Direct wallet param (Demo Shop) — no Redis lookup needed
+  useEffect(() => {
+    if (!merchantWalletParam) return;
+    setMerchantOverride({ wallet: merchantWalletParam, merchantId: "demo" });
+  }, [merchantWalletParam]);
 
   // Lookup external merchant from Redis
   useEffect(() => {
