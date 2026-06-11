@@ -21,19 +21,7 @@ export default function Treasury() {
   const doSwap = useCallback(async () => {
     if (!account || !swapAmount) return;
     setSwapping(true); setSwapStatus("Preparing swap…");
-    // Patch fetch to remove X-User-Agent header (Circle SDK adds it,
-    // but Circle CORS policy doesn't allow it from browser origins)
-    const _origFetch = window.fetch.bind(window);
     try {
-      window.fetch = function patchedFetch(input: RequestInfo | URL, init?: RequestInit) {
-        if (init?.headers) {
-          const h = new Headers(init.headers as HeadersInit);
-          h.delete("x-user-agent");
-          h.delete("X-User-Agent");
-          init = { ...init, headers: h };
-        }
-        return _origFetch(input, init);
-      };
 
       const { AppKit } = await import("@circle-fin/app-kit");
       // ✅ Correct function: createAdapterFromProvider
@@ -59,11 +47,7 @@ export default function Treasury() {
     } catch (e: any) {
       setSwapStatus(`❌ ${e.message || "Swap failed"}`);
       console.error("Swap error:", e);
-    } finally {
-      // Restore original fetch
-      window.fetch = _origFetch;
-      setSwapping(false);
-    }
+    } finally { setSwapping(false); }
   }, [account, swapAmount, swapFrom, getUsdcBalance]);
 
   return (

@@ -6,6 +6,19 @@ export const HUB_CONTRACT = "0xc7cb4f5ace70a4febc3b260591832af72563e988" as `0x$
 export const MERCHANT_WALLET = "0x5e86FCe1b94772Ff6a9632FA8BEc82BA59e24f02" as `0x${string}`;
 export const KIT_KEY = process.env.NEXT_PUBLIC_KIT_KEY ?? "";
 
+// Strip X-User-Agent header added by Circle SDK — not allowed by Circle CORS policy in browser
+if (typeof window !== "undefined") {
+  const _orig = window.fetch.bind(window);
+  window.fetch = (input, init) => {
+    if (init?.headers) {
+      const h = new Headers(init.headers as HeadersInit);
+      h.delete("x-user-agent");
+      init = { ...init, headers: h };
+    }
+    return _orig(input, init);
+  };
+}
+
 export function parseUsdcErc20(amount: string): bigint {
   const [whole, fraction = ""] = amount.trim().split(".");
   return BigInt(whole) * 10n ** 6n + BigInt(fraction.padEnd(6, "0").slice(0, 6));
