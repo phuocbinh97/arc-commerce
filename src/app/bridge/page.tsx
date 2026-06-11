@@ -44,12 +44,30 @@ export default function Bridge() {
       const adapter = await createAdapterFromProvider({ provider: eth });
 
       setStatus(`Confirm bridge in ${walletName}…`);
-      await (kit as any).bridge({
-        from: { adapter, chain: fromChain },
-        to:   { adapter, chain: toChain },
-        amount: parseFloat(amount).toFixed(2),
-        token: "USDC",
-      });
+
+      // Intercept eth_sendTransaction to detect if user actually signed
+      let txSigned = false;
+      const origRequest = eth.request.bind(eth);
+      eth.request = async (args: any) => {
+        if (args.method === "eth_sendTransaction") txSigned = true;
+        return origRequest(args);
+      };
+
+      try {
+        await (kit as any).bridge({
+          from: { adapter, chain: fromChain },
+          to:   { adapter, chain: toChain },
+          amount: parseFloat(amount).toFixed(2),
+          token: "USDC",
+        });
+      } finally {
+        eth.request = origRequest; // always restore
+      }
+
+      if (!txSigned) {
+        setStatus("Bridge cancelled.");
+        return;
+      }
 
       saveBridgeEntry({ from: fromChain, to: toChain, amount, token: "USDC", ts: Date.now(), status: "completed" }, account);
       setHistory(getBridgeHistory(account));

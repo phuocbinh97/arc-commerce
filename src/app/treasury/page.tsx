@@ -37,13 +37,31 @@ export default function Treasury() {
       const adapter = await (createAdapterFromProvider as any)({ provider: eth });
 
       setSwapStatus(`Confirm swap in ${walletName}…`);
-      await kit.swap({
-        from: { adapter, chain: "Arc_Testnet" },
-        tokenIn: swapFrom as "USDC" | "EURC",
-        tokenOut: swapFrom === "USDC" ? "EURC" : "USDC",
-        amountIn: parseFloat(swapAmount).toFixed(2),
-        config: { kitKey: `KIT_KEY:${KIT_KEY}` },
-      });
+
+      // Intercept eth_sendTransaction to detect if user actually signed
+      let txSigned = false;
+      const origRequest = eth.request.bind(eth);
+      eth.request = async (args: any) => {
+        if (args.method === "eth_sendTransaction") txSigned = true;
+        return origRequest(args);
+      };
+
+      try {
+        await kit.swap({
+          from: { adapter, chain: "Arc_Testnet" },
+          tokenIn: swapFrom as "USDC" | "EURC",
+          tokenOut: swapFrom === "USDC" ? "EURC" : "USDC",
+          amountIn: parseFloat(swapAmount).toFixed(2),
+          config: { kitKey: `KIT_KEY:${KIT_KEY}` },
+        });
+      } finally {
+        eth.request = origRequest;
+      }
+
+      if (!txSigned) {
+        setSwapStatus("Swap cancelled.");
+        return;
+      }
 
       const tokenOut = swapFrom === "USDC" ? "EURC" : "USDC";
       saveSwapEntry({ tokenIn: swapFrom, tokenOut, amountIn: swapAmount, ts: Date.now(), status: "completed" }, account);
