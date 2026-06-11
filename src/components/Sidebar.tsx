@@ -70,32 +70,39 @@ export default function Sidebar() {
       </nav>
 
       {/* Resources */}
-      <div className="px-3 pt-3 pb-1 border-t border-white/8">
-        <div className="text-[10px] font-semibold text-muted uppercase tracking-[0.8px] px-1.5 pb-2">Resources</div>
+      <div className="px-4 pt-3 pb-2 border-t border-white/8">
+        <div className="text-[10.5px] font-semibold text-muted uppercase tracking-[0.9px] mb-1.5">Resources</div>
+
         <a href="https://faucet.circle.com" target="_blank" rel="noreferrer"
-          className="flex items-center justify-between px-2.5 py-2 rounded-lg text-[13px] text-muted hover:bg-surface2 hover:text-ink transition-colors">
-          <div className="flex items-center gap-2.5">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0757f9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a5 5 0 0 1 5 5c0 3-5 11-5 11S7 10 7 7a5 5 0 0 1 5-5z"/><circle cx="12" cy="7" r="2"/></svg>
-            Claim Faucet
+          className="flex items-center justify-between py-2 text-[13px] text-muted hover:text-ink transition-colors group">
+          <div className="flex items-center gap-3">
+            <div className="w-[28px] h-[28px] rounded-lg bg-[#0757f9]/15 grid place-items-center shrink-0">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0757f9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C8 2 5 5.5 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.5-3-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+            </div>
+            <span className="font-medium">Claim Faucet</span>
           </div>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="opacity-40 group-hover:opacity-70"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
         </a>
+
         <a href="https://testnet.arcscan.app" target="_blank" rel="noreferrer"
-          className="flex items-center justify-between px-2.5 py-2 rounded-lg text-[13px] text-muted hover:bg-surface2 hover:text-ink transition-colors">
-          <div className="flex items-center gap-2.5">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0757f9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            Arc Explorer
+          className="flex items-center justify-between py-2 text-[13px] text-muted hover:text-ink transition-colors group">
+          <div className="flex items-center gap-3">
+            <div className="w-[28px] h-[28px] rounded-lg bg-[#0757f9]/15 grid place-items-center shrink-0">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0757f9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            </div>
+            <span className="font-medium">Arc Explorer</span>
           </div>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="opacity-40 group-hover:opacity-70"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
         </a>
+
         <a href="https://x.com/phuocbinh97" target="_blank" rel="noreferrer"
-          className="flex items-center justify-between px-2.5 py-2 rounded-lg text-[13px] text-muted hover:bg-surface2 hover:text-ink transition-colors">
-          <div className="flex items-center gap-2.5">
+          className="flex items-center justify-between py-2 text-[13px] text-muted hover:text-ink transition-colors">
+          <div className="flex items-center gap-3 min-w-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="https://unavatar.io/x/phuocbinh97" alt="@phuocbinh97" width={15} height={15} className="rounded-full" />
-            Built By @phuocbinh97
+            <img src="https://unavatar.io/x/phuocbinh97" alt="avatar" width={28} height={28} className="rounded-full shrink-0" />
+            <span className="font-medium truncate">Built By @phuocbinh97</span>
           </div>
-          <span className="text-[10px] px-1.5 py-px bg-accent text-white rounded font-bold">FOLLOW</span>
+          <span className="text-[10px] px-2 py-0.5 bg-[#1c1c1e] border border-white/20 text-ink rounded font-bold ml-2 shrink-0">FOLLOW</span>
         </a>
       </div>
 
