@@ -53,34 +53,34 @@ export default function StatusBar() {
 
   const Stat = ({ label, value }: { label: string; value: string }) => (
     <div className="flex items-center gap-1.5 shrink-0">
-      <span className="text-muted">{label}</span>
-      <span className="text-ink font-semibold">{value}</span>
+      <span className="text-[#7d8590]">{label}</span>
+      <span className="text-[#e6edf3] font-semibold">{value}</span>
     </div>
   );
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 h-8 bg-[#0d1117] border-t border-white/8 flex items-center px-3 gap-3 text-[11px] font-mono select-none">
 
-      {/* Left — Resources */}
+      {/* Left — Resources (always dark bar, use fixed colors) */}
       <a href="https://faucet.circle.com" target="_blank" rel="noreferrer"
-        className="flex items-center gap-1.5 text-muted hover:text-ink transition-colors shrink-0">
+        className="flex items-center gap-1.5 text-[#7d8590] hover:text-[#e6edf3] transition-colors shrink-0">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2C8 2 5 5.5 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.5-3-7-7-7z"/><circle cx="12" cy="9" r="2"/></svg>
         Claim Faucet
       </a>
       <Divider />
       <a href="https://testnet.arcscan.app" target="_blank" rel="noreferrer"
-        className="flex items-center gap-1.5 text-muted hover:text-ink transition-colors shrink-0">
+        className="flex items-center gap-1.5 text-[#7d8590] hover:text-[#e6edf3] transition-colors shrink-0">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         Arc Explorer
       </a>
       <Divider />
       <a href="https://x.com/phuocbinh97" target="_blank" rel="noreferrer"
-        className="flex items-center gap-1.5 text-muted hover:text-ink transition-colors shrink-0">
+        className="flex items-center gap-1.5 text-[#7d8590] hover:text-[#e6edf3] transition-colors shrink-0">
         <span className="shrink-0">Built by</span>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="https://unavatar.io/x/phuocbinh97" alt="" width={16} height={16} className="rounded-full shrink-0" />
-        <span className="text-ink">@phuocbinh97</span>
-        <span className="text-[10.5px] px-2.5 py-0.5 bg-ink text-bg rounded-full font-bold tracking-wide">FOLLOW</span>
+        <span className="text-[#e6edf3]">@phuocbinh97</span>
+        <span className="text-[10.5px] px-2.5 py-0.5 bg-[#e6edf3] text-[#0d1117] rounded-full font-bold tracking-wide">FOLLOW</span>
       </a>
 
       <div className="flex-1" />
