@@ -37,7 +37,7 @@ export default function Treasury() {
       const adapter = await (createAdapterFromProvider as any)({ provider: eth });
 
       setSwapStatus(`Confirm swap in ${walletName}…`);
-      const result = await kit.swap({
+      const swapResult = await kit.swap({
         from: { adapter, chain: "Arc_Testnet" },
         tokenIn: swapFrom as "USDC" | "EURC",
         tokenOut: swapFrom === "USDC" ? "EURC" : "USDC",
@@ -45,15 +45,25 @@ export default function Treasury() {
         config: { kitKey: `KIT_KEY:${KIT_KEY}` },
       });
 
+      const txHash = (swapResult as any)?.txHash || (swapResult as any)?.hash || (typeof swapResult === "string" ? swapResult : null);
+      if (!txHash && swapResult !== true) {
+        setSwapStatus("Swap cancelled.");
+        return;
+      }
+
       const tokenOut = swapFrom === "USDC" ? "EURC" : "USDC";
       saveSwapEntry({ tokenIn: swapFrom, tokenOut, amountIn: swapAmount, ts: Date.now(), status: "completed" }, account);
       setSwapHist(getSwapHistory(account));
       setSwapStatus(`✅ Swap complete! ${swapAmount} ${swapFrom} → ${tokenOut}`);
       getUsdcBalance().then(setUsdcBalance);
     } catch (e: any) {
-      saveSwapEntry({ tokenIn: swapFrom, tokenOut: swapFrom === "USDC" ? "EURC" : "USDC", amountIn: swapAmount, ts: Date.now(), status: "failed" }, account);
-      setSwapStatus(`❌ ${e.message || "Swap failed"}`);
-      console.error("Swap error:", e);
+      if (e?.code === 4001 || e?.message?.toLowerCase().includes("rejected") || e?.message?.toLowerCase().includes("cancel")) {
+        setSwapStatus("Swap cancelled.");
+      } else {
+        saveSwapEntry({ tokenIn: swapFrom, tokenOut: swapFrom === "USDC" ? "EURC" : "USDC", amountIn: swapAmount, ts: Date.now(), status: "failed" }, account);
+        setSwapStatus(`❌ ${e.message || "Swap failed"}`);
+        console.error("Swap error:", e);
+      }
     } finally { setSwapping(false); }
   }, [account, swapAmount, swapFrom, getUsdcBalance]);
 
