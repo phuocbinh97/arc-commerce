@@ -49,39 +49,64 @@ export default function StatusBar() {
     return () => clearInterval(id);
   }, []);
 
+  const Divider = () => <div className="w-px h-4 bg-white/10 shrink-0" />;
+
+  const Stat = ({ label, value }: { label: string; value: string }) => (
+    <div className="flex items-center gap-1.5 shrink-0">
+      <span className="text-muted">{label}</span>
+      <span className="text-ink font-semibold">{value}</span>
+    </div>
+  );
+
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 h-9 bg-[#0d1117] border-t border-white/8 flex items-center px-4 gap-6 text-[11.5px] font-mono select-none">
+    <div className="fixed bottom-0 left-0 right-0 z-50 h-8 bg-[#0d1117] border-t border-white/8 flex items-center px-3 gap-3 text-[11px] font-mono select-none">
+
       {/* Network indicator */}
-      <div className="flex items-center gap-1.5 text-green font-semibold shrink-0">
+      <div className="flex items-center gap-1.5 text-green font-bold shrink-0">
         <span className="w-1.5 h-1.5 rounded-full bg-green animate-pulse" />
         ARC TESTNET
       </div>
 
-      <div className="w-px h-4 bg-white/10" />
+      <Divider />
 
-      {/* Stats */}
-      <div className="flex items-center gap-5 text-muted overflow-x-auto">
-        <span><span className="text-ink font-semibold">AVG BLOCK TIME</span> {stats.blockTime}</span>
-        <span><span className="text-ink font-semibold">TOTAL BLOCKS</span> {stats.totalBlocks}</span>
-      </div>
+      {/* Live stats */}
+      <Stat label="AVG BLOCK TIME" value={stats.blockTime} />
+      <Divider />
+      <Stat label="TOTAL BLOCKS" value={stats.totalBlocks} />
 
-      {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Links */}
-      <div className="flex items-center gap-4 shrink-0 text-muted">
-        <a href="https://faucet.circle.com" target="_blank" rel="noreferrer"
-          className="hover:text-ink transition-colors">Claim Faucet ↗</a>
-        <a href="https://testnet.arcscan.app" target="_blank" rel="noreferrer"
-          className="hover:text-ink transition-colors">Arc Explorer ↗</a>
-        <div className="w-px h-4 bg-white/10" />
-        <span className="text-muted">Built by</span>
-        <a href="https://x.com/phuocbinh97" target="_blank" rel="noreferrer"
-          className="flex items-center gap-1 px-2 py-0.5 bg-white/5 border border-white/10 rounded text-ink hover:bg-white/10 transition-colors font-semibold">
-          @phuocbinh97
-        </a>
-        <span className="text-white/20">· Updated {stats.updated}</span>
-      </div>
+      {/* Resources */}
+      <a href="https://faucet.circle.com" target="_blank" rel="noreferrer"
+        className="flex items-center gap-1 text-muted hover:text-ink transition-colors shrink-0">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+        Claim Faucet
+      </a>
+      <Divider />
+      <a href="https://testnet.arcscan.app" target="_blank" rel="noreferrer"
+        className="flex items-center gap-1 text-muted hover:text-ink transition-colors shrink-0">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        Arc Explorer
+      </a>
+      <Divider />
+
+      {/* Built by */}
+      <span className="text-muted shrink-0">Built by</span>
+      <a href="https://x.com/phuocbinh97" target="_blank" rel="noreferrer"
+        className="flex items-center gap-1.5 px-2 py-0.5 bg-white/5 border border-white/10 rounded hover:bg-white/10 transition-colors shrink-0">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="https://unavatar.io/x/phuocbinh97"
+          alt="@phuocbinh97"
+          width={14} height={14}
+          className="rounded-full"
+        />
+        <span className="text-ink font-semibold">@phuocbinh97</span>
+        <span className="text-[10px] px-1 py-px bg-accent/20 text-accent rounded font-bold">FOLLOW</span>
+      </a>
+
+      <Divider />
+      <span className="text-white/30 shrink-0">Updated {stats.updated}</span>
     </div>
   );
 }
