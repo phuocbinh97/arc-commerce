@@ -76,7 +76,10 @@ export default function StatusBar() {
       <Divider />
       <a href="https://x.com/phuocbinh97" target="_blank" rel="noreferrer"
         className="flex items-center gap-1.5 text-muted hover:text-ink transition-colors shrink-0">
-        <span className="text-ink font-semibold">Built by @phuocbinh97</span>
+        <span className="shrink-0">Built by</span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="https://unavatar.io/x/phuocbinh97" alt="" width={16} height={16} className="rounded-full shrink-0" />
+        <span className="text-ink">@phuocbinh97</span>
         <span className="text-[10px] px-1.5 py-px bg-accent text-white rounded font-bold">FOLLOW</span>
       </a>
 
