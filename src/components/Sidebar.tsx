@@ -31,7 +31,7 @@ export default function Sidebar() {
   }, []);
 
   return (
-    <aside className="fixed top-0 left-0 bottom-0 w-[240px] bg-surface border-r border-white/8 flex flex-col z-50">
+    <aside className="fixed top-0 left-0 bottom-0 w-[256px] bg-surface border-r border-white/8 flex flex-col z-50">
       <div className="px-[18px] py-5 border-b border-white/8 flex items-center gap-3">
         <div className="w-8 h-8 bg-accent rounded-lg grid place-items-center font-bold text-[15px] text-white shrink-0">
           {initial}
@@ -100,7 +100,7 @@ export default function Sidebar() {
           <div className="flex items-center gap-3 min-w-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="https://unavatar.io/x/phuocbinh97" alt="avatar" width={28} height={28} className="rounded-full shrink-0" />
-            <span className="font-medium truncate">Built By @phuocbinh97</span>
+            <span className="text-[11.5px] font-medium truncate">Built By @phuocbinh97</span>
           </div>
           <span className="text-[10px] px-2 py-0.5 bg-[#1c1c1e] border border-white/20 text-ink rounded font-bold ml-2 shrink-0">FOLLOW</span>
         </a>

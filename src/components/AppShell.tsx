@@ -18,7 +18,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       <Sidebar />
-      <div className="ml-[240px] min-h-screen flex flex-col pb-9">
+      <div className="ml-[256px] min-h-screen flex flex-col pb-9">
         {children}
       </div>
       <AIWidget />
