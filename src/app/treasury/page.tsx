@@ -38,9 +38,16 @@ export default function Treasury() {
 
       setSwapStatus(`Confirm swap in ${walletName}…`);
 
-      const nonceBefore = parseInt(
-        await eth.request({ method: "eth_getTransactionCount", params: [account, "latest"] }), 16
-      );
+      const arcRpc = async (method: string, params: unknown[]) => {
+        const res = await fetch("https://rpc.testnet.arc.network", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+        }).then(r => r.json());
+        return res.result;
+      };
+
+      const nonceBefore = parseInt(await arcRpc("eth_getTransactionCount", [account, "latest"]), 16);
 
       await kit.swap({
         from: { adapter, chain: "Arc_Testnet" },
@@ -50,9 +57,7 @@ export default function Treasury() {
         config: { kitKey: `KIT_KEY:${KIT_KEY}` },
       });
 
-      const nonceAfter = parseInt(
-        await eth.request({ method: "eth_getTransactionCount", params: [account, "latest"] }), 16
-      );
+      const nonceAfter = parseInt(await arcRpc("eth_getTransactionCount", [account, "latest"]), 16);
 
       if (nonceAfter <= nonceBefore) {
         setSwapStatus("Swap cancelled.");
