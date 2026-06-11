@@ -80,7 +80,7 @@ export default function StatusBar() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="https://unavatar.io/x/phuocbinh97" alt="" width={16} height={16} className="rounded-full shrink-0" />
         <span className="text-ink">@phuocbinh97</span>
-        <span className="text-[10px] px-1.5 py-px bg-accent text-white rounded font-bold">FOLLOW</span>
+        <span className="text-[10.5px] px-2.5 py-0.5 bg-ink text-bg rounded-full font-bold tracking-wide">FOLLOW</span>
       </a>
 
       <div className="flex-1" />
