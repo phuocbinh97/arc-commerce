@@ -69,24 +69,35 @@ export interface SwapEntry {
   status: "completed" | "failed";
 }
 
-export function getSwapHistory(): SwapEntry[] {
-  if (!isBrowser()) return [];
-  try { return JSON.parse(localStorage.getItem("arcSwapHistory") || "[]"); } catch { return []; }
-}
-export function saveSwapEntry(entry: SwapEntry) {
-  if (!isBrowser()) return;
-  const hist = getSwapHistory();
-  hist.unshift(entry);
-  localStorage.setItem("arcSwapHistory", JSON.stringify(hist.slice(0, 20)));
+function swapKey(addr?: string) { return addr ? `arcSwapHistory:${addr.toLowerCase()}` : "arcSwapHistory"; }
+function bridgeKey(addr?: string) { return addr ? `arcBridgeHistory:${addr.toLowerCase()}` : "arcBridgeHistory"; }
+
+function currentAddr() {
+  try { return JSON.parse(localStorage.getItem("arcMerchantSession") || "{}").wallet || ""; } catch { return ""; }
 }
 
-export function getBridgeHistory() {
+export function getSwapHistory(addr?: string): SwapEntry[] {
   if (!isBrowser()) return [];
-  try { return JSON.parse(localStorage.getItem("arcBridgeHistory") || "[]"); } catch { return []; }
+  const key = swapKey(addr || currentAddr());
+  try { return JSON.parse(localStorage.getItem(key) || "[]"); } catch { return []; }
 }
-export function saveBridgeEntry(entry: any) {
+export function saveSwapEntry(entry: SwapEntry, addr?: string) {
   if (!isBrowser()) return;
-  const hist = getBridgeHistory();
+  const key = swapKey(addr || currentAddr());
+  const hist = getSwapHistory(addr);
   hist.unshift(entry);
-  localStorage.setItem("arcBridgeHistory", JSON.stringify(hist.slice(0, 20)));
+  localStorage.setItem(key, JSON.stringify(hist.slice(0, 20)));
+}
+
+export function getBridgeHistory(addr?: string) {
+  if (!isBrowser()) return [];
+  const key = bridgeKey(addr || currentAddr());
+  try { return JSON.parse(localStorage.getItem(key) || "[]"); } catch { return []; }
+}
+export function saveBridgeEntry(entry: any, addr?: string) {
+  if (!isBrowser()) return;
+  const key = bridgeKey(addr || currentAddr());
+  const hist = getBridgeHistory(addr);
+  hist.unshift(entry);
+  localStorage.setItem(key, JSON.stringify(hist.slice(0, 20)));
 }

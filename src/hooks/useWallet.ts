@@ -49,9 +49,8 @@ export function useWallet() {
     localStorage.removeItem("arcCommerceSettings");
     localStorage.removeItem("arcCheckoutHistory");
     localStorage.removeItem("arcCommerceInvoices");
-    localStorage.removeItem("arcBridgeHistory");
-    localStorage.removeItem("arcSwapHistory");
     localStorage.removeItem("arcWalletName");
+    // Swap/bridge history kept under per-wallet keys — not cleared on disconnect
   }
 
   const isArcNetwork = chainId.toLowerCase() === ARC_CHAIN_ID_HEX;

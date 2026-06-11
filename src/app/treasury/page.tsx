@@ -12,10 +12,13 @@ export default function Treasury() {
   const [swapAmount, setSwapAmount] = useState("");
   const [swapStatus, setSwapStatus] = useState("");
   const [swapping, setSwapping] = useState(false);
-  const [swapHist, setSwapHist] = useState(getSwapHistory);
+  const [swapHist, setSwapHist] = useState(() => getSwapHistory(account));
 
   useEffect(() => {
-    if (account) getUsdcBalance().then(setUsdcBalance);
+    if (account) {
+      getUsdcBalance().then(setUsdcBalance);
+      setSwapHist(getSwapHistory(account));
+    }
   }, [account, getUsdcBalance]);
 
   const doSwap = useCallback(async () => {
@@ -43,12 +46,12 @@ export default function Treasury() {
       });
 
       const tokenOut = swapFrom === "USDC" ? "EURC" : "USDC";
-      saveSwapEntry({ tokenIn: swapFrom, tokenOut, amountIn: swapAmount, ts: Date.now(), status: "completed" });
-      setSwapHist(getSwapHistory());
+      saveSwapEntry({ tokenIn: swapFrom, tokenOut, amountIn: swapAmount, ts: Date.now(), status: "completed" }, account);
+      setSwapHist(getSwapHistory(account));
       setSwapStatus(`✅ Swap complete! ${swapAmount} ${swapFrom} → ${tokenOut}`);
       getUsdcBalance().then(setUsdcBalance);
     } catch (e: any) {
-      saveSwapEntry({ tokenIn: swapFrom, tokenOut: swapFrom === "USDC" ? "EURC" : "USDC", amountIn: swapAmount, ts: Date.now(), status: "failed" });
+      saveSwapEntry({ tokenIn: swapFrom, tokenOut: swapFrom === "USDC" ? "EURC" : "USDC", amountIn: swapAmount, ts: Date.now(), status: "failed" }, account);
       setSwapStatus(`❌ ${e.message || "Swap failed"}`);
       console.error("Swap error:", e);
     } finally { setSwapping(false); }

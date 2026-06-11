@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Topbar from "@/components/Topbar";
 import { useWallet } from "@/hooks/useWallet";
 import { getBridgeHistory, saveBridgeEntry } from "@/lib/storage";
@@ -20,7 +20,10 @@ export default function Bridge() {
   const [recipient, setRecipient] = useState("");
   const [status,    setStatus]    = useState("");
   const [bridging,  setBridging]  = useState(false);
-  const [history,   setHistory]   = useState(getBridgeHistory());
+  const [history,   setHistory]   = useState(() => getBridgeHistory(account));
+
+  // Reload history when wallet address is available
+  useEffect(() => { if (account) setHistory(getBridgeHistory(account)); }, [account]);
 
   const estimate = parseFloat(amount) > 0 && fromChain !== toChain
     ? { fee: "~0.10 USDC", receive: (parseFloat(amount) - 0.10).toFixed(4), time: "~20 min" }
@@ -49,8 +52,8 @@ export default function Bridge() {
       });
 
       const entry = { from: fromChain, to: toChain, amount, token: "USDC", ts: Date.now(), status: "completed" };
-      saveBridgeEntry(entry);
-      setHistory(getBridgeHistory());
+      saveBridgeEntry(entry, account);
+      setHistory(getBridgeHistory(account));
       setStatus(`✅ Bridge submitted! ${amount} USDC → ${toChain}`);
     } catch (e: any) {
       setStatus(`❌ ${e?.message || "Bridge failed"}`);
