@@ -22,10 +22,17 @@ export function useWallet() {
     eth.request({ method: "eth_chainId" }).then(setChainId).catch(() => {});
     eth.on?.("accountsChanged", (accs: string[]) => {
       if (accs[0]) {
+        // New wallet — clear old merchant session so fresh data loads
         localStorage.removeItem("arcWalletDisconnected");
+        localStorage.removeItem("arcMerchantSession");
+        localStorage.removeItem("arcCommerceSettings");
         setAccount(accs[0]); setIsConnected(true);
+        window.location.reload();
       } else {
+        localStorage.setItem("arcWalletDisconnected", "1");
+        localStorage.removeItem("arcMerchantSession");
         setAccount(""); setIsConnected(false);
+        window.location.reload();
       }
     });
     eth.on?.("chainChanged", setChainId);
