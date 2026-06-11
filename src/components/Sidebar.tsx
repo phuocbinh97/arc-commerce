@@ -31,7 +31,7 @@ export default function Sidebar() {
   }, []);
 
   return (
-    <aside className="fixed top-0 left-0 bottom-0 w-[220px] bg-surface border-r border-white/8 flex flex-col z-50">
+    <aside className="fixed top-0 left-0 bottom-0 w-[240px] bg-surface border-r border-white/8 flex flex-col z-50">
       <div className="px-[18px] py-5 border-b border-white/8 flex items-center gap-3">
         <div className="w-8 h-8 bg-accent rounded-lg grid place-items-center font-bold text-[15px] text-white shrink-0">
           {initial}
