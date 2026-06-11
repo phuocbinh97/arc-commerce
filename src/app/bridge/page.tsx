@@ -20,10 +20,23 @@ export default function Bridge() {
   const [recipient, setRecipient] = useState("");
   const [status,    setStatus]    = useState("");
   const [bridging,  setBridging]  = useState(false);
+  const [awaitConfirm, setAwaitConfirm] = useState(false);
   const [history,   setHistory]   = useState(() => getBridgeHistory(account));
 
   // Reload history when wallet address is available
   useEffect(() => { if (account) setHistory(getBridgeHistory(account)); }, [account]);
+
+  function confirmBridge() {
+    saveBridgeEntry({ from: fromChain, to: toChain, amount, token: "USDC", ts: Date.now(), status: "completed" }, account);
+    setHistory(getBridgeHistory(account));
+    setStatus(`✅ Bridge submitted! ${amount} USDC → ${toChain}`);
+    setAwaitConfirm(false);
+  }
+
+  function cancelBridge() {
+    setStatus("Bridge cancelled.");
+    setAwaitConfirm(false);
+  }
 
   const estimate = parseFloat(amount) > 0 && fromChain !== toChain
     ? { fee: "~0.10 USDC", receive: (parseFloat(amount) - 0.10).toFixed(4), time: "~20 min" }
@@ -71,9 +84,10 @@ export default function Bridge() {
         return;
       }
 
-      saveBridgeEntry({ from: fromChain, to: toChain, amount, token: "USDC", ts: Date.now(), status: "completed" }, account);
-      setHistory(getBridgeHistory(account));
-      setStatus(`✅ Bridge submitted! ${amount} USDC → ${toChain}`);
+      // nonce increased — but bridge needs 2 txs (approve + burn)
+      // ask user to confirm all steps were completed
+      setAwaitConfirm(true);
+      return;
     } catch (e: any) {
       if (e?.code === 4001 || e?.message?.toLowerCase().includes("rejected") || e?.message?.toLowerCase().includes("cancel")) {
         setStatus("Bridge cancelled.");
@@ -126,7 +140,21 @@ export default function Bridge() {
               </div>
             )}
             {fromChain === toChain && <div className="mb-3 text-[12.5px] text-red">Source and destination must be different.</div>}
-            {status && (
+            {awaitConfirm && (
+              <div className="mb-3 p-3 bg-amber/10 border border-amber/30 rounded-lg">
+                <div className="text-[12.5px] text-amber font-semibold mb-2">Did you confirm all steps in your wallet?</div>
+                <div className="text-[11.5px] text-muted mb-3">Bridge requires 2 confirmations: USDC approve + bridge transaction.</div>
+                <div className="flex gap-2">
+                  <button onClick={confirmBridge} className="flex-1 py-1.5 bg-green/15 border border-green/30 text-green rounded-lg text-[12.5px] font-semibold hover:bg-green/25">
+                    ✅ Yes, both confirmed
+                  </button>
+                  <button onClick={cancelBridge} className="flex-1 py-1.5 bg-surface2 border border-white/14 text-muted rounded-lg text-[12.5px] font-semibold hover:text-ink">
+                    ✗ I cancelled
+                  </button>
+                </div>
+              </div>
+            )}
+            {status && !awaitConfirm && (
               <div className={`mb-3 px-3 py-2 rounded-lg text-[12.5px] ${status.startsWith("✅")?"bg-green/10 text-green border border-green/20":status.startsWith("❌")?"bg-red/10 text-red border border-red/20":"bg-surface2 text-muted"}`}>
                 {status}
               </div>
