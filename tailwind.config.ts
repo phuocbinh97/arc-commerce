@@ -4,12 +4,11 @@ export default {
   theme: {
     extend: {
       colors: {
-        bg:      "#0d1117",
-        surface: "#161b22",
-        surface2:"#1c2330",
-        border:  "rgba(255,255,255,0.08)",
-        ink:     "#e6edf3",
-        muted:   "#7d8590",
+        bg:      "var(--color-bg)",
+        surface: "var(--color-surface)",
+        surface2:"var(--color-surface2)",
+        ink:     "var(--color-ink)",
+        muted:   "var(--color-muted)",
         accent:  "#0757f9",
         green:   "#3fb950",
         amber:   "#d29922",

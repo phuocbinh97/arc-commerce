@@ -15,18 +15,41 @@ export default function Topbar({ title, action }: TopbarProps) {
   const { session, login, logout, loading } = useMerchantAuth();
   const [showWalletMenu, setShowWalletMenu] = useState(false);
   const [hasSavedMerchant, setHasSavedMerchant] = useState(false);
+  const [isDark, setIsDark] = useState(true);
 
   useEffect(() => {
     try {
       const s = JSON.parse(localStorage.getItem("arcCommerceSettings") || "{}");
       setHasSavedMerchant(!!s.merchantId);
     } catch { /* ignore */ }
+    if (localStorage.getItem("arcTheme") === "light") {
+      document.documentElement.classList.add("light");
+      setIsDark(false);
+    }
   }, []);
+
+  function toggleTheme() {
+    const next = !isDark;
+    setIsDark(next);
+    if (next) {
+      document.documentElement.classList.remove("light");
+      localStorage.setItem("arcTheme", "dark");
+    } else {
+      document.documentElement.classList.add("light");
+      localStorage.setItem("arcTheme", "light");
+    }
+  }
 
   return (
     <header className="sticky top-0 z-40 bg-surface border-b border-white/8 px-7 h-14 flex items-center justify-between gap-4">
       <span className="text-base font-semibold tracking-tight">{title}</span>
       <div className="flex items-center gap-2.5">
+        {/* Theme toggle */}
+        <button onClick={toggleTheme}
+          className="w-8 h-8 flex items-center justify-center rounded-lg bg-surface2 border border-white/14 text-muted hover:text-ink hover:border-white/30 transition-colors text-base">
+          {isDark ? "🌙" : "☀️"}
+        </button>
+
         {action && (
           action.href ? (
             <Link href={action.href}
