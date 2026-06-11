@@ -38,27 +38,23 @@ export default function Treasury() {
 
       setSwapStatus(`Confirm swap in ${walletName}…`);
 
-      // Intercept eth_sendTransaction to detect if user actually signed
-      let txSigned = false;
-      const origRequest = eth.request.bind(eth);
-      eth.request = async (args: any) => {
-        if (args.method === "eth_sendTransaction") txSigned = true;
-        return origRequest(args);
-      };
+      const nonceBefore = parseInt(
+        await eth.request({ method: "eth_getTransactionCount", params: [account, "latest"] }), 16
+      );
 
-      try {
-        await kit.swap({
-          from: { adapter, chain: "Arc_Testnet" },
-          tokenIn: swapFrom as "USDC" | "EURC",
-          tokenOut: swapFrom === "USDC" ? "EURC" : "USDC",
-          amountIn: parseFloat(swapAmount).toFixed(2),
-          config: { kitKey: `KIT_KEY:${KIT_KEY}` },
-        });
-      } finally {
-        eth.request = origRequest;
-      }
+      await kit.swap({
+        from: { adapter, chain: "Arc_Testnet" },
+        tokenIn: swapFrom as "USDC" | "EURC",
+        tokenOut: swapFrom === "USDC" ? "EURC" : "USDC",
+        amountIn: parseFloat(swapAmount).toFixed(2),
+        config: { kitKey: `KIT_KEY:${KIT_KEY}` },
+      });
 
-      if (!txSigned) {
+      const nonceAfter = parseInt(
+        await eth.request({ method: "eth_getTransactionCount", params: [account, "latest"] }), 16
+      );
+
+      if (nonceAfter <= nonceBefore) {
         setSwapStatus("Swap cancelled.");
         return;
       }

@@ -45,26 +45,23 @@ export default function Bridge() {
 
       setStatus(`Confirm bridge in ${walletName}…`);
 
-      // Intercept eth_sendTransaction to detect if user actually signed
-      let txSigned = false;
-      const origRequest = eth.request.bind(eth);
-      eth.request = async (args: any) => {
-        if (args.method === "eth_sendTransaction") txSigned = true;
-        return origRequest(args);
-      };
+      // Snapshot nonce before — if nonce doesn't increase after SDK resolves, user cancelled
+      const nonceBefore = parseInt(
+        await eth.request({ method: "eth_getTransactionCount", params: [account, "latest"] }), 16
+      );
 
-      try {
-        await (kit as any).bridge({
-          from: { adapter, chain: fromChain },
-          to:   { adapter, chain: toChain },
-          amount: parseFloat(amount).toFixed(2),
-          token: "USDC",
-        });
-      } finally {
-        eth.request = origRequest; // always restore
-      }
+      await (kit as any).bridge({
+        from: { adapter, chain: fromChain },
+        to:   { adapter, chain: toChain },
+        amount: parseFloat(amount).toFixed(2),
+        token: "USDC",
+      });
 
-      if (!txSigned) {
+      const nonceAfter = parseInt(
+        await eth.request({ method: "eth_getTransactionCount", params: [account, "latest"] }), 16
+      );
+
+      if (nonceAfter <= nonceBefore) {
         setStatus("Bridge cancelled.");
         return;
       }
