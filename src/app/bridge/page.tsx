@@ -70,8 +70,10 @@ export default function Bridge() {
 
       const balAfter = await getArcBalance();
 
-      if (balAfter >= balBefore) {
-        // USDC didn't decrease — user cancelled before the burn completed
+      // Bridge burns the full amount — check balance dropped by at least 80% of amount
+      // (fees from intermediate steps are tiny, e.g. 0.004 USDC, not the full amount)
+      const expectedBurn = BigInt(Math.floor(parseFloat(amount) * 1_000_000 * 0.8));
+      if (balBefore - balAfter < expectedBurn) {
         setStatus("Bridge cancelled.");
         return;
       }
