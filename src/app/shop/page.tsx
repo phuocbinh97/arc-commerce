@@ -51,7 +51,7 @@ export default function Shop() {
     url.searchParams.set("amount", total.toFixed(2));
     url.searchParams.set("order", orderId);
     url.searchParams.set("memo", memo);
-    url.searchParams.set("merchantName", "Môc Craft");
+    url.searchParams.set("merchantName", "Moc Craft");
     url.searchParams.set("merchant", "mer_fd28ie0");
     url.searchParams.set("redirect", returnUrl);
     router.push(url.pathname + url.search);
@@ -68,7 +68,7 @@ export default function Shop() {
       {/* Nav */}
       <nav className="sticky top-0 z-40 bg-[#faf8f4]/90 backdrop-blur border-b border-[#e8e0d4]">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="font-serif font-bold text-xl">Môc<span className="text-[#c45c2a]">.</span></div>
+          <div className="font-serif font-bold text-xl">Moc<span className="text-[#c45c2a]">.</span></div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 rounded-full text-[12px] font-semibold text-blue-700">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />Arc Testnet

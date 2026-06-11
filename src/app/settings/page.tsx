@@ -180,13 +180,13 @@ export default function Settings() {
             <div className="mb-4">
               <label className="text-[12.5px] font-semibold text-muted mb-1.5 block">Merchant ID</label>
               <div className="flex gap-2">
-                <input value={form.merchantId} readOnly placeholder="Chưa đăng ký — bấm Register bên dưới"
+                <input value={form.merchantId} readOnly placeholder="Not registered yet — click Register below"
                   className="flex-1 bg-surface2 border border-white/14 rounded-lg px-3 py-2 text-[13px] text-ink font-mono outline-none opacity-70" />
                 {form.merchantId && (
                   <span className="px-2.5 py-1 bg-green/10 text-green border border-green/20 rounded-lg text-[12px] font-semibold self-center">✓ Active</span>
                 )}
               </div>
-              <div className="text-[11.5px] text-muted mt-1">Generated automatically khi bạn Register. Dùng trong payment links và widget.</div>
+              <div className="text-[11.5px] text-muted mt-1">Auto-generated when you register. Used in payment links and the embed widget.</div>
             </div>
           </div>
         </div>
@@ -215,12 +215,12 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Embed Widget — chỉ hiện khi đã có merchantId */}
+        {/* Embed Widget — only shown when merchantId exists */}
         {form.merchantId && (
           <div className="bg-surface border border-white/8 rounded-lg mb-5">
             <div className="px-5 py-4 border-b border-white/8">
               <div className="font-semibold text-sm">Embed Widget</div>
-              <div className="text-xs text-muted mt-0.5">Copy snippet này vào trang web của bạn để nhận thanh toán</div>
+              <div className="text-xs text-muted mt-0.5">Copy this snippet into your website to start accepting payments</div>
             </div>
             <div className="p-5">
               <div className="relative">
@@ -233,10 +233,10 @@ export default function Settings() {
                 </button>
               </div>
               <div className="mt-3 text-[12px] text-muted">
-                Thay <code className="text-ink bg-surface2 px-1 rounded">{"{{order.total}}"}</code> và <code className="text-ink bg-surface2 px-1 rounded">{"{{order.id}}"}</code> bằng giá trị thật từ hệ thống của bạn.
+                Replace <code className="text-ink bg-surface2 px-1 rounded">{"{{order.total}}"}</code> and <code className="text-ink bg-surface2 px-1 rounded">{"{{order.id}}"}</code> with real values from your system.
               </div>
               <div className="mt-3 p-3 bg-accent/10 border border-accent/20 rounded-lg text-[12.5px] text-[#6ea8fe]">
-                💡 Payment link trực tiếp:{" "}
+                💡 Direct payment link:{" "}
                 <span className="font-mono break-all">
                   {`https://arcpay-desk.vercel.app/checkout?merchant=${form.merchantId}&amount=10.00&order=ORDER_ID`}
                 </span>
