@@ -25,6 +25,13 @@ export async function POST(req: NextRequest) {
     await redis.lpush(`txns:${body.merchantId}`, JSON.stringify(entry));
     await redis.ltrim(`txns:${body.merchantId}`, 0, 199);
 
+    // Increment global counters for StatusBar stats
+    const today = new Date().toISOString().slice(0, 10);
+    await Promise.all([
+      redis.incr("stats:txns:total"),
+      redis.incr(`stats:txns:${today}`),
+    ]);
+
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error(e);
