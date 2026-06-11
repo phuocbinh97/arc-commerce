@@ -6,8 +6,6 @@ interface Stats {
   blockTime: string;
   totalBlocks: string;
   networkLoad: string;
-  totalTxns: string;
-  txnsToday: string;
   updated: string;
 }
 
@@ -19,10 +17,7 @@ async function fetchStats(): Promise<Stats> {
       body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
     }).then(r => r.json()).then(r => r.result);
 
-  const [latest, platformStats] = await Promise.all([
-    rpc("eth_getBlockByNumber", ["latest", false]),
-    fetch("/api/stats").then(r => r.json()).catch(() => ({ totalTxns: 0, txnsToday: 0 })),
-  ]);
+  const latest = await rpc("eth_getBlockByNumber", ["latest", false]);
 
   const blockNum = parseInt(latest.number, 16);
   const blockBefore = await rpc("eth_getBlockByNumber", ["0x" + (blockNum - 10).toString(16), false]);
@@ -44,14 +39,12 @@ async function fetchStats(): Promise<Stats> {
     blockTime: avgBlockTime + "s",
     totalBlocks: fmt(blockNum),
     networkLoad,
-    totalTxns: fmt(Number(platformStats.totalTxns)),
-    txnsToday: String(platformStats.txnsToday),
     updated: now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
   };
 }
 
 export default function StatusBar() {
-  const [stats, setStats] = useState<Stats>({ blockTime: "—", totalBlocks: "—", networkLoad: "—", totalTxns: "—", txnsToday: "—", updated: "—" });
+  const [stats, setStats] = useState<Stats>({ blockTime: "—", totalBlocks: "—", networkLoad: "—", updated: "—" });
 
   useEffect(() => {
     fetchStats().then(setStats).catch(() => {});
@@ -106,10 +99,6 @@ export default function StatusBar() {
       <Stat label="TOTAL BLOCKS" value={stats.totalBlocks} />
       <Divider />
       <Stat label="NETWORK LOAD" value={stats.networkLoad} />
-      <Divider />
-      <Stat label="TOTAL TXNS" value={stats.totalTxns} />
-      <Divider />
-      <Stat label="TODAY" value={stats.txnsToday} />
       <Divider />
       <span className="text-white/30 shrink-0">Updated {stats.updated}</span>
     </div>
