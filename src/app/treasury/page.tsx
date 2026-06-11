@@ -46,7 +46,7 @@ export default function Treasury() {
       });
 
       const txHash = (swapResult as any)?.txHash || (swapResult as any)?.hash || (typeof swapResult === "string" ? swapResult : null);
-      if (!txHash && swapResult !== true) {
+      if (!txHash && !(swapResult as any)) {
         setSwapStatus("Swap cancelled.");
         return;
       }
