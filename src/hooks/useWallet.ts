@@ -45,8 +45,13 @@ export function useWallet() {
     localStorage.removeItem("arcWalletDisconnected");
     const accs = await eth.request({ method: "eth_requestAccounts" });
     const cid = await eth.request({ method: "eth_chainId" });
+    // If reconnecting after disconnect, clear old merchant session
+    // so the new wallet loads its own data fresh from Redis
+    if (wasDisconnected) {
+      localStorage.removeItem("arcMerchantSession");
+      localStorage.removeItem("arcCommerceSettings");
+    }
     setAccount(accs[0]); setChainId(cid); setIsConnected(true);
-    // Reload so dashboard and sidebar re-initialize with fresh state
     if (wasDisconnected) { window.location.reload(); }
     return accs[0] as string;
   }, []);
