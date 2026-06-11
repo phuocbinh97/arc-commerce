@@ -43,7 +43,7 @@ export default function Bridge() {
       setStatus("Confirm bridge in MetaMask…");
       await (kit as any).bridge({
         from: { adapter, chain: fromChain },
-        to:   { adapter, chain: toChain },
+        to:   { chain: toChain },
         amount: parseFloat(amount).toFixed(2),
         token: "USDC",
       });
