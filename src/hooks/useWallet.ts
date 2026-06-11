@@ -7,6 +7,15 @@ export function useWallet() {
   const [chainId, setChainId] = useState("");
   const [isConnected, setIsConnected] = useState(false);
 
+  // Clear all wallet-specific data — called on disconnect or wallet switch
+  function clearWalletData() {
+    localStorage.removeItem("arcMerchantSession");
+    localStorage.removeItem("arcCommerceSettings");
+    localStorage.removeItem("arcCheckoutHistory");
+    localStorage.removeItem("arcCommerceInvoices");
+    localStorage.removeItem("arcBridgeHistory");
+  }
+
   const isArcNetwork = chainId.toLowerCase() === ARC_CHAIN_ID_HEX;
 
   useEffect(() => {
@@ -21,16 +30,13 @@ export function useWallet() {
     }
     eth.request({ method: "eth_chainId" }).then(setChainId).catch(() => {});
     eth.on?.("accountsChanged", (accs: string[]) => {
+      clearWalletData();
       if (accs[0]) {
-        // New wallet — clear old merchant session so fresh data loads
         localStorage.removeItem("arcWalletDisconnected");
-        localStorage.removeItem("arcMerchantSession");
-        localStorage.removeItem("arcCommerceSettings");
         setAccount(accs[0]); setIsConnected(true);
         window.location.reload();
       } else {
         localStorage.setItem("arcWalletDisconnected", "1");
-        localStorage.removeItem("arcMerchantSession");
         setAccount(""); setIsConnected(false);
         window.location.reload();
       }
@@ -45,11 +51,8 @@ export function useWallet() {
     localStorage.removeItem("arcWalletDisconnected");
     const accs = await eth.request({ method: "eth_requestAccounts" });
     const cid = await eth.request({ method: "eth_chainId" });
-    // If reconnecting after disconnect, clear old merchant session
-    // so the new wallet loads its own data fresh from Redis
     if (wasDisconnected) {
-      localStorage.removeItem("arcMerchantSession");
-      localStorage.removeItem("arcCommerceSettings");
+      clearWalletData();
     }
     setAccount(accs[0]); setChainId(cid); setIsConnected(true);
     if (wasDisconnected) { window.location.reload(); }
@@ -88,6 +91,7 @@ export function useWallet() {
   }, [account]);
 
   const disconnect = useCallback(() => {
+    clearWalletData();
     localStorage.setItem("arcWalletDisconnected", "1");
     setAccount(""); setIsConnected(false);
   }, []);
