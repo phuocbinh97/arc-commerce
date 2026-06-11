@@ -2,6 +2,7 @@
 import { usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import AIWidget from "@/components/AIWidget";
+import StatusBar from "@/components/StatusBar";
 
 // Pages that should NOT have sidebar (standalone / embeddable)
 const STANDALONE = ["/checkout", "/shop"];
@@ -17,10 +18,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       <Sidebar />
-      <div className="ml-[220px] min-h-screen flex flex-col">
+      <div className="ml-[220px] min-h-screen flex flex-col pb-9">
         {children}
       </div>
       <AIWidget />
+      <StatusBar />
     </>
   );
 }
