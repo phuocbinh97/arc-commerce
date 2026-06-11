@@ -45,17 +45,21 @@ export default function Bridge() {
 
       setStatus(`Confirm bridge in ${walletName}…`);
 
-      // Check nonce on Arc RPC directly (bridge burns on Arc regardless of current wallet network)
-      const arcRpc = async (method: string, params: unknown[]) => {
+      // Snapshot USDC balance on Arc before — if balance doesn't decrease, bridge was cancelled
+      const USDC_ADDR = "0x3600000000000000000000000000000000000000";
+      const getArcBalance = async () => {
         const res = await fetch("https://rpc.testnet.arc.network", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [{
+            to: USDC_ADDR,
+            data: "0x70a08231" + account.toLowerCase().replace("0x","").padStart(64,"0"),
+          }, "latest"] }),
         }).then(r => r.json());
-        return res.result;
+        return BigInt(res.result || "0x0");
       };
 
-      const nonceBefore = parseInt(await arcRpc("eth_getTransactionCount", [account, "latest"]), 16);
+      const balBefore = await getArcBalance();
 
       await (kit as any).bridge({
         from: { adapter, chain: fromChain },
@@ -64,33 +68,14 @@ export default function Bridge() {
         token: "USDC",
       });
 
-      const nonceAfter = parseInt(await arcRpc("eth_getTransactionCount", [account, "latest"]), 16);
-      const diff = nonceAfter - nonceBefore;
+      const balAfter = await getArcBalance();
 
-      if (diff === 0) {
-        // No tx sent at all — cancelled at first step
+      if (balAfter >= balBefore) {
+        // USDC didn't decrease — user cancelled before the burn completed
         setStatus("Bridge cancelled.");
         return;
       }
 
-      if (diff === 1) {
-        // One tx sent — could be approve-only (cancelled) or burn-only (pre-approved USDC)
-        // Check what the last tx's destination was
-        const latestBlock = await arcRpc("eth_getBlockByNumber", ["latest", true]);
-        const txs: any[] = latestBlock?.transactions || [];
-        const lastTx = [...txs].reverse().find((t: any) =>
-          t.from?.toLowerCase() === account.toLowerCase()
-        );
-        const USDC = "0x3600000000000000000000000000000000000000";
-        if (lastTx?.to?.toLowerCase() === USDC.toLowerCase()) {
-          // Last tx was approve → bridge was cancelled at step 2
-          setStatus("Bridge cancelled.");
-          return;
-        }
-        // Last tx was burn → completed with pre-approved USDC
-      }
-
-      // diff >= 2, or diff === 1 with burn tx confirmed → completed
       saveBridgeEntry({ from: fromChain, to: toChain, amount, token: "USDC", ts: Date.now(), status: "completed" }, account);
       setHistory(getBridgeHistory(account));
       setStatus(`✅ Bridge submitted! ${amount} USDC → ${toChain}`);
