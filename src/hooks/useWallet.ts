@@ -23,10 +23,25 @@ async function loadMerchantSession(address: string) {
   } catch {}
 }
 
+function detectWalletName(provider: any): string {
+  if (!provider) return "Wallet";
+  if (provider.isRabby) return "Rabby";
+  if (provider.isRainbow) return "Rainbow";
+  if (provider.isCoinbaseWallet) return "Coinbase Wallet";
+  if (provider.isBraveWallet) return "Brave Wallet";
+  if (provider.isMetaMask) return "MetaMask";
+  if (provider.isWalletConnect) return "WalletConnect";
+  return "Wallet";
+}
+
 export function useWallet() {
   const [account, setAccount] = useState("");
   const [chainId, setChainId] = useState("");
   const [isConnected, setIsConnected] = useState(false);
+  const [walletName, setWalletName] = useState(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("arcWalletName") || "Wallet";
+    return "Wallet";
+  });
 
   // Clear all wallet-specific data — called on disconnect or wallet switch
   function clearWalletData() {
@@ -35,6 +50,7 @@ export function useWallet() {
     localStorage.removeItem("arcCheckoutHistory");
     localStorage.removeItem("arcCommerceInvoices");
     localStorage.removeItem("arcBridgeHistory");
+    localStorage.removeItem("arcWalletName");
   }
 
   const isArcNetwork = chainId.toLowerCase() === ARC_CHAIN_ID_HEX;
@@ -47,6 +63,8 @@ export function useWallet() {
     if (!manuallyDisconnected) {
       eth.request({ method: "eth_accounts" }).then((accs: string[]) => {
         if (accs[0]) {
+          const saved = localStorage.getItem("arcWalletName");
+          if (!saved) { const n = detectWalletName(eth); localStorage.setItem("arcWalletName", n); setWalletName(n); }
           setAccount(accs[0]); setIsConnected(true);
           // Restore merchant session if not already cached
           if (!localStorage.getItem("arcMerchantSession")) {
@@ -72,11 +90,13 @@ export function useWallet() {
   }, []);
 
   // connectWithProvider: called by WalletModal after user picks a wallet
-  const connectWithProvider = useCallback(async (provider: any, addr: string) => {
+  const connectWithProvider = useCallback(async (provider: any, addr: string, name?: string) => {
     localStorage.removeItem("arcWalletDisconnected");
     clearWalletData();
     const cid = await provider.request({ method: "eth_chainId" }).catch(() => "0x0");
-    setAccount(addr); setChainId(cid); setIsConnected(true);
+    const detectedName = name || detectWalletName(provider);
+    localStorage.setItem("arcWalletName", detectedName);
+    setAccount(addr); setChainId(cid); setIsConnected(true); setWalletName(detectedName);
     await loadMerchantSession(addr);
     window.location.reload();
   }, []);
@@ -134,5 +154,5 @@ export function useWallet() {
     setAccount(""); setIsConnected(false);
   }, []);
 
-  return { account, chainId, isConnected, isArcNetwork, connect, connectWithProvider, switchToArc, getUsdcBalance, disconnect };
+  return { account, chainId, isConnected, isArcNetwork, walletName, connect, connectWithProvider, switchToArc, getUsdcBalance, disconnect };
 }

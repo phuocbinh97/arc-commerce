@@ -77,7 +77,7 @@ export default function Topbar({ title, action }: TopbarProps) {
         {/* Wallet modal */}
         {showWalletModal && (
           <WalletModal
-            onConnect={(provider, addr) => { setShowWalletModal(false); connectWithProvider(provider, addr); }}
+            onConnect={(provider, addr, name) => { setShowWalletModal(false); connectWithProvider(provider, addr, name); }}
             onClose={() => setShowWalletModal(false)}
           />
         )}

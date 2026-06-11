@@ -13,7 +13,7 @@ const CHAINS = [
 ];
 
 export default function Bridge() {
-  const { account, isConnected, connect } = useWallet();
+  const { account, isConnected, connect, walletName } = useWallet();
   const [fromChain, setFromChain] = useState("Arc_Testnet");
   const [toChain,   setToChain]   = useState("Ethereum_Sepolia");
   const [amount,    setAmount]    = useState("");
@@ -40,7 +40,7 @@ export default function Bridge() {
       setStatus("Creating adapter…");
       const adapter = await createAdapterFromProvider({ provider: eth });
 
-      setStatus("Confirm bridge in MetaMask…");
+      setStatus(`Confirm bridge in ${walletName}…`);
       await (kit as any).bridge({
         from: { adapter, chain: fromChain },
         to:   { adapter, chain: toChain },

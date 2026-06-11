@@ -46,7 +46,7 @@ async function connectWalletConnect(): Promise<{ provider: any; account: string 
 }
 
 interface Props {
-  onConnect: (provider: any, account: string) => void;
+  onConnect: (provider: any, account: string, walletName: string) => void;
   onClose: () => void;
 }
 
@@ -119,7 +119,7 @@ export default function WalletModal({ onConnect, onClose }: Props) {
     setConnecting(wallet.id);
     try {
       const { provider, account } = await wallet.connect();
-      onConnect(provider, account);
+      onConnect(provider, account, wallet.name);
     } catch (e: any) {
       setError(e?.message || "Connection failed");
       setConnecting(null);

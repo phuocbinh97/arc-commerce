@@ -6,7 +6,7 @@ import { getPaymentHistory } from "@/lib/storage";
 import { formatUsdc, timeAgo, KIT_KEY } from "@/lib/arc";
 
 export default function Treasury() {
-  const { account, isConnected, connect, getUsdcBalance } = useWallet();
+  const { account, isConnected, connect, getUsdcBalance, walletName } = useWallet();
   const [usdcBalance, setUsdcBalance] = useState("—");
   const [swapFrom, setSwapFrom] = useState("USDC");
   const [swapAmount, setSwapAmount] = useState("");
@@ -33,7 +33,7 @@ export default function Treasury() {
       setSwapStatus("Creating adapter from MetaMask…");
       const adapter = await (createAdapterFromProvider as any)({ provider: eth });
 
-      setSwapStatus("Confirm swap in MetaMask…");
+      setSwapStatus(`Confirm swap in ${walletName}…`);
       const result = await kit.swap({
         from: { adapter, chain: "Arc_Testnet" },
         tokenIn: swapFrom as "USDC" | "EURC",
