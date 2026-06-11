@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Topbar from "@/components/Topbar";
 import { useWallet } from "@/hooks/useWallet";
-import { getPaymentHistory } from "@/lib/storage";
+import { getSwapHistory, saveSwapEntry } from "@/lib/storage";
 import { formatUsdc, timeAgo, KIT_KEY } from "@/lib/arc";
 
 export default function Treasury() {
@@ -12,7 +12,7 @@ export default function Treasury() {
   const [swapAmount, setSwapAmount] = useState("");
   const [swapStatus, setSwapStatus] = useState("");
   const [swapping, setSwapping] = useState(false);
-  const [hist] = useState(getPaymentHistory().slice(0, 6));
+  const [swapHist, setSwapHist] = useState(getSwapHistory);
 
   useEffect(() => {
     if (account) getUsdcBalance().then(setUsdcBalance);
@@ -42,9 +42,13 @@ export default function Treasury() {
         config: { kitKey: `KIT_KEY:${KIT_KEY}` },
       });
 
-      setSwapStatus(`✅ Swap complete! ${swapAmount} ${swapFrom} → ${swapFrom === "USDC" ? "EURC" : "USDC"}`);
+      const tokenOut = swapFrom === "USDC" ? "EURC" : "USDC";
+      saveSwapEntry({ tokenIn: swapFrom, tokenOut, amountIn: swapAmount, ts: Date.now(), status: "completed" });
+      setSwapHist(getSwapHistory());
+      setSwapStatus(`✅ Swap complete! ${swapAmount} ${swapFrom} → ${tokenOut}`);
       getUsdcBalance().then(setUsdcBalance);
     } catch (e: any) {
+      saveSwapEntry({ tokenIn: swapFrom, tokenOut: swapFrom === "USDC" ? "EURC" : "USDC", amountIn: swapAmount, ts: Date.now(), status: "failed" });
       setSwapStatus(`❌ ${e.message || "Swap failed"}`);
       console.error("Swap error:", e);
     } finally { setSwapping(false); }
@@ -119,20 +123,24 @@ export default function Treasury() {
           </div>
         </div>
 
-        {/* Payment history */}
+        {/* Swap history */}
         <div className="bg-surface border border-white/8 rounded-lg">
-          <div className="px-5 py-4 border-b border-white/8 font-semibold text-sm">Payment History</div>
+          <div className="px-5 py-4 border-b border-white/8 font-semibold text-sm">Swap History</div>
           <div className="p-4">
-            {hist.length === 0 ? (
-              <div className="text-center py-8 text-muted text-sm">No transactions yet</div>
-            ) : hist.map((h, i) => (
+            {swapHist.length === 0 ? (
+              <div className="text-center py-8 text-muted text-sm">No swaps yet</div>
+            ) : swapHist.map((h, i) => (
               <div key={i} className="flex items-center gap-3 py-2.5 border-b border-white/8 last:border-0">
-                <div className="w-[30px] h-[30px] rounded-lg bg-green/10 grid place-items-center text-sm">✅</div>
+                <div className={`w-[30px] h-[30px] rounded-lg grid place-items-center text-sm ${h.status === "completed" ? "bg-green/10" : "bg-red/10"}`}>
+                  {h.status === "completed" ? "⇄" : "✗"}
+                </div>
                 <div className="flex-1">
-                  <div className="text-[13px] font-medium">{h.orderId || "Payment"}</div>
+                  <div className="text-[13px] font-medium font-mono">{h.tokenIn} → {h.tokenOut}</div>
                   <div className="text-[11.5px] text-muted">{timeAgo(h.ts)}</div>
                 </div>
-                <div className="font-mono text-[13px] font-semibold text-green">+{formatUsdc(h.amount)} USDC</div>
+                <div className={`font-mono text-[13px] font-semibold ${h.status === "completed" ? "text-green" : "text-red"}`}>
+                  {h.status === "completed" ? `${h.amountIn} ${h.tokenIn}` : "Failed"}
+                </div>
               </div>
             ))}
           </div>

@@ -50,6 +50,7 @@ export function useWallet() {
     localStorage.removeItem("arcCheckoutHistory");
     localStorage.removeItem("arcCommerceInvoices");
     localStorage.removeItem("arcBridgeHistory");
+    localStorage.removeItem("arcSwapHistory");
     localStorage.removeItem("arcWalletName");
   }
 

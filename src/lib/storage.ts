@@ -61,6 +61,25 @@ export function saveSettings(s: MerchantSettings) {
   if (s.merchantWallet) localStorage.setItem("arcCheckoutMerchant", s.merchantWallet);
 }
 
+export interface SwapEntry {
+  tokenIn: string;
+  tokenOut: string;
+  amountIn: string;
+  ts: number;
+  status: "completed" | "failed";
+}
+
+export function getSwapHistory(): SwapEntry[] {
+  if (!isBrowser()) return [];
+  try { return JSON.parse(localStorage.getItem("arcSwapHistory") || "[]"); } catch { return []; }
+}
+export function saveSwapEntry(entry: SwapEntry) {
+  if (!isBrowser()) return;
+  const hist = getSwapHistory();
+  hist.unshift(entry);
+  localStorage.setItem("arcSwapHistory", JSON.stringify(hist.slice(0, 20)));
+}
+
 export function getBridgeHistory() {
   if (!isBrowser()) return [];
   try { return JSON.parse(localStorage.getItem("arcBridgeHistory") || "[]"); } catch { return []; }
