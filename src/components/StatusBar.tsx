@@ -61,50 +61,38 @@ export default function StatusBar() {
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 h-8 bg-[#0d1117] border-t border-white/8 flex items-center px-3 gap-3 text-[11px] font-mono select-none">
 
-      {/* Network indicator */}
-      <div className="flex items-center gap-1.5 text-green font-bold shrink-0">
-        <span className="w-1.5 h-1.5 rounded-full bg-green animate-pulse" />
-        ARC TESTNET
-      </div>
-
-      <Divider />
-
-      {/* Live stats */}
-      <Stat label="AVG BLOCK TIME" value={stats.blockTime} />
-      <Divider />
-      <Stat label="TOTAL BLOCKS" value={stats.totalBlocks} />
-
-      <div className="flex-1" />
-
-      {/* Resources */}
+      {/* Left — Resources */}
       <a href="https://faucet.circle.com" target="_blank" rel="noreferrer"
-        className="flex items-center gap-1 text-muted hover:text-ink transition-colors shrink-0">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+        className="flex items-center gap-1.5 text-muted hover:text-ink transition-colors shrink-0">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2C8 2 5 5.5 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.5-3-7-7-7z"/><circle cx="12" cy="9" r="2"/></svg>
         Claim Faucet
       </a>
       <Divider />
       <a href="https://testnet.arcscan.app" target="_blank" rel="noreferrer"
-        className="flex items-center gap-1 text-muted hover:text-ink transition-colors shrink-0">
+        className="flex items-center gap-1.5 text-muted hover:text-ink transition-colors shrink-0">
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         Arc Explorer
       </a>
       <Divider />
-
-      {/* Built by */}
-      <span className="text-muted shrink-0">Built by</span>
       <a href="https://x.com/phuocbinh97" target="_blank" rel="noreferrer"
-        className="flex items-center gap-1.5 px-2 py-0.5 bg-white/5 border border-white/10 rounded hover:bg-white/10 transition-colors shrink-0">
+        className="flex items-center gap-1.5 px-2 py-0.5 bg-white/8 border border-white/14 rounded hover:bg-white/12 transition-colors shrink-0">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="https://unavatar.io/x/phuocbinh97"
-          alt="@phuocbinh97"
-          width={14} height={14}
-          className="rounded-full"
-        />
-        <span className="text-ink font-semibold">@phuocbinh97</span>
-        <span className="text-[10px] px-1 py-px bg-accent/20 text-accent rounded font-bold">FOLLOW</span>
+        <img src="https://unavatar.io/x/phuocbinh97" alt="@phuocbinh97" width={14} height={14} className="rounded-full" />
+        <span className="text-ink font-semibold">Built by @phuocbinh97</span>
+        <span className="text-[10px] px-1.5 py-px bg-accent text-white rounded font-bold">FOLLOW</span>
       </a>
 
+      <div className="flex-1" />
+
+      {/* Right — Network + Stats */}
+      <div className="flex items-center gap-1.5 text-green font-bold shrink-0">
+        <span className="w-1.5 h-1.5 rounded-full bg-green animate-pulse" />
+        ARC TESTNET
+      </div>
+      <Divider />
+      <Stat label="AVG BLOCK TIME" value={stats.blockTime} />
+      <Divider />
+      <Stat label="TOTAL BLOCKS" value={stats.totalBlocks} />
       <Divider />
       <span className="text-white/30 shrink-0">Updated {stats.updated}</span>
     </div>
