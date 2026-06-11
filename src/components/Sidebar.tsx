@@ -69,7 +69,37 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="p-2 border-t border-white/8">
+      {/* Resources */}
+      <div className="px-3 pt-3 pb-1 border-t border-white/8">
+        <div className="text-[10px] font-semibold text-muted uppercase tracking-[0.8px] px-1.5 pb-2">Resources</div>
+        <a href="https://faucet.circle.com" target="_blank" rel="noreferrer"
+          className="flex items-center justify-between px-2.5 py-2 rounded-lg text-[13px] text-muted hover:bg-surface2 hover:text-ink transition-colors">
+          <div className="flex items-center gap-2.5">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0757f9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a5 5 0 0 1 5 5c0 3-5 11-5 11S7 10 7 7a5 5 0 0 1 5-5z"/><circle cx="12" cy="7" r="2"/></svg>
+            Claim Faucet
+          </div>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </a>
+        <a href="https://testnet.arcscan.app" target="_blank" rel="noreferrer"
+          className="flex items-center justify-between px-2.5 py-2 rounded-lg text-[13px] text-muted hover:bg-surface2 hover:text-ink transition-colors">
+          <div className="flex items-center gap-2.5">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0757f9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            Arc Explorer
+          </div>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </a>
+        <a href="https://x.com/phuocbinh97" target="_blank" rel="noreferrer"
+          className="flex items-center justify-between px-2.5 py-2 rounded-lg text-[13px] text-muted hover:bg-surface2 hover:text-ink transition-colors">
+          <div className="flex items-center gap-2.5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="https://unavatar.io/x/phuocbinh97" alt="@phuocbinh97" width={15} height={15} className="rounded-full" />
+            Built By @phuocbinh97
+          </div>
+          <span className="text-[10px] px-1.5 py-px bg-accent text-white rounded font-bold">FOLLOW</span>
+        </a>
+      </div>
+
+      <div className="px-3 pb-2">
         <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-green/8 border border-green/20">
           <span className="w-2 h-2 rounded-full bg-green shrink-0 animate-pulse" />
           <span className="text-[11.5px] text-green font-medium">Arc Testnet · Live</span>
