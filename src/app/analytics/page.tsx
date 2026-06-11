@@ -21,8 +21,6 @@ export default function Analytics() {
   useEffect(() => {
     setMounted(true);
     if (localStorage.getItem("arcWalletDisconnected") === "1") return;
-    const local = getPaymentHistory();
-    setHist(local);
     const settings = JSON.parse(localStorage.getItem("arcCommerceSettings") || "{}");
     const session = JSON.parse(localStorage.getItem("arcMerchantSession") || "{}");
     const merchantId = session.merchantId || settings.merchantId;
@@ -35,10 +33,9 @@ export default function Analytics() {
           ...t,
           merchant: t.buyerWallet || t.merchant || t.merchantWallet || "unknown",
         }));
-        const merged = [...normalized, ...local];
         const seen = new Set<string>();
-        const deduped = merged.filter(t => { if (seen.has(t.txHash)) return false; seen.add(t.txHash); return true; });
-        deduped.sort((a, b) => b.ts - a.ts);
+        const deduped = normalized.filter((t: any) => { if (seen.has(t.txHash)) return false; seen.add(t.txHash); return true; });
+        deduped.sort((a: any, b: any) => b.ts - a.ts);
         setHist(deduped);
       }).catch(console.error);
   }, []);

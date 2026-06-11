@@ -39,7 +39,8 @@ export default function Dashboard() {
     const merchantId = session.merchantId || settings.merchantId;
 
     if (!merchantId) {
-      setHist(getPaymentHistory());
+      // Not registered — show empty state, don't leak another wallet's localStorage data
+      setHist([]);
       return;
     }
 

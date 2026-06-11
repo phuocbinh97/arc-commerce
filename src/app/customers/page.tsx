@@ -11,8 +11,6 @@ export default function Customers() {
 
   useEffect(() => {
     if (localStorage.getItem("arcWalletDisconnected") === "1") { setLoading(false); return; }
-    const local = getPaymentHistory();
-    setHist(local);
 
     const settings = JSON.parse(localStorage.getItem("arcCommerceSettings") || "{}");
     const session = JSON.parse(localStorage.getItem("arcMerchantSession") || "{}");
@@ -27,9 +25,8 @@ export default function Customers() {
           ...t,
           merchant: t.buyerWallet || t.merchant || t.merchantWallet || "unknown",
         }));
-        const merged = [...normalized, ...local];
         const seen = new Set<string>();
-        const deduped = merged.filter(t => {
+        const deduped = normalized.filter((t: any) => {
           if (seen.has(t.txHash)) return false;
           seen.add(t.txHash); return true;
         });
