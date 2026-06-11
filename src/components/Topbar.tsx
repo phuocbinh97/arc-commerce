@@ -4,6 +4,7 @@ import { useWallet } from "@/hooks/useWallet";
 import { useMerchantAuth } from "@/hooks/useMerchantAuth";
 import { shortAddr } from "@/lib/arc";
 import Link from "next/link";
+import WalletModal from "@/components/WalletModal";
 
 interface TopbarProps {
   title: string;
@@ -11,9 +12,10 @@ interface TopbarProps {
 }
 
 export default function Topbar({ title, action }: TopbarProps) {
-  const { account, isConnected, isArcNetwork, connect, switchToArc, disconnect } = useWallet();
+  const { account, isConnected, isArcNetwork, connect, connectWithProvider, switchToArc, disconnect } = useWallet();
   const { session, login, logout, loading } = useMerchantAuth();
   const [showWalletMenu, setShowWalletMenu] = useState(false);
+  const [showWalletModal, setShowWalletModal] = useState(false);
   const [hasSavedMerchant, setHasSavedMerchant] = useState(false);
   const [isDark, setIsDark] = useState(true);
 
@@ -72,9 +74,17 @@ export default function Topbar({ title, action }: TopbarProps) {
           </div>
         )}
 
+        {/* Wallet modal */}
+        {showWalletModal && (
+          <WalletModal
+            onConnect={(provider, addr) => { setShowWalletModal(false); connectWithProvider(provider, addr); }}
+            onClose={() => setShowWalletModal(false)}
+          />
+        )}
+
         {/* Wallet status */}
         {!isConnected ? (
-          <button onClick={connect}
+          <button onClick={() => setShowWalletModal(true)}
             className="flex items-center gap-2 px-3 py-1.5 bg-surface2 border border-white/14 rounded-full text-[12.5px] font-medium hover:border-accent transition-colors">
             <span className="w-2 h-2 rounded-full bg-muted" />
             Connect wallet

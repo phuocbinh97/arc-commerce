@@ -71,6 +71,16 @@ export function useWallet() {
     eth.on?.("chainChanged", setChainId);
   }, []);
 
+  // connectWithProvider: called by WalletModal after user picks a wallet
+  const connectWithProvider = useCallback(async (provider: any, addr: string) => {
+    localStorage.removeItem("arcWalletDisconnected");
+    clearWalletData();
+    const cid = await provider.request({ method: "eth_chainId" }).catch(() => "0x0");
+    setAccount(addr); setChainId(cid); setIsConnected(true);
+    await loadMerchantSession(addr);
+    window.location.reload();
+  }, []);
+
   const connect = useCallback(async () => {
     const eth = (window as any).ethereum;
     if (!eth) throw new Error("Install MetaMask first.");
@@ -82,7 +92,6 @@ export function useWallet() {
       clearWalletData();
     }
     setAccount(accs[0]); setChainId(cid); setIsConnected(true);
-    // Always load fresh merchant session when connecting
     await loadMerchantSession(accs[0]);
     if (wasDisconnected) { window.location.reload(); }
     return accs[0] as string;
@@ -125,5 +134,5 @@ export function useWallet() {
     setAccount(""); setIsConnected(false);
   }, []);
 
-  return { account, chainId, isConnected, isArcNetwork, connect, switchToArc, getUsdcBalance, disconnect };
+  return { account, chainId, isConnected, isArcNetwork, connect, connectWithProvider, switchToArc, getUsdcBalance, disconnect };
 }
