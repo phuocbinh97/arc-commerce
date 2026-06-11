@@ -12,28 +12,30 @@ export default function Customers() {
   useEffect(() => {
     if (localStorage.getItem("arcWalletDisconnected") === "1") { setLoading(false); return; }
 
-    const settings = JSON.parse(localStorage.getItem("arcCommerceSettings") || "{}");
-    const session = JSON.parse(localStorage.getItem("arcMerchantSession") || "{}");
-    const merchantId = session.merchantId || settings.merchantId;
-    if (!merchantId) { setLoading(false); return; }
-
-    fetch(`/api/transactions?merchantId=${merchantId}`)
-      .then(r => r.json())
-      .then(data => {
+    async function load() {
+      let merchantId = JSON.parse(localStorage.getItem("arcMerchantSession") || "{}").merchantId;
+      if (!merchantId) {
+        const eth = (window as any).ethereum;
+        const accs: string[] = eth ? await eth.request({ method: "eth_accounts" }).catch(() => []) : [];
+        if (accs[0]) {
+          try {
+            const res = await fetch(`/api/merchants/by-wallet/${accs[0]}`);
+            if (res.ok) { const { merchant } = await res.json(); merchantId = merchant?.merchantId; }
+          } catch {}
+        }
+      }
+      if (!merchantId) { setLoading(false); return; }
+      try {
+        const data = await fetch(`/api/transactions?merchantId=${merchantId}`).then(r => r.json());
         if (!data.txns) return;
-        const normalized = data.txns.map((t: any) => ({
-          ...t,
-          merchant: t.buyerWallet || t.merchant || t.merchantWallet || "unknown",
-        }));
+        const normalized = data.txns.map((t: any) => ({ ...t, merchant: t.buyerWallet || t.merchant || t.merchantWallet || "unknown" }));
         const seen = new Set<string>();
-        const deduped = normalized.filter((t: any) => {
-          if (seen.has(t.txHash)) return false;
-          seen.add(t.txHash); return true;
-        });
+        const deduped = normalized.filter((t: any) => { if (seen.has(t.txHash)) return false; seen.add(t.txHash); return true; });
         setHist(deduped);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+      } catch {}
+      finally { setLoading(false); }
+    }
+    load();
   }, []);
 
   const map: Record<string, any> = {};

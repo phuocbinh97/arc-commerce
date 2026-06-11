@@ -2,6 +2,27 @@
 import { useState, useEffect, useCallback } from "react";
 import { ARC_CHAIN_ID_HEX, ARC_RPC, ARC_EXPLORER } from "@/lib/arc";
 
+// Fetch merchant from Redis and cache in localStorage so all pages load instantly
+async function loadMerchantSession(address: string) {
+  try {
+    const res = await fetch(`/api/merchants/by-wallet/${address}`);
+    if (!res.ok) return;
+    const { merchant } = await res.json();
+    if (!merchant) return;
+    localStorage.setItem("arcMerchantSession", JSON.stringify({
+      merchantId: merchant.merchantId,
+      name: merchant.name,
+      wallet: merchant.wallet,
+    }));
+    localStorage.setItem("arcCommerceSettings", JSON.stringify({
+      businessName: merchant.name,
+      merchantId: merchant.merchantId,
+      merchantWallet: merchant.wallet,
+      hubContract: process.env.NEXT_PUBLIC_HUB_CONTRACT || "",
+    }));
+  } catch {}
+}
+
 export function useWallet() {
   const [account, setAccount] = useState("");
   const [chainId, setChainId] = useState("");
@@ -25,7 +46,13 @@ export function useWallet() {
     const manuallyDisconnected = localStorage.getItem("arcWalletDisconnected") === "1";
     if (!manuallyDisconnected) {
       eth.request({ method: "eth_accounts" }).then((accs: string[]) => {
-        if (accs[0]) { setAccount(accs[0]); setIsConnected(true); }
+        if (accs[0]) {
+          setAccount(accs[0]); setIsConnected(true);
+          // Restore merchant session if not already cached
+          if (!localStorage.getItem("arcMerchantSession")) {
+            loadMerchantSession(accs[0]);
+          }
+        }
       }).catch(() => {});
     }
     eth.request({ method: "eth_chainId" }).then(setChainId).catch(() => {});
@@ -55,6 +82,8 @@ export function useWallet() {
       clearWalletData();
     }
     setAccount(accs[0]); setChainId(cid); setIsConnected(true);
+    // Always load fresh merchant session when connecting
+    await loadMerchantSession(accs[0]);
     if (wasDisconnected) { window.location.reload(); }
     return accs[0] as string;
   }, []);

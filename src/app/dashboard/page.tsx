@@ -30,38 +30,45 @@ export default function Dashboard() {
 
   useEffect(() => {
     setMounted(true);
-    // Use Redis as source of truth (per-merchant isolation)
-    const settings = JSON.parse(localStorage.getItem("arcCommerceSettings") || "{}");
-    const session = JSON.parse(localStorage.getItem("arcMerchantSession") || "{}");
     if (localStorage.getItem("arcWalletDisconnected") === "1") return;
 
-    // Use session if available, fall back to settings (same machine = already verified)
-    const merchantId = session.merchantId || settings.merchantId;
+    async function load() {
+      let session = JSON.parse(localStorage.getItem("arcMerchantSession") || "{}");
+      let merchantId = session.merchantId;
 
-    if (!merchantId) {
-      // Not registered — show empty state, don't leak another wallet's localStorage data
-      setHist([]);
-      return;
+      // Session not cached yet — look up by connected wallet address
+      if (!merchantId) {
+        const eth = (window as any).ethereum;
+        const accs: string[] = eth ? await eth.request({ method: "eth_accounts" }).catch(() => []) : [];
+        if (accs[0]) {
+          try {
+            const res = await fetch(`/api/merchants/by-wallet/${accs[0]}`);
+            if (res.ok) {
+              const { merchant } = await res.json();
+              merchantId = merchant?.merchantId;
+            }
+          } catch {}
+        }
+      }
+
+      if (!merchantId) return;
+
+      const data = await fetch(`/api/transactions?merchantId=${merchantId}`).then(r => r.json()).catch(() => ({}));
+      if (!data.txns) return;
+      const normalized = data.txns.map((t: any) => ({
+        ...t,
+        merchant: t.buyerWallet || t.merchant || t.merchantWallet || "unknown",
+      }));
+      const seen = new Set<string>();
+      const deduped = normalized.filter((t: any) => {
+        if (seen.has(t.txHash)) return false;
+        seen.add(t.txHash); return true;
+      });
+      deduped.sort((a: any, b: any) => b.ts - a.ts);
+      setHist(deduped);
     }
 
-    fetch(`/api/transactions?merchantId=${merchantId}`)
-      .then(r => r.json())
-      .then(data => {
-        if (!data.txns) return;
-        const normalized = data.txns.map((t: any) => ({
-          ...t,
-          merchant: t.buyerWallet || t.merchant || t.merchantWallet || "unknown",
-        }));
-        const merged = [...normalized];
-        const seen = new Set<string>();
-        const deduped = merged.filter(t => {
-          if (seen.has(t.txHash)) return false;
-          seen.add(t.txHash); return true;
-        });
-        deduped.sort((a, b) => b.ts - a.ts);
-        setHist(deduped);
-      })
-      .catch(console.error);
+    load();
   }, []);
 
   const filtered = range >= 90 ? hist : hist.filter(h => h.ts >= Date.now() - range * 86400000);

@@ -21,23 +21,29 @@ export default function Analytics() {
   useEffect(() => {
     setMounted(true);
     if (localStorage.getItem("arcWalletDisconnected") === "1") return;
-    const settings = JSON.parse(localStorage.getItem("arcCommerceSettings") || "{}");
-    const session = JSON.parse(localStorage.getItem("arcMerchantSession") || "{}");
-    const merchantId = session.merchantId || settings.merchantId;
-    if (!merchantId) return;
-    fetch(`/api/transactions?merchantId=${merchantId}`)
-      .then(r => r.json())
-      .then(data => {
-        if (!data.txns) return;
-        const normalized = data.txns.map((t: any) => ({
-          ...t,
-          merchant: t.buyerWallet || t.merchant || t.merchantWallet || "unknown",
-        }));
-        const seen = new Set<string>();
-        const deduped = normalized.filter((t: any) => { if (seen.has(t.txHash)) return false; seen.add(t.txHash); return true; });
-        deduped.sort((a: any, b: any) => b.ts - a.ts);
-        setHist(deduped);
-      }).catch(console.error);
+
+    async function load() {
+      let merchantId = JSON.parse(localStorage.getItem("arcMerchantSession") || "{}").merchantId;
+      if (!merchantId) {
+        const eth = (window as any).ethereum;
+        const accs: string[] = eth ? await eth.request({ method: "eth_accounts" }).catch(() => []) : [];
+        if (accs[0]) {
+          try {
+            const res = await fetch(`/api/merchants/by-wallet/${accs[0]}`);
+            if (res.ok) { const { merchant } = await res.json(); merchantId = merchant?.merchantId; }
+          } catch {}
+        }
+      }
+      if (!merchantId) return;
+      const data = await fetch(`/api/transactions?merchantId=${merchantId}`).then(r => r.json()).catch(() => ({}));
+      if (!data.txns) return;
+      const normalized = data.txns.map((t: any) => ({ ...t, merchant: t.buyerWallet || t.merchant || t.merchantWallet || "unknown" }));
+      const seen = new Set<string>();
+      const deduped = normalized.filter((t: any) => { if (seen.has(t.txHash)) return false; seen.add(t.txHash); return true; });
+      deduped.sort((a: any, b: any) => b.ts - a.ts);
+      setHist(deduped);
+    }
+    load();
   }, []);
 
   const filtered = range >= 90 ? hist : hist.filter(h => h.ts >= Date.now() - range * 86400000);
