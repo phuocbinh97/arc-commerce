@@ -44,26 +44,17 @@ export default function Bridge() {
       const adapter = await createAdapterFromProvider({ provider: eth });
 
       setStatus(`Confirm bridge in ${walletName}…`);
-      const result = await (kit as any).bridge({
+      await (kit as any).bridge({
         from: { adapter, chain: fromChain },
         to:   { adapter, chain: toChain },
         amount: parseFloat(amount).toFixed(2),
         token: "USDC",
       });
 
-      // If result is falsy or has no txHash, user likely cancelled
-      const txHash = result?.txHash || result?.hash || (typeof result === "string" ? result : null);
-      if (!txHash && result !== true) {
-        setStatus("Bridge cancelled.");
-        return;
-      }
-
-      const entry = { from: fromChain, to: toChain, amount, token: "USDC", ts: Date.now(), status: "completed", txHash };
-      saveBridgeEntry(entry, account);
+      saveBridgeEntry({ from: fromChain, to: toChain, amount, token: "USDC", ts: Date.now(), status: "completed" }, account);
       setHistory(getBridgeHistory(account));
       setStatus(`✅ Bridge submitted! ${amount} USDC → ${toChain}`);
     } catch (e: any) {
-      // Code 4001 = user rejected in MetaMask
       if (e?.code === 4001 || e?.message?.toLowerCase().includes("rejected") || e?.message?.toLowerCase().includes("cancel")) {
         setStatus("Bridge cancelled.");
       } else {
