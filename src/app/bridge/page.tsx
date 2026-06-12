@@ -159,7 +159,7 @@ export default function Bridge() {
                 </div>
               ))}
               <div className="p-3 bg-amber/10 border border-amber/30 rounded-lg text-[12.5px] text-amber">⚠️ Make sure you have native gas on the destination chain.</div>
-              <div className="p-3 bg-red/10 border border-red/20 rounded-lg text-[12.5px] text-red">🚨 <strong>Bước 3 — KHÔNG cancel:</strong> USDC đã bị burn trên Arc từ bước 2. Nếu cancel bước 3 (mint trên chain đích), tiền có thể bị stuck và cần claim thủ công tại <a href="https://cctp.circle.com" target="_blank" rel="noreferrer" className="underline">cctp.circle.com</a>.</div>
+              <div className="p-3 bg-red/10 border border-red/20 rounded-lg text-[12.5px] text-red">🚨 <strong>Step 3 — do NOT cancel:</strong> USDC is already burned on Arc after step 2. Cancelling step 3 (mint on destination) may leave funds stuck — claim manually at <a href="https://cctp.circle.com" target="_blank" rel="noreferrer" className="underline">cctp.circle.com</a>.</div>
             </div>
           </div>
           <div className="bg-surface border border-white/8 rounded-lg">
