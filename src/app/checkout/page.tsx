@@ -43,15 +43,63 @@ const STEP_LABELS: Record<string, string> = {
   error:                "Try again",
 };
 
-function StatusBadge({ status }: { status: TokenDef["status"] }) {
-  if (status === "live") return (
-    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-green/20 text-green">LIVE</span>
-  );
-  if (status === "arc-soon") return (
-    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber/20 text-amber">ARC SOON</span>
-  );
+function StatusDot({ status }: { status: TokenDef["status"] }) {
+  if (status === "live")       return <span className="w-1.5 h-1.5 rounded-full bg-green shrink-0" />;
+  if (status === "arc-soon")   return <span className="w-1.5 h-1.5 rounded-full bg-amber shrink-0" />;
+  return <span className="w-1.5 h-1.5 rounded-full bg-muted shrink-0" />;
+}
+
+function StatusLabel({ status }: { status: TokenDef["status"] }) {
+  if (status === "live")     return <span className="text-[10px] text-green font-semibold">Live</span>;
+  if (status === "arc-soon") return <span className="text-[10px] text-amber font-semibold">Arc soon</span>;
+  return <span className="text-[10px] text-muted">Coming soon</span>;
+}
+
+function TokenDropdown({ value, onChange }: { value: PayToken; onChange: (t: PayToken) => void }) {
+  const [open, setOpen] = useState(false);
+  const meta = TOKENS[value];
   return (
-    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-surface border border-white/14 text-muted">SOON</span>
+    <div className="relative">
+      <button onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center gap-3 px-3 py-2.5 bg-surface2 border border-white/14 rounded-lg hover:border-white/30 transition-colors">
+        <div className="w-7 h-7 rounded-full grid place-items-center text-[13px] font-bold shrink-0"
+          style={{ background: meta.bg, color: meta.color }}>{meta.symbol}</div>
+        <div className="flex-1 text-left">
+          <div className="text-[13.5px] font-semibold text-ink">{meta.label}</div>
+          <div className="text-[10.5px] text-muted">{meta.chain}</div>
+        </div>
+        <StatusDot status={meta.status} />
+        <span className="text-muted text-xs ml-1">▾</span>
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-surface border border-white/14 rounded-xl shadow-2xl overflow-hidden">
+            {TOKEN_ORDER.map(tok => {
+              const m = TOKENS[tok];
+              const disabled = m.status !== "live";
+              return (
+                <button key={tok} disabled={disabled}
+                  onClick={() => { if (!disabled) { onChange(tok); setOpen(false); } }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 border-b border-white/8 last:border-0 transition-colors text-left
+                    ${tok === value ? "bg-accent/10" : "hover:bg-surface2"}
+                    ${disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}>
+                  <div className="w-7 h-7 rounded-full grid place-items-center text-[13px] font-bold shrink-0"
+                    style={{ background: m.bg, color: m.color }}>{m.symbol}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[13px] font-semibold text-ink">{m.label}</div>
+                    <div className="text-[10.5px] text-muted">{m.chain}</div>
+                  </div>
+                  <StatusLabel status={m.status} />
+                  {tok === value && <span className="text-accent text-xs ml-1">✓</span>}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -218,66 +266,25 @@ function CheckoutContent() {
             </div>
 
             {/* Token selector */}
-            <div className="mb-5">
-              <div className="flex items-center justify-between mb-2.5">
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
                 <span className="text-[12.5px] font-semibold text-muted">Pay with</span>
                 <span className="text-[11px] text-muted">Merchant always receives USDC</span>
               </div>
-              <div className="grid grid-cols-4 gap-2">
-                {TOKEN_ORDER.map(tok => {
-                  const meta    = TOKENS[tok];
-                  const disabled = isDisabled(tok);
-                  const selected = payToken === tok;
-                  const bal      = getBalance(tok);
-                  const suff     = isSufficient(tok);
-                  return (
-                    <button
-                      key={tok}
-                      disabled={disabled}
-                      onClick={() => !disabled && setPayToken(tok)}
-                      className={`relative flex flex-col items-center gap-1 p-2.5 rounded-xl border text-center transition-all
-                        ${selected ? "border-accent bg-accent/10" : "border-white/10 bg-surface2"}
-                        ${disabled ? "opacity-50 cursor-not-allowed" : "hover:border-white/30 cursor-pointer"}`}
-                    >
-                      {/* Token icon */}
-                      <div className="w-9 h-9 rounded-full grid place-items-center text-[15px] font-bold mb-0.5"
-                        style={{ background: meta.bg, color: meta.color }}>
-                        {meta.symbol}
-                      </div>
-                      <span className="text-[12.5px] font-semibold text-ink">{meta.label}</span>
-                      {/* Chain label */}
-                      <span className="text-[9.5px] text-muted leading-none">{meta.chain}</span>
-                      {/* Balance — only for live tokens */}
-                      {meta.status === "live" && isConnected && (
-                        <span className={`text-[10px] font-mono mt-0.5 ${suff ? "text-green" : "text-red"}`}>
-                          {bal}
-                        </span>
-                      )}
-                      {/* Status badge */}
-                      <div className="mt-0.5">
-                        <StatusBadge status={meta.status} />
-                      </div>
-                      {/* Selected ring */}
-                      {selected && <div className="absolute inset-0 rounded-xl ring-2 ring-accent pointer-events-none" />}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Swap note */}
+              <TokenDropdown value={payToken} onChange={setPayToken} />
               {payToken === "EURC" && (
-                <div className="mt-2.5 px-3 py-2 bg-surface2 border border-white/8 rounded-lg text-[11.5px] text-muted">
-                  ~{(parseFloat(amount) * 1.01).toFixed(2)} EURC will be swapped → {amount} USDC via Arc App Kit before payment.
+                <div className="mt-2 px-3 py-2 bg-surface2 border border-white/8 rounded-lg text-[11.5px] text-muted">
+                  ~{(parseFloat(amount) * 1.01).toFixed(2)} EURC will be swapped → {amount} USDC via Arc App Kit.
                 </div>
               )}
               {TOKENS[payToken].status === "crosschain-soon" && (
-                <div className="mt-2.5 px-3 py-2 bg-purple/10 border border-purple/20 rounded-lg text-[11.5px] text-[#a371f7]">
-                  🔗 Cross-chain payment via LI.FI — coming when Arc Mainnet launches. {activeMeta.label} on {activeMeta.chain} will auto-swap to USDC on Arc.
+                <div className="mt-2 px-3 py-2 bg-purple/10 border border-purple/20 rounded-lg text-[11.5px] text-[#a371f7]">
+                  🔗 Cross-chain via LI.FI — coming on Arc Mainnet. {activeMeta.label} → USDC auto-swap.
                 </div>
               )}
               {payToken === "cirBTC" && (
-                <div className="mt-2.5 px-3 py-2 bg-amber/10 border border-amber/20 rounded-lg text-[11.5px] text-amber">
-                  ⏳ cirBTC swap support coming soon on Arc App Kit.
+                <div className="mt-2 px-3 py-2 bg-amber/10 border border-amber/20 rounded-lg text-[11.5px] text-amber">
+                  ⏳ cirBTC swap coming soon on Arc App Kit.
                 </div>
               )}
             </div>
