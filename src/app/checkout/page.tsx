@@ -161,7 +161,15 @@ function CheckoutContent() {
             {isConnected && (
               <div className={`mb-4 flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium ${activeSufficient ? "bg-green/10 border border-green/20 text-green" : "bg-red/10 border border-red/20 text-red"}`}>
                 <span>Your {TOKEN_META[payToken].label} balance: {activeBalance}</span>
-                <span>{activeSufficient ? "✓ Sufficient" : "✗ Insufficient"}</span>
+                <div className="flex items-center gap-2">
+                  <span>{activeSufficient ? "✓ Sufficient" : "✗ Insufficient"}</span>
+                  {!activeSufficient && (
+                    <a href="https://faucet.circle.com" target="_blank" rel="noreferrer"
+                      className="text-[11.5px] font-semibold underline opacity-80 hover:opacity-100">
+                      Get {TOKEN_META[payToken].label} →
+                    </a>
+                  )}
+                </div>
               </div>
             )}
 
