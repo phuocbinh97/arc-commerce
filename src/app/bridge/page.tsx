@@ -43,7 +43,7 @@ export default function Bridge() {
       setStatus("Creating adapter…");
       const adapter = await createAdapterFromProvider({ provider: eth });
 
-      setStatus(`Confirm bridge in ${walletName}… (3 confirmations required — do NOT cancel step 3)`);
+      setStatus(`Confirm bridge in ${walletName}…`);
 
       // Snapshot USDC balance on Arc before — if balance doesn't decrease, bridge was cancelled
       const USDC_ADDR = "0x3600000000000000000000000000000000000000";
@@ -159,7 +159,6 @@ export default function Bridge() {
                 </div>
               ))}
               <div className="p-3 bg-amber/10 border border-amber/30 rounded-lg text-[12.5px] text-amber">⚠️ Make sure you have native gas on the destination chain.</div>
-              <div className="p-3 bg-red/10 border border-red/20 rounded-lg text-[12.5px] text-red">🚨 <strong>Step 3 — do NOT cancel:</strong> USDC is already burned on Arc after step 2. Cancelling step 3 (mint on destination) may leave funds stuck — claim manually at <a href="https://cctp.circle.com" target="_blank" rel="noreferrer" className="underline">cctp.circle.com</a>.</div>
             </div>
           </div>
           <div className="bg-surface border border-white/8 rounded-lg">
