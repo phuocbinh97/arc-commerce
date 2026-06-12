@@ -6,43 +6,73 @@ import { useCheckout } from "@/hooks/useCheckout";
 import { formatUsdc, shortAddr, ARC_EXPLORER, EURC_ADDRESS } from "@/lib/arc";
 import { getSettings } from "@/lib/storage";
 
-type PayToken = "USDC" | "EURC" | "cirBTC";
+type PayToken = "USDC" | "EURC" | "cirBTC" | "ETH" | "BNB" | "SOL" | "BTC" | "MATIC";
 
-const TOKEN_META: Record<PayToken, { label: string; icon: string; color: string }> = {
-  USDC:   { label: "USDC",   icon: "$", color: "#2775ca" },
-  EURC:   { label: "EURC",   icon: "€", color: "#3b82f6" },
-  cirBTC: { label: "cirBTC", icon: "₿", color: "#f7931a" },
+interface TokenDef {
+  label: string;
+  symbol: string;
+  color: string;
+  bg: string;
+  chain: string;
+  chainColor: string;
+  status: "live" | "arc-soon" | "crosschain-soon";
+  icon: string;
+}
+
+const TOKENS: Record<PayToken, TokenDef> = {
+  USDC:   { label: "USDC",    symbol: "$",  color: "#fff",    bg: "#2775ca", chain: "Arc Testnet",    chainColor: "#0757f9", status: "live",             icon: "💵" },
+  EURC:   { label: "EURC",    symbol: "€",  color: "#fff",    bg: "#3b82f6", chain: "Arc Testnet",    chainColor: "#0757f9", status: "live",             icon: "💶" },
+  cirBTC: { label: "cirBTC",  symbol: "₿",  color: "#fff",    bg: "#f7931a", chain: "Arc Testnet",    chainColor: "#0757f9", status: "arc-soon",         icon: "🟠" },
+  ETH:    { label: "ETH",     symbol: "Ξ",  color: "#fff",    bg: "#627eea", chain: "Ethereum",       chainColor: "#627eea", status: "crosschain-soon",  icon: "⟠"  },
+  BNB:    { label: "BNB",     symbol: "B",  color: "#1a1a2e", bg: "#f0b90b", chain: "BNB Chain",      chainColor: "#f0b90b", status: "crosschain-soon",  icon: "🟡" },
+  SOL:    { label: "SOL",     symbol: "◎",  color: "#fff",    bg: "#9945ff", chain: "Solana",         chainColor: "#9945ff", status: "crosschain-soon",  icon: "◎"  },
+  BTC:    { label: "BTC",     symbol: "₿",  color: "#fff",    bg: "#f7931a", chain: "Bitcoin",        chainColor: "#f7931a", status: "crosschain-soon",  icon: "₿"  },
+  MATIC:  { label: "POL",     symbol: "M",  color: "#fff",    bg: "#8247e5", chain: "Polygon",        chainColor: "#8247e5", status: "crosschain-soon",  icon: "🟣" },
 };
+
+const TOKEN_ORDER: PayToken[] = ["USDC", "EURC", "cirBTC", "ETH", "SOL", "BNB", "BTC", "MATIC"];
 
 const STEP_LABELS: Record<string, string> = {
-  idle:                "Pay with USDC",
-  swapping:            "Swapping to USDC…",
-  approving:           "Step 1/2 — Approve USDC…",
-  "confirming-approve":"Confirming approve…",
-  paying:              "Step 2/2 — Sending payment…",
-  "confirming-pay":    "Waiting for receipt…",
-  success:             "Payment Confirmed!",
-  error:               "Try again",
+  idle:                 "Pay now",
+  swapping:             "Swapping to USDC…",
+  approving:            "Step 1/2 — Approve USDC…",
+  "confirming-approve": "Confirming approve…",
+  paying:               "Step 2/2 — Sending payment…",
+  "confirming-pay":     "Waiting for receipt…",
+  success:              "Payment Confirmed!",
+  error:                "Try again",
 };
+
+function StatusBadge({ status }: { status: TokenDef["status"] }) {
+  if (status === "live") return (
+    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-green/20 text-green">LIVE</span>
+  );
+  if (status === "arc-soon") return (
+    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber/20 text-amber">ARC SOON</span>
+  );
+  return (
+    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-surface border border-white/14 text-muted">SOON</span>
+  );
+}
 
 function CheckoutContent() {
   const params = useSearchParams();
-  const amount = params.get("amount") || "1.00";
-  const orderId = params.get("order") || `order-${Date.now()}`;
-  const memo = params.get("memo") || "";
-  const merchantName = params.get("merchantName") || "Arc Commerce";
-  const merchantParam = params.get("merchant") || "";
+  const amount    = params.get("amount")       || "1.00";
+  const orderId   = params.get("order")        || `order-${Date.now()}`;
+  const memo      = params.get("memo")         || "";
+  const merchantName    = params.get("merchantName")    || "Arc Commerce";
+  const merchantParam   = params.get("merchant")        || "";
   const merchantWalletParam = params.get("merchantWallet") || "";
-  const redirect = params.get("redirect") || "";
+  const redirect  = params.get("redirect")     || "";
 
   const { account, isConnected, isArcNetwork, connect, switchToArc } = useWallet();
   const { step, txHash, error, pay, reset } = useCheckout();
 
   const [usdcBalance, setUsdcBalance] = useState("—");
   const [eurcBalance, setEurcBalance] = useState("—");
-  const [payToken, setPayToken] = useState<PayToken>("USDC");
+  const [payToken, setPayToken]       = useState<PayToken>("USDC");
   const [merchantOverride, setMerchantOverride] = useState<{ wallet: string; merchantId: string } | undefined>();
-  const [loadingMerchant, setLoadingMerchant] = useState(false);
+  const [loadingMerchant, setLoadingMerchant]   = useState(false);
 
   const settings = typeof window !== "undefined"
     ? getSettings()
@@ -63,7 +93,6 @@ function CheckoutContent() {
       .finally(() => setLoadingMerchant(false));
   }, [merchantParam]);
 
-  // Load USDC + EURC balances
   useEffect(() => {
     if (!account) return;
     const eth = (window as any).ethereum;
@@ -76,21 +105,6 @@ function CheckoutContent() {
     fetchBal("0x3600000000000000000000000000000000000000").then(setUsdcBalance).catch(() => setUsdcBalance("0.00"));
     fetchBal(EURC_ADDRESS).then(setEurcBalance).catch(() => setEurcBalance("0.00"));
   }, [account]);
-
-  const isEmbed = params.get("embed") === "1";
-  const displayName = merchantOverride
-    ? (params.get("merchantName") || merchantParam)
-    : (merchantName || settings.businessName || "Arc Commerce");
-
-  const usdcSufficient = usdcBalance !== "—" && parseFloat(usdcBalance) >= parseFloat(amount);
-  const eurcSufficient = eurcBalance !== "—" && parseFloat(eurcBalance) >= parseFloat(amount) * 1.01;
-  const hasGas = usdcBalance !== "—" && parseFloat(usdcBalance) >= 0.01; // need USDC for gas even when paying with EURC
-  const showAltTokens = isConnected;
-
-  // Auto-reset payToken if USDC becomes sufficient
-  useEffect(() => {
-    if (usdcSufficient) setPayToken("USDC");
-  }, [usdcSufficient]);
 
   // Redirect + postMessage on success
   useEffect(() => {
@@ -106,20 +120,51 @@ function CheckoutContent() {
     return () => clearTimeout(timer);
   }, [step, redirect, orderId, txHash]);
 
-  const activeBalance = payToken === "USDC" ? usdcBalance : payToken === "EURC" ? eurcBalance : "—";
-  const activeSufficient = payToken === "USDC" ? usdcSufficient : payToken === "EURC" ? eurcSufficient : false;
+  const isEmbed = params.get("embed") === "1";
+  const displayName = merchantOverride
+    ? (params.get("merchantName") || merchantParam)
+    : (merchantName || settings.businessName || "Arc Commerce");
+
+  const usdcSufficient = usdcBalance !== "—" && parseFloat(usdcBalance) >= parseFloat(amount);
+  const eurcSufficient = eurcBalance !== "—" && parseFloat(eurcBalance) >= parseFloat(amount) * 1.01;
+  const hasGas         = usdcBalance !== "—" && parseFloat(usdcBalance) >= 0.01;
+
+  function getBalance(tok: PayToken): string {
+    if (tok === "USDC") return usdcBalance;
+    if (tok === "EURC") return eurcBalance;
+    return "—";
+  }
+
+  function isSufficient(tok: PayToken): boolean {
+    if (tok === "USDC") return usdcSufficient;
+    if (tok === "EURC") return eurcSufficient;
+    return false;
+  }
+
+  function isDisabled(tok: PayToken): boolean {
+    const meta = TOKENS[tok];
+    if (meta.status !== "live") return true;
+    return false;
+  }
+
+  const activeSufficient = isSufficient(payToken);
+  const activeBalance    = getBalance(payToken);
+  const activeMeta       = TOKENS[payToken];
 
   async function handlePay() {
     if (!isConnected) { await connect(); return; }
     if (!isArcNetwork) { await switchToArc(); return; }
-    await pay({ amount, orderId, memo, merchantOverride, payToken: payToken === "cirBTC" ? "USDC" : payToken }).catch(() => {});
+    await pay({ amount, orderId, memo, merchantOverride, payToken: payToken as "USDC" | "EURC" }).catch(() => {});
   }
 
-  const payLabel = step === "idle" || step === "error"
-    ? payToken === "USDC"
-      ? "Pay with USDC"
-      : `Swap ${TOKEN_META[payToken].label} → USDC & Pay`
+  const payLabel = (step === "idle" || step === "error")
+    ? payToken === "USDC" ? "Pay with USDC" : `Swap ${activeMeta.label} → USDC & Pay`
     : STEP_LABELS[step];
+
+  const canPay = ["idle", "error"].includes(step)
+    && !loadingMerchant
+    && !(isConnected && !activeSufficient)
+    && !(isConnected && payToken === "EURC" && !hasGas);
 
   if (step === "success") {
     return (
@@ -155,6 +200,7 @@ function CheckoutContent() {
         {/* Left: form */}
         <div className="bg-surface border border-white/8 rounded-xl shadow-lg">
           <div className="p-6">
+
             {/* Wallet status */}
             <div className="flex items-center justify-between mb-4 p-3 bg-surface2 border border-white/8 rounded-lg text-sm">
               <span className="text-muted">{isConnected ? `Connected: ${shortAddr(account)}` : "Wallet not connected"}</span>
@@ -162,7 +208,7 @@ function CheckoutContent() {
             </div>
 
             {/* Merchant */}
-            <div className="mb-4 p-3.5 bg-surface2 border border-white/8 rounded-lg flex items-center gap-3">
+            <div className="mb-5 p-3.5 bg-surface2 border border-white/8 rounded-lg flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-accent grid place-items-center text-white font-bold text-lg">{displayName.charAt(0).toUpperCase()}</div>
               <div>
                 <div className="text-[11px] font-semibold text-muted uppercase">Merchant</div>
@@ -171,63 +217,93 @@ function CheckoutContent() {
               <div className="ml-auto text-xs text-green font-semibold bg-green/10 px-2 py-0.5 rounded-full">✓ Verified</div>
             </div>
 
+            {/* Token selector */}
+            <div className="mb-5">
+              <div className="flex items-center justify-between mb-2.5">
+                <span className="text-[12.5px] font-semibold text-muted">Pay with</span>
+                <span className="text-[11px] text-muted">Merchant always receives USDC</span>
+              </div>
+              <div className="grid grid-cols-4 gap-2">
+                {TOKEN_ORDER.map(tok => {
+                  const meta    = TOKENS[tok];
+                  const disabled = isDisabled(tok);
+                  const selected = payToken === tok;
+                  const bal      = getBalance(tok);
+                  const suff     = isSufficient(tok);
+                  return (
+                    <button
+                      key={tok}
+                      disabled={disabled}
+                      onClick={() => !disabled && setPayToken(tok)}
+                      className={`relative flex flex-col items-center gap-1 p-2.5 rounded-xl border text-center transition-all
+                        ${selected ? "border-accent bg-accent/10" : "border-white/10 bg-surface2"}
+                        ${disabled ? "opacity-50 cursor-not-allowed" : "hover:border-white/30 cursor-pointer"}`}
+                    >
+                      {/* Token icon */}
+                      <div className="w-9 h-9 rounded-full grid place-items-center text-[15px] font-bold mb-0.5"
+                        style={{ background: meta.bg, color: meta.color }}>
+                        {meta.symbol}
+                      </div>
+                      <span className="text-[12.5px] font-semibold text-ink">{meta.label}</span>
+                      {/* Chain label */}
+                      <span className="text-[9.5px] text-muted leading-none">{meta.chain}</span>
+                      {/* Balance — only for live tokens */}
+                      {meta.status === "live" && isConnected && (
+                        <span className={`text-[10px] font-mono mt-0.5 ${suff ? "text-green" : "text-red"}`}>
+                          {bal}
+                        </span>
+                      )}
+                      {/* Status badge */}
+                      <div className="mt-0.5">
+                        <StatusBadge status={meta.status} />
+                      </div>
+                      {/* Selected ring */}
+                      {selected && <div className="absolute inset-0 rounded-xl ring-2 ring-accent pointer-events-none" />}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Swap note */}
+              {payToken === "EURC" && (
+                <div className="mt-2.5 px-3 py-2 bg-surface2 border border-white/8 rounded-lg text-[11.5px] text-muted">
+                  ~{(parseFloat(amount) * 1.01).toFixed(2)} EURC will be swapped → {amount} USDC via Arc App Kit before payment.
+                </div>
+              )}
+              {TOKENS[payToken].status === "crosschain-soon" && (
+                <div className="mt-2.5 px-3 py-2 bg-purple/10 border border-purple/20 rounded-lg text-[11.5px] text-[#a371f7]">
+                  🔗 Cross-chain payment via LI.FI — coming when Arc Mainnet launches. {activeMeta.label} on {activeMeta.chain} will auto-swap to USDC on Arc.
+                </div>
+              )}
+              {payToken === "cirBTC" && (
+                <div className="mt-2.5 px-3 py-2 bg-amber/10 border border-amber/20 rounded-lg text-[11.5px] text-amber">
+                  ⏳ cirBTC swap support coming soon on Arc App Kit.
+                </div>
+              )}
+            </div>
+
             {/* Balance row */}
-            {isConnected && (
-              <div className={`mb-4 flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium ${activeSufficient ? "bg-green/10 border border-green/20 text-green" : "bg-red/10 border border-red/20 text-red"}`}>
-                <span>Your {TOKEN_META[payToken].label} balance: {activeBalance}</span>
+            {isConnected && TOKENS[payToken].status === "live" && (
+              <div className={`mb-4 flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium
+                ${activeSufficient ? "bg-green/10 border border-green/20 text-green" : "bg-red/10 border border-red/20 text-red"}`}>
+                <span>Your {activeMeta.label} balance: {activeBalance}</span>
                 <div className="flex items-center gap-2">
                   <span>{activeSufficient ? "✓ Sufficient" : "✗ Insufficient"}</span>
                   {!activeSufficient && (
                     <a href="https://faucet.circle.com" target="_blank" rel="noreferrer"
                       className="text-[11.5px] font-semibold underline opacity-80 hover:opacity-100">
-                      Get {TOKEN_META[payToken].label} →
+                      Get {activeMeta.label} →
                     </a>
                   )}
                 </div>
               </div>
             )}
 
-            {/* Token selector */}
-            {showAltTokens && (
-              <div className="mb-4">
-                <div className="text-[12px] font-semibold text-muted mb-2">
-                  Pay with:
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  {(["USDC", "EURC", "cirBTC"] as PayToken[]).map(tok => {
-                    const meta = TOKEN_META[tok];
-                    const disabled = tok === "cirBTC" || (tok === "USDC" && !usdcSufficient);
-                    const selected = payToken === tok;
-                    const bal = tok === "USDC" ? usdcBalance : tok === "EURC" ? eurcBalance : "—";
-                    return (
-                      <button
-                        key={tok}
-                        disabled={disabled}
-                        onClick={() => setPayToken(tok)}
-                        title={tok === "cirBTC" ? "cirBTC swap not supported yet" : undefined}
-                        className={`relative flex flex-col items-center gap-1.5 p-3 rounded-lg border text-[13px] font-semibold transition-colors
-                          ${selected ? "border-accent bg-accent/10 text-ink" : "border-white/14 bg-surface2 text-muted"}
-                          ${disabled ? "opacity-40 cursor-not-allowed" : "hover:border-white/30 cursor-pointer"}`}
-                      >
-                        <div className="w-8 h-8 rounded-full grid place-items-center text-white font-bold text-sm"
-                          style={{ background: meta.color }}>{meta.icon}</div>
-                        <span>{meta.label}</span>
-                        <span className="text-[10.5px] font-mono text-muted">{bal}</span>
-                        {tok === "cirBTC" && (
-                          <span className="absolute top-1 right-1 text-[9px] bg-surface border border-white/14 text-muted px-1 rounded">Soon</span>
-                        )}
-                        {selected && tok !== "USDC" && (
-                          <span className="absolute top-1 right-1 text-[9px] bg-accent/20 text-accent px-1 rounded">Selected</span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-                {payToken === "EURC" && (
-                  <div className="mt-2 text-[11.5px] text-muted px-1">
-                    ~{(parseFloat(amount) * 1.01).toFixed(2)} EURC will be swapped → {amount} USDC before payment.
-                  </div>
-                )}
+            {/* No gas warning */}
+            {isConnected && payToken === "EURC" && !hasGas && (
+              <div className="mb-4 px-3 py-2.5 bg-amber/10 border border-amber/30 rounded-lg text-amber text-[12.5px]">
+                ⛽ Arc uses USDC as gas. You need at least <strong>~0.01 USDC</strong> for network fees.{" "}
+                <a href="https://faucet.circle.com" target="_blank" rel="noreferrer" className="underline font-semibold">Get free USDC →</a>
               </div>
             )}
 
@@ -253,18 +329,10 @@ function CheckoutContent() {
               </div>
             )}
 
-            {/* No gas warning */}
-            {showAltTokens && payToken !== "USDC" && !hasGas && (
-              <div className="mb-3 px-3 py-2.5 bg-amber/10 border border-amber/30 rounded-lg text-amber text-[12.5px]">
-                ⛽ Arc uses USDC as gas. You need at least <strong>~0.01 USDC</strong> to pay network fees — even when swapping from EURC.{" "}
-                <a href="https://faucet.circle.com" target="_blank" rel="noreferrer" className="underline font-semibold">Get free USDC →</a>
-              </div>
-            )}
-
             {error && <div className="mb-3 px-3 py-2 bg-red/10 border border-red/20 rounded-lg text-red text-sm">{error}</div>}
 
             <div className="flex gap-2">
-              <button onClick={handlePay} disabled={!["idle", "error"].includes(step) || loadingMerchant || (isConnected && !activeSufficient) || (isConnected && payToken !== "USDC" && !hasGas)}
+              <button onClick={handlePay} disabled={!canPay}
                 className="flex-1 py-2.5 bg-accent text-white rounded-lg font-semibold text-sm disabled:opacity-60 hover:bg-accent/90 transition-colors">
                 {payLabel}
               </button>
@@ -272,45 +340,92 @@ function CheckoutContent() {
                 Switch network
               </button>
             </div>
+
+            <p className="text-center text-[11px] text-muted mt-3">
+              Powered by{" "}
+              <span className="text-accent font-semibold">Arc Commerce</span>
+              {" · "}Circle CCTP · Arc App Kit
+            </p>
           </div>
         </div>
 
         {/* Right: preview */}
         {!isEmbed && (
           <div className="bg-surface border border-white/8 rounded-xl shadow-lg p-6">
-            <h2 className="font-semibold text-ink mb-3">Payment preview</h2>
-            <div className="text-5xl font-black tracking-tight mb-1 text-ink">
-              ${formatUsdc(amount)} <span className="text-xl text-muted font-semibold">USDC</span>
+            <h2 className="font-semibold text-ink mb-1">Payment preview</h2>
+            <div className="text-4xl font-black tracking-tight mb-1 text-ink">
+              ${formatUsdc(amount)} <span className="text-lg text-muted font-semibold">USDC</span>
             </div>
-            <p className="text-muted text-sm mb-5">
+            <p className="text-muted text-[12.5px] mb-5">
               {payToken === "EURC"
-                ? `~${(parseFloat(amount) * 1.01).toFixed(2)} EURC will be swapped to USDC first, then paid to merchant.`
-                : "You will approve USDC first, then confirm the payment through the merchant checkout contract."}
+                ? `~${(parseFloat(amount) * 1.01).toFixed(2)} EURC → ${amount} USDC via Arc App Kit swap, then paid to merchant.`
+                : TOKENS[payToken].status === "crosschain-soon"
+                ? `${activeMeta.label} on ${activeMeta.chain} → USDC on Arc via cross-chain swap (coming soon).`
+                : "USDC sent directly through the merchant contract on Arc."}
             </p>
 
-            <h3 className="font-semibold text-ink mb-3">How payment works</h3>
+            <h3 className="font-semibold text-ink mb-3 text-sm">How it works</h3>
             {(payToken === "EURC"
               ? [
-                  ["Swap EURC → USDC", "Arc App Kit swaps your EURC to the exact USDC amount."],
-                  ["Approve USDC", "Allow this checkout to use the invoice amount."],
-                  ["Confirm payment", "Send USDC through the merchant contract on Arc."],
-                  ["Get receipt", "View the confirmed transaction on ArcScan."],
+                  ["Swap EURC → USDC", "Arc App Kit swaps your EURC to USDC.", "live"],
+                  ["Approve USDC",     "Allow checkout to spend the invoice amount.", "live"],
+                  ["Confirm payment",  "USDC sent to merchant contract on Arc.", "live"],
+                  ["Get receipt",      "View confirmed tx on ArcScan.", "live"],
+                ]
+              : TOKENS[payToken].status === "crosschain-soon"
+              ? [
+                  ["Connect source chain", `${activeMeta.label} detected on ${activeMeta.chain}.`, "soon"],
+                  ["Cross-chain swap",     `${activeMeta.label} → USDC via LI.FI aggregator.`, "soon"],
+                  ["Bridge to Arc",        "USDC bridged to Arc Testnet via CCTP.", "soon"],
+                  ["Confirm payment",      "USDC sent to merchant on Arc.", "soon"],
+                  ["Get receipt",          "View confirmed tx on ArcScan.", "soon"],
+                ]
+              : payToken === "cirBTC"
+              ? [
+                  ["Swap cirBTC → USDC", "Arc App Kit swap (coming soon).", "soon"],
+                  ["Approve USDC",       "Allow checkout to spend the invoice amount.", "live"],
+                  ["Confirm payment",    "USDC sent to merchant contract on Arc.", "live"],
+                  ["Get receipt",        "View confirmed tx on ArcScan.", "live"],
                 ]
               : [
-                  ["Approve USDC", "Allow this checkout to use exactly the invoice amount."],
-                  ["Confirm payment", "Send the payment through the merchant contract on Arc."],
-                  ["Get receipt", "View the confirmed transaction on ArcScan."],
+                  ["Approve USDC",    "Allow this checkout to use exactly the invoice amount.", "live"],
+                  ["Confirm payment", "Send USDC through the merchant contract on Arc.", "live"],
+                  ["Get receipt",     "View the confirmed transaction on ArcScan.", "live"],
                 ]
-            ).map(([t, d], i) => (
-              <div key={i} className="flex gap-3 mb-3 opacity-80">
-                <div className="w-7 h-7 rounded-full bg-accent/15 text-accent grid place-items-center text-xs font-bold shrink-0">{i + 1}</div>
-                <div><div className="font-semibold text-sm text-ink">{t}</div><div className="text-xs text-muted">{d}</div></div>
+            ).map(([t, d, s], i) => (
+              <div key={i} className={`flex gap-3 mb-3 ${s === "soon" ? "opacity-50" : "opacity-90"}`}>
+                <div className={`w-7 h-7 rounded-full grid place-items-center text-xs font-bold shrink-0
+                  ${s === "soon" ? "bg-surface2 border border-white/14 text-muted" : "bg-accent/15 text-accent"}`}>
+                  {i + 1}
+                </div>
+                <div>
+                  <div className="font-semibold text-sm text-ink flex items-center gap-2">
+                    {t}
+                    {s === "soon" && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-surface border border-white/14 text-muted">SOON</span>}
+                  </div>
+                  <div className="text-xs text-muted">{d}</div>
+                </div>
               </div>
             ))}
 
+            {/* Roadmap section */}
+            <div className="mt-4 pt-4 border-t border-white/8">
+              <div className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2">Multi-chain roadmap</div>
+              <div className="flex flex-wrap gap-1.5">
+                {(["USDC","EURC","cirBTC","ETH","SOL","BNB","BTC","MATIC"] as PayToken[]).map(tok => (
+                  <div key={tok} className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10.5px] font-semibold border
+                    ${TOKENS[tok].status === "live" ? "bg-green/10 border-green/30 text-green"
+                    : TOKENS[tok].status === "arc-soon" ? "bg-amber/10 border-amber/30 text-amber"
+                    : "bg-surface2 border-white/10 text-muted"}`}>
+                    <span>{TOKENS[tok].label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="mt-4 p-3 bg-amber/10 border-l-4 border-amber text-amber text-xs rounded-r-lg">
-              Use testnet funds only. Get Arc Testnet USDC/EURC from the{" "}
-              <a href="https://faucet.circle.com" target="_blank" rel="noreferrer" className="font-bold underline">Circle Faucet</a>.
+              Testnet only. Get USDC/EURC/cirBTC free at{" "}
+              <a href="https://faucet.circle.com" target="_blank" rel="noreferrer" className="font-bold underline">faucet.circle.com</a>.
             </div>
           </div>
         )}
