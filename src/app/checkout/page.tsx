@@ -84,6 +84,7 @@ function CheckoutContent() {
 
   const usdcSufficient = usdcBalance !== "—" && parseFloat(usdcBalance) >= parseFloat(amount);
   const eurcSufficient = eurcBalance !== "—" && parseFloat(eurcBalance) >= parseFloat(amount) * 1.01;
+  const hasGas = usdcBalance !== "—" && parseFloat(usdcBalance) >= 0.01; // need USDC for gas even when paying with EURC
   const showAltTokens = isConnected && !usdcSufficient;
 
   // Auto-reset payToken if USDC becomes sufficient
@@ -230,10 +231,18 @@ function CheckoutContent() {
               </div>
             )}
 
+            {/* No gas warning */}
+            {showAltTokens && payToken !== "USDC" && !hasGas && (
+              <div className="mb-3 px-3 py-2.5 bg-amber/10 border border-amber/30 rounded-lg text-amber text-[12.5px]">
+                ⛽ Arc uses USDC as gas. You need at least <strong>~0.01 USDC</strong> to pay network fees — even when swapping from EURC.{" "}
+                <a href="https://faucet.circle.com" target="_blank" rel="noreferrer" className="underline font-semibold">Get free USDC →</a>
+              </div>
+            )}
+
             {error && <div className="mb-3 px-3 py-2 bg-red/10 border border-red/20 rounded-lg text-red text-sm">{error}</div>}
 
             <div className="flex gap-2">
-              <button onClick={handlePay} disabled={!["idle", "error"].includes(step) || loadingMerchant || (isConnected && !activeSufficient)}
+              <button onClick={handlePay} disabled={!["idle", "error"].includes(step) || loadingMerchant || (isConnected && !activeSufficient) || (isConnected && payToken !== "USDC" && !hasGas)}
                 className="flex-1 py-2.5 bg-accent text-white rounded-lg font-semibold text-sm disabled:opacity-60 hover:bg-accent/90 transition-colors">
                 {payLabel}
               </button>
