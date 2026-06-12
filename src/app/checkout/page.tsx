@@ -92,6 +92,20 @@ function CheckoutContent() {
     if (usdcSufficient) setPayToken("USDC");
   }, [usdcSufficient]);
 
+  // Redirect + postMessage on success
+  useEffect(() => {
+    if (step !== "success") return;
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: "ARCPAY_SUCCESS", orderId, txHash }, "*");
+    }
+    if (!redirect) return;
+    const sep = redirect.includes("?") ? "&" : "?";
+    const timer = setTimeout(() => {
+      window.location.href = `${redirect}${sep}order=${orderId}&tx=${txHash}`;
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [step, redirect, orderId, txHash]);
+
   const activeBalance = payToken === "USDC" ? usdcBalance : payToken === "EURC" ? eurcBalance : "—";
   const activeSufficient = payToken === "USDC" ? usdcSufficient : payToken === "EURC" ? eurcSufficient : false;
 
