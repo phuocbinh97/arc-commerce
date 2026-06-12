@@ -2,6 +2,7 @@ export const ARC_CHAIN_ID_HEX = "0x4cef52";
 export const ARC_RPC = "https://rpc.testnet.arc.network";
 export const ARC_EXPLORER = "https://testnet.arcscan.app";
 export const USDC_ADDRESS = "0x3600000000000000000000000000000000000000" as `0x${string}`;
+export const EURC_ADDRESS = "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a" as `0x${string}`;
 export const HUB_CONTRACT = "0xc7cb4f5ace70a4febc3b260591832af72563e988" as `0x${string}`;
 export const MERCHANT_WALLET = "0x5e86FCe1b94772Ff6a9632FA8BEc82BA59e24f02" as `0x${string}`;
 export const KIT_KEY = process.env.NEXT_PUBLIC_KIT_KEY ?? "";

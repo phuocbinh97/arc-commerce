@@ -2,11 +2,19 @@
 import { useCallback, useState } from "react";
 import {
   encodeApprove, encodeHubPay, fetchGasPrice,
-  waitForReceipt, parseUsdcErc20, USDC_ADDRESS, HUB_CONTRACT, MERCHANT_WALLET
+  waitForReceipt, parseUsdcErc20, USDC_ADDRESS, HUB_CONTRACT, MERCHANT_WALLET, KIT_KEY
 } from "@/lib/arc";
 import { savePayment, getSettings } from "@/lib/storage";
 
-export type CheckoutStep = "idle" | "approving" | "confirming-approve" | "paying" | "confirming-pay" | "success" | "error";
+export type CheckoutStep =
+  | "idle"
+  | "swapping"
+  | "approving"
+  | "confirming-approve"
+  | "paying"
+  | "confirming-pay"
+  | "success"
+  | "error";
 
 export function useCheckout() {
   const [step, setStep] = useState<CheckoutStep>("idle");
@@ -14,26 +22,67 @@ export function useCheckout() {
   const [error, setError] = useState("");
 
   const pay = useCallback(async ({
-    amount, orderId, memo, merchantOverride,
-  }: { amount: string; orderId: string; memo: string; merchantOverride?: { wallet: string; merchantId: string } }) => {
+    amount, orderId, memo, merchantOverride, payToken = "USDC",
+  }: {
+    amount: string;
+    orderId: string;
+    memo: string;
+    merchantOverride?: { wallet: string; merchantId: string };
+    payToken?: "USDC" | "EURC";
+  }) => {
     const eth = (window as any).ethereum;
     if (!eth) throw new Error("No wallet found.");
 
-    // Use override from URL param (external merchant) or fall back to local settings
     const settings = getSettings();
     const merchant = merchantOverride?.wallet || settings.merchantWallet || MERCHANT_WALLET;
     const contract = settings.hubContract || HUB_CONTRACT;
     const merchantId = merchantOverride?.merchantId || settings.merchantId || "arc-commerce";
 
-    setStep("approving"); setError(""); setTxHash("");
+    setStep("swapping"); setError(""); setTxHash("");
 
     try {
       const accs = await eth.request({ method: "eth_accounts" });
       const account = accs[0];
+
+      // Step 0: Swap EURC → USDC if needed
+      if (payToken === "EURC") {
+        const appKitModule = await import("@circle-fin/app-kit");
+        const adapterModule = await import("@circle-fin/adapter-viem-v2");
+        const AppKit = (appKitModule as any).AppKit;
+        const createAdapterFromProvider = (adapterModule as any).createAdapterFromProvider;
+
+        const kit = new AppKit();
+        const adapter = await createAdapterFromProvider({ provider: eth });
+
+        // Swap 1% more to cover slippage
+        const swapAmount = (parseFloat(amount) * 1.01).toFixed(2);
+
+        const nonceBefore = await eth.request({ method: "eth_getTransactionCount", params: [account, "latest"] })
+          .then((n: string) => parseInt(n, 16));
+
+        await kit.swap({
+          from: { adapter, chain: "Arc_Testnet" },
+          tokenIn: "EURC",
+          tokenOut: "USDC",
+          amountIn: swapAmount,
+          config: { kitKey: `KIT_KEY:${KIT_KEY}` },
+        });
+
+        const nonceAfter = await eth.request({ method: "eth_getTransactionCount", params: [account, "latest"] })
+          .then((n: string) => parseInt(n, 16));
+
+        if (nonceAfter <= nonceBefore) {
+          setError("Swap cancelled.");
+          setStep("error");
+          return;
+        }
+      }
+
       const units = parseUsdcErc20(amount);
       const gas = await fetchGasPrice(eth);
 
-      // Step 1: Approve
+      // Step 1: Approve USDC
+      setStep("approving");
       const approveTx = await eth.request({
         method: "eth_sendTransaction",
         params: [{ from: account, to: USDC_ADDRESS, value: "0x0", data: encodeApprove(contract, units), ...gas }],
@@ -54,7 +103,6 @@ export function useCheckout() {
       setStep("confirming-pay");
       await waitForReceipt(eth, payTx);
 
-      // Save to localStorage (same-origin) + Redis (cross-origin widget support)
       savePayment({ txHash: payTx, amount, orderId, merchant: account, ts: Date.now() });
       fetch("/api/transactions", {
         method: "POST",
@@ -62,7 +110,6 @@ export function useCheckout() {
         body: JSON.stringify({ txHash: payTx, amount, orderId, merchantId, merchantWallet: merchant, buyerWallet: account, ts: Date.now() }),
       }).catch(console.error);
 
-      // Mark invoice paid if orderId starts with INV-
       if (orderId.startsWith("INV-")) {
         fetch("/api/invoices", {
           method: "PATCH",
