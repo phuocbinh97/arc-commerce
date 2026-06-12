@@ -85,7 +85,7 @@ function CheckoutContent() {
   const usdcSufficient = usdcBalance !== "—" && parseFloat(usdcBalance) >= parseFloat(amount);
   const eurcSufficient = eurcBalance !== "—" && parseFloat(eurcBalance) >= parseFloat(amount) * 1.01;
   const hasGas = usdcBalance !== "—" && parseFloat(usdcBalance) >= 0.01; // need USDC for gas even when paying with EURC
-  const showAltTokens = isConnected && !usdcSufficient;
+  const showAltTokens = isConnected;
 
   // Auto-reset payToken if USDC becomes sufficient
   useEffect(() => {
@@ -187,11 +187,11 @@ function CheckoutContent() {
               </div>
             )}
 
-            {/* Alt token selector — shown when USDC insufficient */}
+            {/* Token selector */}
             {showAltTokens && (
               <div className="mb-4">
-                <div className="text-[12px] font-semibold text-amber mb-2">
-                  ⚠ Not enough USDC — pay with another token (auto-swap to USDC):
+                <div className="text-[12px] font-semibold text-muted mb-2">
+                  Pay with:
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   {(["USDC", "EURC", "cirBTC"] as PayToken[]).map(tok => {
