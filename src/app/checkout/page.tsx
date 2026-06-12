@@ -55,7 +55,7 @@ function StatusLabel({ status }: { status: TokenDef["status"] }) {
   return <span className="text-[10px] text-muted">Coming soon</span>;
 }
 
-function TokenDropdown({ value, onChange }: { value: PayToken; onChange: (t: PayToken) => void }) {
+function TokenDropdown({ value, onChange, balances }: { value: PayToken; onChange: (t: PayToken) => void; balances: Partial<Record<PayToken, string>> }) {
   const [open, setOpen] = useState(false);
   const meta = TOKENS[value];
   return (
@@ -69,7 +69,7 @@ function TokenDropdown({ value, onChange }: { value: PayToken; onChange: (t: Pay
           <div className="text-[10.5px] text-muted">{meta.chain}</div>
         </div>
         <StatusDot status={meta.status} />
-        <span className="text-muted text-xs ml-1">▾</span>
+        <span className={`text-ink text-sm ml-1 transition-transform ${open ? "rotate-180" : ""}`} style={{display:"inline-block"}}>▾</span>
       </button>
 
       {open && (
@@ -91,7 +91,12 @@ function TokenDropdown({ value, onChange }: { value: PayToken; onChange: (t: Pay
                     <div className="text-[13px] font-semibold text-ink">{m.label}</div>
                     <div className="text-[10.5px] text-muted">{m.chain}</div>
                   </div>
-                  <StatusLabel status={m.status} />
+                  <div className="text-right">
+                    <div><StatusLabel status={m.status} /></div>
+                    <div className="font-mono text-[11px] text-muted mt-0.5">
+                      {balances[tok] ?? "—"}
+                    </div>
+                  </div>
                   {tok === value && <span className="text-accent text-xs ml-1">✓</span>}
                 </button>
               );
@@ -271,7 +276,7 @@ function CheckoutContent() {
                 <span className="text-[12.5px] font-semibold text-muted">Pay with</span>
                 <span className="text-[11px] text-muted">Merchant always receives USDC</span>
               </div>
-              <TokenDropdown value={payToken} onChange={setPayToken} />
+              <TokenDropdown value={payToken} onChange={setPayToken} balances={{ USDC: usdcBalance, EURC: eurcBalance }} />
               {payToken === "EURC" && (
                 <div className="mt-2 px-3 py-2 bg-surface2 border border-white/8 rounded-lg text-[11.5px] text-muted">
                   ~{(parseFloat(amount) * 1.01).toFixed(2)} EURC will be swapped → {amount} USDC via Arc App Kit.
