@@ -23,9 +23,12 @@ export default function Home() {
     <div className="min-h-screen bg-bg flex flex-col">
       {/* Header */}
       <header className="border-b border-white/8 px-8 h-14 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-accent rounded-lg grid place-items-center font-bold text-white text-sm">A</div>
-          <span className="font-bold text-[15px]">Nexmer</span>
+        <div className="flex flex-col leading-none">
+          <div className="flex items-end">
+            <span className="text-[20px] font-black tracking-tight text-ink">Nex</span>
+            <span className="text-[20px] font-black tracking-tight text-accent">mer</span>
+          </div>
+          <span className="text-[8px] font-bold tracking-[0.18em] text-muted uppercase">On-Chain Checkout</span>
         </div>
         <Link href="/dashboard" className="text-[13px] text-muted hover:text-ink">Already registered? →</Link>
       </header>
