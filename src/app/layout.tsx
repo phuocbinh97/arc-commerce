@@ -3,7 +3,7 @@ import "./globals.css";
 import AppShell from "@/components/AppShell";
 
 export const metadata: Metadata = {
-  title: "Arc Commerce",
+  title: "Nexmer",
   description: "USDC Payment Platform on Arc Testnet",
 };
 

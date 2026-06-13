@@ -64,7 +64,7 @@ export default function Invoices() {
     url.searchParams.set("amount", inv.amount);
     url.searchParams.set("order", inv.id);
     url.searchParams.set("memo", inv.memo || inv.description);
-    url.searchParams.set("merchantName", settings.businessName || "Arc Commerce");
+    url.searchParams.set("merchantName", settings.businessName || "Nexmer");
     if (settings.merchantId) url.searchParams.set("merchant", settings.merchantId);
     return url.toString();
   }

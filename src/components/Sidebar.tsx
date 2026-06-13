@@ -38,7 +38,7 @@ export default function Sidebar() {
         </div>
         <div className="min-w-0">
           <div className="font-bold text-[15px] tracking-tight truncate">
-            {shopName || "Arc Commerce"}
+            {shopName || "Nexmer"}
           </div>
           <div className="text-[11px] text-muted">Merchant Dashboard</div>
         </div>

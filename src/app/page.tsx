@@ -25,7 +25,7 @@ export default function Home() {
       <header className="border-b border-white/8 px-8 h-14 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 bg-accent rounded-lg grid place-items-center font-bold text-white text-sm">A</div>
-          <span className="font-bold text-[15px]">Arc Commerce</span>
+          <span className="font-bold text-[15px]">Nexmer</span>
         </div>
         <Link href="/dashboard" className="text-[13px] text-muted hover:text-ink">Already registered? →</Link>
       </header>
@@ -40,7 +40,7 @@ export default function Home() {
           <span className="text-accent">on any website</span>
         </h1>
         <p className="text-muted text-lg max-w-xl mb-8">
-          Arc Commerce is a Stripe-like payment platform on Arc Testnet.
+          Nexmer is a Stripe-like payment platform on Arc Testnet.
           Register your shop, embed a widget, and receive USDC directly to your wallet — no middleman.
         </p>
 
@@ -99,7 +99,7 @@ export default function Home() {
       </main>
 
       <footer className="border-t border-white/8 px-8 py-4 text-center text-[12px] text-muted">
-        Arc Commerce · Built on Arc Testnet · USDC by Circle
+        Nexmer · Built on Arc Testnet · USDC by Circle
       </footer>
     </div>
   );

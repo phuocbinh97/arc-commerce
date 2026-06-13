@@ -113,7 +113,7 @@ function CheckoutContent() {
   const amount    = params.get("amount")       || "1.00";
   const orderId   = params.get("order")        || `order-${Date.now()}`;
   const memo      = params.get("memo")         || "";
-  const merchantName    = params.get("merchantName")    || "Arc Commerce";
+  const merchantName    = params.get("merchantName")    || "Nexmer";
   const merchantParam   = params.get("merchant")        || "";
   const merchantWalletParam = params.get("merchantWallet") || "";
   const redirect  = params.get("redirect")     || "";
@@ -176,7 +176,7 @@ function CheckoutContent() {
   const isEmbed = params.get("embed") === "1";
   const displayName = merchantOverride
     ? (params.get("merchantName") || merchantParam)
-    : (merchantName || settings.businessName || "Arc Commerce");
+    : (merchantName || settings.businessName || "Nexmer");
 
   const usdcSufficient = usdcBalance !== "—" && parseFloat(usdcBalance) >= parseFloat(amount);
   const eurcSufficient = eurcBalance !== "—" && parseFloat(eurcBalance) >= parseFloat(amount) * 1.01;
@@ -355,7 +355,7 @@ function CheckoutContent() {
 
             <p className="text-center text-[11px] text-muted mt-3">
               Powered by{" "}
-              <span className="text-accent font-semibold">Arc Commerce</span>
+              <span className="text-accent font-semibold">Nexmer</span>
               {" · "}Circle CCTP · Arc App Kit
             </p>
           </div>

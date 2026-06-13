@@ -34,7 +34,7 @@ async function connectWalletConnect(): Promise<{ provider: any; account: string 
     optionalChains: [1, 11155111],
     showQrModal: true,
     metadata: {
-      name: "Arc Commerce",
+      name: "Nexmer",
       description: "USDC Payment Platform on Arc Testnet",
       url: "https://arcpay-desk.vercel.app",
       icons: ["https://arcpay-desk.vercel.app/favicon.ico"],

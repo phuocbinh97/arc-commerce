@@ -22,7 +22,7 @@ export default function AIWidget() {
     const todayTotal = today.reduce((s, h) => s + (parseFloat(h.amount) || 0), 0);
     const paid = invs.filter(i => i.status === "paid").length;
     const pending = invs.filter(i => i.status === "pending").length;
-    return `You are an AI assistant for Arc Commerce, a USDC payment platform on Arc Testnet.
+    return `You are an AI assistant for Nexmer, a USDC payment platform on Arc Testnet.
 Merchant data:
 - Total revenue: ${formatUsdc(total)} USDC
 - Today's revenue: ${formatUsdc(todayTotal)} USDC (${today.length} transactions)
