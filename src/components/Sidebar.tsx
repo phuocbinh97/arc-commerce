@@ -32,16 +32,12 @@ export default function Sidebar() {
 
   return (
     <aside className="fixed top-0 left-0 bottom-0 w-[220px] bg-surface border-r border-white/8 flex flex-col z-50">
-      <div className="px-[18px] py-5 border-b border-white/8 flex items-center gap-3">
-        <div className="w-8 h-8 bg-accent rounded-lg grid place-items-center font-bold text-[15px] text-white shrink-0">
-          {initial}
+      <div className="px-[18px] py-4 border-b border-white/8">
+        <div className="flex items-end gap-0">
+          <span className="text-[22px] font-black tracking-tight text-ink leading-none">Nex</span>
+          <span className="text-[22px] font-black tracking-tight text-accent leading-none">mer</span>
         </div>
-        <div className="min-w-0">
-          <div className="font-bold text-[15px] tracking-tight truncate">
-            {shopName || "Nexmer"}
-          </div>
-          <div className="text-[11px] text-muted">Merchant Dashboard</div>
-        </div>
+        <div className="text-[9px] font-bold tracking-[0.18em] text-muted uppercase mt-0.5">On-Chain Checkout</div>
       </div>
 
       <nav className="flex-1 p-2 flex flex-col gap-0.5 overflow-y-auto">
