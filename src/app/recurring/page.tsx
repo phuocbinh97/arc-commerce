@@ -248,9 +248,9 @@ export default function Recurring() {
                 <div className="flex gap-1.5">
                   {DAYS_OF_WEEK.map((d, i) => (
                     <button key={d} type="button" onClick={() => setForm(f=>({...f,payWeekday:String(i+1)}))}
-                      className={`flex-1 py-1.5 rounded-lg text-[12.5px] font-semibold border transition-colors
+                      className={`w-10 h-9 rounded-lg text-[12px] font-semibold border transition-colors
                         ${form.payWeekday===String(i+1) ? "bg-accent text-white border-accent" : "bg-surface2 border-white/14 text-muted hover:text-ink"}`}>
-                      {d}
+                      {d.slice(0,2)}
                     </button>
                   ))}
                 </div>
