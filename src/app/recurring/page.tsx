@@ -19,10 +19,11 @@ const CATEGORIES = [
 ];
 
 const INTERVALS = [
-  { value: "weekly",    label: "Weekly",    days: 7   },
-  { value: "monthly",   label: "Monthly",   days: 30  },
-  { value: "quarterly", label: "Quarterly", days: 90  },
-  { value: "yearly",    label: "Yearly",    days: 365 },
+  { value: "test",      label: "Every minute (test)", days: 1/1440 },
+  { value: "weekly",    label: "Weekly",              days: 7      },
+  { value: "monthly",   label: "Monthly",             days: 30     },
+  { value: "quarterly", label: "Quarterly",           days: 90     },
+  { value: "yearly",    label: "Yearly",              days: 365    },
 ];
 
 function catMeta(c: string) { return CATEGORIES.find(x => x.value === c) || CATEGORIES[5]; }
