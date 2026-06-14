@@ -115,7 +115,7 @@ export interface RecurringPayment {
   paidPeriods: number;
   startDate: number;
   nextDueDate: number;
-  status: "active" | "paused" | "cancelled";
+  status: "active" | "paused" | "cancelled" | "completed";
   notes?: string;
 }
 

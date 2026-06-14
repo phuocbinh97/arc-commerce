@@ -175,7 +175,7 @@ export default function Recurring() {
           ...p,
           paidPeriods: newPaid,
           nextDueDate: done ? p.nextDueDate : nextDue(Date.now(), p.interval, p.payDay),
-          status: done ? "cancelled" as const : p.status,
+          status: done ? "completed" as const : p.status,
         };
       });
       saveRecurringPayments(updated);
@@ -188,10 +188,13 @@ export default function Recurring() {
     } finally { setPaying(null); }
   }, [isConnected, isArcNetwork, connect, switchToArc, payments]);
 
-  const active    = payments.filter(p => p.status === "active");
-  const paused    = payments.filter(p => p.status === "paused");
+  const visiblePayments = isConnected ? payments : [];
+  const active    = visiblePayments.filter(p => p.status === "active");
+  const paused    = visiblePayments.filter(p => p.status === "paused");
+  const completed = visiblePayments.filter(p => p.status === "completed");
   const dueNow    = active.filter(p => p.nextDueDate <= Date.now() + 86400000); // due within 24h
   const upcoming  = active.filter(p => p.nextDueDate > Date.now() + 86400000);
+  const visibleInvoices = isConnected ? invoices : [];
 
   return (
     <>
@@ -201,10 +204,10 @@ export default function Recurring() {
         {/* Stats */}
         <div className="grid grid-cols-4 gap-4 mb-6">
           {[
-            { label: "Active",        value: active.length,    color: "text-green"  },
-            { label: "Due / Overdue", value: dueNow.length,    color: dueNow.length > 0 ? "text-amber" : "text-ink" },
-            { label: "Paused",        value: paused.length,    color: "text-muted"  },
-            { label: "Total Invoices",value: invoices.length,  color: "text-accent" },
+            { label: "Active",        value: active.length,         color: "text-green"  },
+            { label: "Due / Overdue", value: dueNow.length,         color: dueNow.length > 0 ? "text-amber" : "text-ink" },
+            { label: "Completed",     value: completed.length,      color: "text-purple" },
+            { label: "Total Invoices",value: visibleInvoices.length, color: "text-accent" },
           ].map(s => (
             <div key={s.label} className="bg-surface border border-white/8 rounded-lg p-4">
               <div className={`text-2xl font-bold font-mono ${s.color}`}>{s.value}</div>
@@ -334,7 +337,7 @@ export default function Recurring() {
             <button key={t} onClick={() => setTab(t)}
               className={`px-4 py-1.5 rounded-md text-[13px] font-semibold transition-colors capitalize
                 ${tab===t ? "bg-surface text-ink shadow" : "text-muted hover:text-ink"}`}>
-              {t === "schedules" ? `Schedules (${payments.filter(p=>p.status!=="cancelled").length})` : `Invoice History (${invoices.length})`}
+              {t === "schedules" ? `Schedules (${visiblePayments.filter(p=>p.status!=="cancelled").length})` : `Invoice History (${visibleInvoices.length})`}
             </button>
           ))}
         </div>
@@ -362,7 +365,14 @@ export default function Recurring() {
                 {paused.map(rec => <RecurringRow key={rec.id} rec={rec} paying={paying} payStatus={payStatus} onPay={payNow} onToggle={toggleStatus} />)}
               </div>
             )}
-            {payments.filter(p=>p.status!=="cancelled").length === 0 && (
+            {/* Completed */}
+            {completed.length > 0 && (
+              <div>
+                <div className="text-[11.5px] font-bold text-purple uppercase tracking-wider mb-2">✓ Completed</div>
+                {completed.map(rec => <RecurringRow key={rec.id} rec={rec} paying={paying} payStatus={payStatus} onPay={payNow} onToggle={toggleStatus} />)}
+              </div>
+            )}
+            {visiblePayments.filter(p=>p.status!=="cancelled").length === 0 && (
               <div className="bg-surface border border-white/8 rounded-xl p-12 text-center">
                 <div className="text-4xl mb-3">↻</div>
                 <div className="font-semibold text-ink mb-1">No recurring payments yet</div>
@@ -379,7 +389,7 @@ export default function Recurring() {
               <div className="font-semibold text-sm">Invoice History</div>
               <div className="text-[12px] text-muted">{invoices.length} payments · On-chain receipts</div>
             </div>
-            {invoices.length === 0 ? (
+            {visibleInvoices.length === 0 ? (
               <div className="p-12 text-center text-muted text-sm">No invoices yet — pay a schedule to generate your first invoice.</div>
             ) : (
               <table className="w-full">
@@ -393,7 +403,7 @@ export default function Recurring() {
                   </tr>
                 </thead>
                 <tbody>
-                  {invoices.map((inv, i) => (
+                  {visibleInvoices.map((inv, i) => (
                     <tr key={inv.id} className={`border-b border-white/8 last:border-0 hover:bg-surface2 transition-colors ${i % 2 === 0 ? "" : "bg-white/[0.01]"}`}>
                       <td className="px-5 py-3 text-[13px] font-medium text-ink">{inv.name}</td>
                       <td className="px-5 py-3 font-mono text-[12px] text-muted">{shortAddr(inv.recipientWallet)}</td>
@@ -468,20 +478,26 @@ function RecurringRow({ rec, paying, payStatus, onPay, onToggle }: {
 
       {/* Actions */}
       <div className="flex gap-1.5 shrink-0">
-        {rec.status === "active" && (
-          <button onClick={() => onPay(rec)} disabled={busy}
-            className={`px-3 py-1.5 rounded-lg text-[12.5px] font-semibold transition-colors
-              ${due.urgent ? "bg-accent text-white hover:bg-accent/90" : "bg-surface2 border border-white/14 text-ink hover:bg-surface"}
-              disabled:opacity-50`}>
-            {busy ? "Paying…" : "Pay now"}
-          </button>
+        {rec.status === "completed" ? (
+          <span className="px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-purple/10 border border-purple/30 text-purple">✓ Done</span>
+        ) : (
+          <>
+            {rec.status === "active" && (
+              <button onClick={() => onPay(rec)} disabled={busy}
+                className={`px-3 py-1.5 rounded-lg text-[12.5px] font-semibold transition-colors
+                  ${due.urgent ? "bg-accent text-white hover:bg-accent/90" : "bg-surface2 border border-white/14 text-ink hover:bg-surface"}
+                  disabled:opacity-50`}>
+                {busy ? "Paying…" : "Pay now"}
+              </button>
+            )}
+            {rec.status === "active"
+              ? <button onClick={() => onToggle(rec.id,"paused")} className="px-2.5 py-1.5 rounded-lg text-[12px] text-muted border border-white/8 hover:text-ink">⏸</button>
+              : rec.status === "paused"
+              ? <button onClick={() => onToggle(rec.id,"active")} className="px-2.5 py-1.5 rounded-lg text-[12px] text-green border border-green/20 hover:bg-green/10">▶</button>
+              : null}
+            <button onClick={() => onToggle(rec.id,"cancelled")} className="px-2.5 py-1.5 rounded-lg text-[12px] text-muted border border-white/8 hover:text-red">✕</button>
+          </>
         )}
-        {rec.status === "active"
-          ? <button onClick={() => onToggle(rec.id,"paused")} className="px-2.5 py-1.5 rounded-lg text-[12px] text-muted border border-white/8 hover:text-ink">⏸</button>
-          : rec.status === "paused"
-          ? <button onClick={() => onToggle(rec.id,"active")} className="px-2.5 py-1.5 rounded-lg text-[12px] text-green border border-green/20 hover:bg-green/10">▶</button>
-          : null}
-        <button onClick={() => onToggle(rec.id,"cancelled")} className="px-2.5 py-1.5 rounded-lg text-[12px] text-muted border border-white/8 hover:text-red">✕</button>
       </div>
     </div>
   );
