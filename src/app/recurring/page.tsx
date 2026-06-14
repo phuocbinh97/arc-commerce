@@ -240,36 +240,31 @@ export default function Recurring() {
                   className="w-full bg-surface2 border border-white/14 rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-accent">
                   {INTERVALS.map(i => <option key={i.value} value={i.value}>{i.label}</option>)}
                 </select>
+                {form.interval === "weekly" && (
+                  <div className="mt-2">
+                    <div className="flex gap-1 flex-wrap">
+                      {DAYS_OF_WEEK.map((d, i) => (
+                        <button key={d} type="button" onClick={() => setForm(f=>({...f,payWeekday:String(i+1)}))}
+                          className={`px-2.5 py-1.5 rounded-lg text-[12px] font-semibold border transition-colors
+                            ${form.payWeekday===String(i+1) ? "bg-accent text-white border-accent" : "bg-surface2 border-white/14 text-muted hover:text-ink"}`}>
+                          {d}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="text-[11px] text-muted mt-1">
+                      Next: <span className="text-ink font-medium">{(() => {
+                        const dow = parseInt(form.payWeekday);
+                        const now = new Date();
+                        const todayDow = now.getDay() || 7;
+                        let diff = dow - todayDow; if (diff <= 0) diff += 7;
+                        const t = new Date(now); t.setDate(t.getDate() + diff);
+                        return t.toLocaleDateString("en-US", { weekday:"short", day:"numeric", month:"short" });
+                      })()}</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-            {form.interval === "weekly" && (
-              <div className="mb-3">
-                <label className="text-[11.5px] font-semibold text-muted uppercase mb-1 block">Payment day of week</label>
-                <div className="flex gap-1.5">
-                  {DAYS_OF_WEEK.map((d, i) => (
-                    <button key={d} type="button" onClick={() => setForm(f=>({...f,payWeekday:String(i+1)}))}
-                      className={`flex-1 py-2 rounded-lg text-[12.5px] font-semibold border transition-colors
-                        ${form.payWeekday===String(i+1) ? "bg-accent text-white border-accent" : "bg-surface2 border-white/14 text-muted hover:text-ink"}`}>
-                      {d}
-                    </button>
-                  ))}
-                </div>
-                <div className="text-[11px] text-muted mt-1.5">
-                  Next due: <span className="text-ink font-medium">
-                    {(() => {
-                      const dow = parseInt(form.payWeekday);
-                      const now = new Date();
-                      const todayDow = now.getDay() || 7;
-                      let diff = dow - todayDow;
-                      if (diff <= 0) diff += 7;
-                      const t = new Date(now);
-                      t.setDate(t.getDate() + diff);
-                      return t.toLocaleDateString("en-US", { weekday:"long", day:"numeric", month:"short" });
-                    })()}
-                  </span>
-                </div>
-              </div>
-            )}
             {["monthly","quarterly","yearly"].includes(form.interval) && (
               <div className="mb-3">
                 <label className="text-[11.5px] font-semibold text-muted uppercase mb-1 block">Payment day of month</label>
