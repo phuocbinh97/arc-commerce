@@ -43,21 +43,30 @@ function nextDue(from: number, interval: string, payDay?: number): number {
   return from + days * 86400 * 1000;
 }
 
-function nextDueFromNow(interval: string, payDay?: number): number {
-  if (interval === "test") return Date.now(); // due immediately
+function nextDueFromNow(interval: string, payDay?: number, payWeekday?: number): number {
+  if (interval === "test") return Date.now();
+  if (interval === "weekly" && payWeekday) {
+    const now = new Date();
+    const todayDow = now.getDay() || 7; // 1=Mon..7=Sun
+    let diff = payWeekday - todayDow;
+    if (diff <= 0) diff += 7;
+    const t = new Date(now);
+    t.setDate(t.getDate() + diff);
+    t.setHours(0, 0, 0, 0);
+    return t.getTime();
+  }
   if ((interval === "monthly" || interval === "quarterly" || interval === "yearly") && payDay) {
     const now = new Date();
     const target = new Date();
     target.setDate(Math.min(payDay, 28));
     target.setHours(0, 0, 0, 0);
-    // If this month's pay day already passed, go to next cycle
     if (target <= now) {
       const months = interval === "monthly" ? 1 : interval === "quarterly" ? 3 : 12;
       target.setMonth(target.getMonth() + months);
     }
     return target.getTime();
   }
-  return Date.now(); // due immediately for weekly
+  return Date.now();
 }
 
 function dueStatus(nextDueDate: number): { label: string; color: string; urgent: boolean } {
@@ -69,7 +78,9 @@ function dueStatus(nextDueDate: number): { label: string; color: string; urgent:
   return { label: `Due in ${days}d`,                                 color: "text-muted", urgent: false };
 }
 
-const EMPTY_FORM = { name: "", category: "hosting", recipientWallet: "", amount: "", interval: "monthly", payDay: "1", notes: "" };
+const DAYS_OF_WEEK = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+
+const EMPTY_FORM = { name: "", category: "hosting", recipientWallet: "", amount: "", interval: "monthly", payDay: "1", payWeekday: "1", notes: "" };
 
 export default function Recurring() {
   const { account, isConnected, isArcNetwork, connect, switchToArc } = useWallet();
@@ -90,6 +101,7 @@ export default function Recurring() {
     if (!form.name || !form.recipientWallet || !form.amount) return;
     const now = Date.now();
     const payDay = ["monthly","quarterly","yearly"].includes(form.interval) ? parseInt(form.payDay) : undefined;
+    const payWeekday = form.interval === "weekly" ? parseInt(form.payWeekday) : undefined;
     const rec: RecurringPayment = {
       id: "rec_" + Math.random().toString(36).slice(2, 9),
       name: form.name,
@@ -98,8 +110,9 @@ export default function Recurring() {
       amount: form.amount,
       interval: form.interval as RecurringPayment["interval"],
       payDay,
+      payWeekday,
       startDate: now,
-      nextDueDate: nextDueFromNow(form.interval, payDay),
+      nextDueDate: nextDueFromNow(form.interval, payDay, payWeekday),
       status: "active",
       notes: form.notes,
     };
@@ -229,6 +242,34 @@ export default function Recurring() {
                 </select>
               </div>
             </div>
+            {form.interval === "weekly" && (
+              <div className="mb-3">
+                <label className="text-[11.5px] font-semibold text-muted uppercase mb-1 block">Payment day of week</label>
+                <div className="flex gap-1.5">
+                  {DAYS_OF_WEEK.map((d, i) => (
+                    <button key={d} type="button" onClick={() => setForm(f=>({...f,payWeekday:String(i+1)}))}
+                      className={`flex-1 py-2 rounded-lg text-[12.5px] font-semibold border transition-colors
+                        ${form.payWeekday===String(i+1) ? "bg-accent text-white border-accent" : "bg-surface2 border-white/14 text-muted hover:text-ink"}`}>
+                      {d}
+                    </button>
+                  ))}
+                </div>
+                <div className="text-[11px] text-muted mt-1.5">
+                  Next due: <span className="text-ink font-medium">
+                    {(() => {
+                      const dow = parseInt(form.payWeekday);
+                      const now = new Date();
+                      const todayDow = now.getDay() || 7;
+                      let diff = dow - todayDow;
+                      if (diff <= 0) diff += 7;
+                      const t = new Date(now);
+                      t.setDate(t.getDate() + diff);
+                      return t.toLocaleDateString("en-US", { weekday:"long", day:"numeric", month:"short" });
+                    })()}
+                  </span>
+                </div>
+              </div>
+            )}
             {["monthly","quarterly","yearly"].includes(form.interval) && (
               <div className="mb-3">
                 <label className="text-[11.5px] font-semibold text-muted uppercase mb-1 block">Payment day of month</label>
@@ -387,7 +428,9 @@ function RecurringRow({ rec, paying, payStatus, onPay, onToggle }: {
         <div className="flex items-center gap-2 mb-0.5">
           <span className="font-semibold text-[13.5px] text-ink truncate">{rec.name}</span>
           <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-surface2 border border-white/14 text-muted">
-            {int.label}{rec.payDay && ["monthly","quarterly","yearly"].includes(rec.interval) ? ` · day ${rec.payDay}` : ""}
+            {int.label}
+            {rec.payDay && ["monthly","quarterly","yearly"].includes(rec.interval) ? ` · day ${rec.payDay}` : ""}
+            {rec.payWeekday && rec.interval === "weekly" ? ` · ${DAYS_OF_WEEK[rec.payWeekday-1]}` : ""}
           </span>
           {rec.status === "paused" && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber/10 border border-amber/30 text-amber">Paused</span>}
         </div>
