@@ -463,8 +463,7 @@ function RecurringRow({ rec, paying, payStatus, onPay, onToggle }: {
         </div>
         <div className="flex items-center gap-3 text-[11.5px] text-muted">
           <span className="font-mono">{shortAddr(rec.recipientWallet)}</span>
-          <span>·</span>
-          <span className={due.color}>{due.label}</span>
+          {rec.status !== "completed" && <><span>·</span><span className={due.color}>{due.label}</span></>}
           {rec.notes && <><span>·</span><span className="truncate max-w-[200px]">{rec.notes}</span></>}
         </div>
         {st && <div className={`mt-1 text-[12px] ${st.startsWith("✅")?"text-green":st.startsWith("❌")?"text-red":"text-muted"}`}>{st}</div>}
