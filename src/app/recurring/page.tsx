@@ -80,7 +80,7 @@ function dueStatus(nextDueDate: number): { label: string; color: string; urgent:
 
 const DAYS_OF_WEEK = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 
-const EMPTY_FORM = { name: "", category: "hosting", recipientWallet: "", amount: "", interval: "monthly", payDay: "1", payWeekday: "1", notes: "" };
+const EMPTY_FORM = { name: "", category: "hosting", recipientWallet: "", amount: "", interval: "monthly", payDay: "1", payWeekday: "1", totalPeriods: "", notes: "" };
 
 export default function Recurring() {
   const { account, isConnected, isArcNetwork, connect, switchToArc } = useWallet();
@@ -102,6 +102,7 @@ export default function Recurring() {
     const now = Date.now();
     const payDay = ["monthly","quarterly","yearly"].includes(form.interval) ? parseInt(form.payDay) : undefined;
     const payWeekday = form.interval === "weekly" ? parseInt(form.payWeekday) : undefined;
+    const totalPeriods = form.totalPeriods ? parseInt(form.totalPeriods) : undefined;
     const rec: RecurringPayment = {
       id: "rec_" + Math.random().toString(36).slice(2, 9),
       name: form.name,
@@ -111,6 +112,8 @@ export default function Recurring() {
       interval: form.interval as RecurringPayment["interval"],
       payDay,
       payWeekday,
+      totalPeriods,
+      paidPeriods: 0,
       startDate: now,
       nextDueDate: nextDueFromNow(form.interval, payDay, payWeekday),
       status: "active",
@@ -163,10 +166,18 @@ export default function Recurring() {
       saveRecurringInvoice(inv);
       setInvoices(getRecurringInvoices());
 
-      // Advance next due date
-      const updated = payments.map(p =>
-        p.id === rec.id ? { ...p, nextDueDate: nextDue(Date.now(), p.interval, p.payDay) } : p
-      );
+      // Advance next due date, increment paidPeriods, auto-cancel if done
+      const updated = payments.map(p => {
+        if (p.id !== rec.id) return p;
+        const newPaid = (p.paidPeriods || 0) + 1;
+        const done = p.totalPeriods && newPaid >= p.totalPeriods;
+        return {
+          ...p,
+          paidPeriods: newPaid,
+          nextDueDate: done ? p.nextDueDate : nextDue(Date.now(), p.interval, p.payDay),
+          status: done ? "cancelled" as const : p.status,
+        };
+      });
       saveRecurringPayments(updated);
       setPayments(updated);
       setPayStatus(s => ({ ...s, [rec.id]: "✅ Paid!" }));
@@ -241,6 +252,11 @@ export default function Recurring() {
                   {INTERVALS.map(i => <option key={i.value} value={i.value}>{i.label}</option>)}
                 </select>
               </div>
+            </div>
+            <div className="mb-3">
+              <label className="text-[11.5px] font-semibold text-muted uppercase mb-1 block">Number of payments <span className="normal-case font-normal">(leave blank = unlimited)</span></label>
+              <input type="number" min="1" value={form.totalPeriods} onChange={e => setForm(f=>({...f,totalPeriods:e.target.value}))}
+                placeholder="e.g. 12" className="w-full bg-surface2 border border-white/14 rounded-lg px-3 py-2 text-[13px] text-ink outline-none focus:border-accent" />
             </div>
             {form.interval === "weekly" && (
               <div className="mb-3">
@@ -428,6 +444,11 @@ function RecurringRow({ rec, paying, payStatus, onPay, onToggle }: {
             {rec.payDay && ["monthly","quarterly","yearly"].includes(rec.interval) ? ` · day ${rec.payDay}` : ""}
             {rec.payWeekday && rec.interval === "weekly" ? ` · ${DAYS_OF_WEEK[rec.payWeekday-1]}` : ""}
           </span>
+          {rec.totalPeriods ? (
+            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${rec.paidPeriods >= rec.totalPeriods ? "bg-green/10 border-green/30 text-green" : "bg-surface2 border-white/14 text-muted"}`}>
+              {rec.paidPeriods}/{rec.totalPeriods} paid
+            </span>
+          ) : null}
           {rec.status === "paused" && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber/10 border border-amber/30 text-amber">Paused</span>}
         </div>
         <div className="flex items-center gap-3 text-[11.5px] text-muted">
