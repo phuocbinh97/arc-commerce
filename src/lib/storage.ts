@@ -101,3 +101,45 @@ export function saveBridgeEntry(entry: any, addr?: string) {
   hist.unshift(entry);
   localStorage.setItem(key, JSON.stringify(hist.slice(0, 20)));
 }
+
+export interface RecurringPayment {
+  id: string;
+  name: string;
+  category: "hosting" | "domain" | "marketing" | "salary" | "tools" | "other";
+  recipientWallet: string;
+  amount: string;
+  interval: "weekly" | "monthly" | "quarterly" | "yearly";
+  startDate: number;
+  nextDueDate: number;
+  status: "active" | "paused" | "cancelled";
+  notes?: string;
+}
+
+export interface RecurringInvoice {
+  id: string;
+  recurringId: string;
+  name: string;
+  recipientWallet: string;
+  amount: string;
+  txHash: string;
+  paidAt: number;
+}
+
+export function getRecurringPayments(): RecurringPayment[] {
+  if (!isBrowser()) return [];
+  try { return JSON.parse(localStorage.getItem("arcRecurringPayments") || "[]"); } catch { return []; }
+}
+export function saveRecurringPayments(list: RecurringPayment[]) {
+  if (!isBrowser()) return;
+  localStorage.setItem("arcRecurringPayments", JSON.stringify(list));
+}
+export function getRecurringInvoices(): RecurringInvoice[] {
+  if (!isBrowser()) return [];
+  try { return JSON.parse(localStorage.getItem("arcRecurringInvoices") || "[]"); } catch { return []; }
+}
+export function saveRecurringInvoice(inv: RecurringInvoice) {
+  if (!isBrowser()) return;
+  const list = getRecurringInvoices();
+  list.unshift(inv);
+  localStorage.setItem("arcRecurringInvoices", JSON.stringify(list.slice(0, 200)));
+}
