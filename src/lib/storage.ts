@@ -108,7 +108,8 @@ export interface RecurringPayment {
   category: "hosting" | "domain" | "marketing" | "salary" | "tools" | "other";
   recipientWallet: string;
   amount: string;
-  interval: "weekly" | "monthly" | "quarterly" | "yearly";
+  interval: "test" | "weekly" | "monthly" | "quarterly" | "yearly";
+  payDay?: number; // 1-28, day of month for monthly/quarterly/yearly
   startDate: number;
   nextDueDate: number;
   status: "active" | "paused" | "cancelled";

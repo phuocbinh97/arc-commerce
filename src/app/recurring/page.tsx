@@ -29,9 +29,35 @@ const INTERVALS = [
 function catMeta(c: string) { return CATEGORIES.find(x => x.value === c) || CATEGORIES[5]; }
 function intMeta(i: string) { return INTERVALS.find(x => x.value === i) || INTERVALS[1]; }
 
-function nextDue(from: number, interval: string): number {
+function nextDue(from: number, interval: string, payDay?: number): number {
+  if (interval === "test") return from + 60 * 1000; // 1 minute
+  if ((interval === "monthly" || interval === "quarterly" || interval === "yearly") && payDay) {
+    const months = interval === "monthly" ? 1 : interval === "quarterly" ? 3 : 12;
+    const d = new Date(from);
+    d.setMonth(d.getMonth() + months);
+    d.setDate(Math.min(payDay, 28));
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }
   const days = intMeta(interval).days;
   return from + days * 86400 * 1000;
+}
+
+function nextDueFromNow(interval: string, payDay?: number): number {
+  if (interval === "test") return Date.now(); // due immediately
+  if ((interval === "monthly" || interval === "quarterly" || interval === "yearly") && payDay) {
+    const now = new Date();
+    const target = new Date();
+    target.setDate(Math.min(payDay, 28));
+    target.setHours(0, 0, 0, 0);
+    // If this month's pay day already passed, go to next cycle
+    if (target <= now) {
+      const months = interval === "monthly" ? 1 : interval === "quarterly" ? 3 : 12;
+      target.setMonth(target.getMonth() + months);
+    }
+    return target.getTime();
+  }
+  return Date.now(); // due immediately for weekly
 }
 
 function dueStatus(nextDueDate: number): { label: string; color: string; urgent: boolean } {
@@ -43,7 +69,7 @@ function dueStatus(nextDueDate: number): { label: string; color: string; urgent:
   return { label: `Due in ${days}d`,                                 color: "text-muted", urgent: false };
 }
 
-const EMPTY_FORM = { name: "", category: "hosting", recipientWallet: "", amount: "", interval: "monthly", notes: "" };
+const EMPTY_FORM = { name: "", category: "hosting", recipientWallet: "", amount: "", interval: "monthly", payDay: "1", notes: "" };
 
 export default function Recurring() {
   const { account, isConnected, isArcNetwork, connect, switchToArc } = useWallet();
@@ -63,6 +89,7 @@ export default function Recurring() {
   function saveForm() {
     if (!form.name || !form.recipientWallet || !form.amount) return;
     const now = Date.now();
+    const payDay = ["monthly","quarterly","yearly"].includes(form.interval) ? parseInt(form.payDay) : undefined;
     const rec: RecurringPayment = {
       id: "rec_" + Math.random().toString(36).slice(2, 9),
       name: form.name,
@@ -70,8 +97,9 @@ export default function Recurring() {
       recipientWallet: form.recipientWallet,
       amount: form.amount,
       interval: form.interval as RecurringPayment["interval"],
+      payDay,
       startDate: now,
-      nextDueDate: now, // due immediately on first cycle
+      nextDueDate: nextDueFromNow(form.interval, payDay),
       status: "active",
       notes: form.notes,
     };
@@ -124,7 +152,7 @@ export default function Recurring() {
 
       // Advance next due date
       const updated = payments.map(p =>
-        p.id === rec.id ? { ...p, nextDueDate: nextDue(Date.now(), p.interval) } : p
+        p.id === rec.id ? { ...p, nextDueDate: nextDue(Date.now(), p.interval, p.payDay) } : p
       );
       saveRecurringPayments(updated);
       setPayments(updated);
@@ -201,6 +229,35 @@ export default function Recurring() {
                 </select>
               </div>
             </div>
+            {["monthly","quarterly","yearly"].includes(form.interval) && (
+              <div className="mb-3">
+                <label className="text-[11.5px] font-semibold text-muted uppercase mb-1 block">Payment day of month</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {[1,5,10,15,20,25,28].map(d => (
+                    <button key={d} type="button" onClick={() => setForm(f=>({...f,payDay:String(d)}))}
+                      className={`w-10 h-9 rounded-lg text-[13px] font-semibold border transition-colors
+                        ${form.payDay===String(d) ? "bg-accent text-white border-accent" : "bg-surface2 border-white/14 text-muted hover:text-ink"}`}>
+                      {d}
+                    </button>
+                  ))}
+                  <input type="number" min="1" max="28" value={form.payDay}
+                    onChange={e => setForm(f=>({...f,payDay:e.target.value}))}
+                    placeholder="day"
+                    className="w-16 bg-surface2 border border-white/14 rounded-lg px-2 py-1.5 text-[13px] text-ink outline-none focus:border-accent text-center" />
+                </div>
+                <div className="text-[11px] text-muted mt-1.5">
+                  Next due: <span className="text-ink font-medium">
+                    {(() => {
+                      const d = parseInt(form.payDay);
+                      if (!d) return "—";
+                      const t = new Date(); t.setDate(Math.min(d,28)); t.setHours(0,0,0,0);
+                      if (t <= new Date()) { t.setMonth(t.getMonth() + (form.interval === "yearly" ? 12 : form.interval === "quarterly" ? 3 : 1)); }
+                      return t.toLocaleDateString("en-US", { day:"numeric", month:"short", year:"numeric" });
+                    })()}
+                  </span>
+                </div>
+              </div>
+            )}
             <div className="mb-4">
               <label className="text-[11.5px] font-semibold text-muted uppercase mb-1 block">Notes (optional)</label>
               <input value={form.notes} onChange={e => setForm(f=>({...f,notes:e.target.value}))}
@@ -329,7 +386,9 @@ function RecurringRow({ rec, paying, payStatus, onPay, onToggle }: {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-0.5">
           <span className="font-semibold text-[13.5px] text-ink truncate">{rec.name}</span>
-          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-surface2 border border-white/14 text-muted">{int.label}</span>
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-surface2 border border-white/14 text-muted">
+            {int.label}{rec.payDay && ["monthly","quarterly","yearly"].includes(rec.interval) ? ` · day ${rec.payDay}` : ""}
+          </span>
           {rec.status === "paused" && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber/10 border border-amber/30 text-amber">Paused</span>}
         </div>
         <div className="flex items-center gap-3 text-[11.5px] text-muted">
