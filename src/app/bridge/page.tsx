@@ -41,6 +41,11 @@ const BURN_INTENT_TYPES = [
   { name: "spec",           type: "TransferSpec" },
 ];
 
+const EIP712_DOMAIN_TYPE = [
+  { name: "name",    type: "string" },
+  { name: "version", type: "string" },
+];
+
 function pad32(addr: string): string {
   return "0x" + addr.toLowerCase().replace("0x", "").padStart(64, "0");
 }
@@ -82,9 +87,9 @@ export default function Bridge() {
       const salt  = randomSalt();
 
       const spec = {
-        version:              1,
-        sourceDomain:         ARC_DOMAIN,
-        destinationDomain:    dest.domain,
+        version:              1 as number,
+        sourceDomain:         ARC_DOMAIN as number,
+        destinationDomain:    dest.domain as number,
         sourceContract:       pad32(GATEWAY_WALLET),
         destinationContract:  pad32(GATEWAY_MINTER),
         sourceToken:          pad32(ARC_USDC),
@@ -122,7 +127,11 @@ export default function Bridge() {
       const message = { maxBlockHeight, maxFee, spec };
       const typedData = {
         domain:      { name: "GatewayWallet", version: "1" },
-        types:       { TransferSpec: TRANSFER_SPEC_TYPES, BurnIntent: BURN_INTENT_TYPES },
+        types: {
+          EIP712Domain:  EIP712_DOMAIN_TYPE,
+          TransferSpec:  TRANSFER_SPEC_TYPES,
+          BurnIntent:    BURN_INTENT_TYPES,
+        },
         primaryType: "BurnIntent",
         message,
       };
