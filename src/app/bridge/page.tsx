@@ -146,51 +146,29 @@ export default function Bridge() {
       // Total to deposit = transfer amount + maxFee (buffered)
       const depositAmount = value + BigInt(maxFee);
 
-      // Check existing Gateway Wallet balance (balanceOf(address depositor, address token))
-      // balanceOf(address,address) = 0xf7888aec
-      setStep(2); setStatus("Step 2/6 — Checking Gateway balance…");
-      const balCallRes = await fetch("https://rpc.testnet.arc.network", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [{
-          to: GATEWAY_WALLET,
-          data: "0xf7888aec"
-            + account.toLowerCase().replace("0x","").padStart(64,"0")
-            + ARC_USDC.toLowerCase().replace("0x","").padStart(64,"0"),
-        }, "latest"] }),
-      }).then(r => r.json());
-      const gwBalance = BigInt(balCallRes.result || "0x0");
+      // Step 2 — approve USDC (amount + buffered fee)
+      setStep(2); setStatus(`Step 2/6 — Approve ${(Number(depositAmount)/1e6).toFixed(4)} USDC…`);
+      const approveData = "0x095ea7b3"
+        + GATEWAY_WALLET.toLowerCase().replace("0x","").padStart(64,"0")
+        + depositAmount.toString(16).padStart(64,"0");
+      const approveTx = await eth.request({
+        method: "eth_sendTransaction",
+        params: [{ from, to: ARC_USDC, value: "0x0", data: approveData }],
+      });
+      setStatus("Confirming approve…");
+      await waitTx(eth, approveTx);
 
-      // Only deposit the shortfall
-      const shortfall = depositAmount > gwBalance ? depositAmount - gwBalance : 0n;
-      if (shortfall > 0n) {
-        setStatus(`Step 2/6 — Approve ${(Number(shortfall)/1e6).toFixed(4)} USDC…`);
-        const approveData = "0x095ea7b3"
-          + GATEWAY_WALLET.toLowerCase().replace("0x","").padStart(64,"0")
-          + shortfall.toString(16).padStart(64,"0");
-        const approveTx = await eth.request({
-          method: "eth_sendTransaction",
-          params: [{ from, to: ARC_USDC, value: "0x0", data: approveData }],
-        });
-        setStatus("Confirming approve…");
-        await waitTx(eth, approveTx);
-
-        // Step 3 — deposit shortfall into Gateway Wallet
-        setStep(3); setStatus("Step 3/6 — Depositing into Gateway Wallet…");
-        const depositData = "0x47e7ef24"
-          + ARC_USDC.toLowerCase().replace("0x","").padStart(64,"0")
-          + shortfall.toString(16).padStart(64,"0");
-        const depositTx = await eth.request({
-          method: "eth_sendTransaction",
-          params: [{ from, to: GATEWAY_WALLET, value: "0x0", data: depositData }],
-        });
-        setStatus("Confirming deposit…");
-        await waitTx(eth, depositTx);
-      } else {
-        setStep(3);
-        setStatus("Step 3/6 — Using existing Gateway balance (no deposit needed)…");
-        await new Promise(r => setTimeout(r, 500));
-      }
+      // Step 3 — deposit into Gateway Wallet
+      setStep(3); setStatus("Step 3/6 — Depositing into Gateway Wallet…");
+      const depositData = "0x47e7ef24"
+        + ARC_USDC.toLowerCase().replace("0x","").padStart(64,"0")
+        + depositAmount.toString(16).padStart(64,"0");
+      const depositTx = await eth.request({
+        method: "eth_sendTransaction",
+        params: [{ from, to: GATEWAY_WALLET, value: "0x0", data: depositData }],
+      });
+      setStatus("Confirming deposit…");
+      await waitTx(eth, depositTx);
 
       // Step 4 — sign
       setStep(4); setStatus("Step 4/6 — Sign burn intent in MetaMask…");
