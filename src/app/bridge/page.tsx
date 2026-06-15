@@ -96,31 +96,6 @@ export default function Bridge() {
       const accs  = await eth.request({ method: "eth_accounts" });
       const from  = accs[0] as string;
 
-      // Step 1 — approve USDC → Gateway Wallet
-      setStep(1); setStatus("Step 1/6 — Approve USDC to Gateway Wallet…");
-      const approveData = "0x095ea7b3"
-        + GATEWAY_WALLET.toLowerCase().replace("0x","").padStart(64,"0")
-        + value.toString(16).padStart(64,"0");
-      const approveTx = await eth.request({
-        method: "eth_sendTransaction",
-        params: [{ from, to: ARC_USDC, value: "0x0", data: approveData }],
-      });
-      setStatus("Confirming approve…");
-      await waitTx(eth, approveTx);
-
-      // Step 2 — deposit USDC into Gateway Wallet
-      setStep(2); setStatus("Step 2/6 — Deposit USDC into Gateway Wallet…");
-      // deposit(address token, uint256 amount) = 0x47e7ef24
-      const depositData = "0x47e7ef24"
-        + ARC_USDC.toLowerCase().replace("0x","").padStart(64,"0")
-        + value.toString(16).padStart(64,"0");
-      const depositTx = await eth.request({
-        method: "eth_sendTransaction",
-        params: [{ from, to: GATEWAY_WALLET, value: "0x0", data: depositData }],
-      });
-      setStatus("Confirming deposit…");
-      await waitTx(eth, depositTx);
-
       const spec = {
         version:              1 as number,
         sourceDomain:         ARC_DOMAIN as number,
@@ -138,8 +113,8 @@ export default function Bridge() {
         hookData:             "0x",
       };
 
-      // Step 3 — estimate fees
-      setStep(3); setStatus("Step 3/6 — Estimating fees…");
+      // Step 1 — estimate fees first (need maxFee to know how much to deposit)
+      setStep(1); setStatus("Step 1/6 — Estimating fees…");
       const estimateRes = await fetch(`${GATEWAY_API}/v1/estimate?enableForwarder=true`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -157,7 +132,34 @@ export default function Bridge() {
         forwarding: fees?.forwardingFee ?? "0.20",
       });
 
-      // Step 4 — sign EIP-712
+      // Total to deposit = transfer amount + maxFee (fee deducted from Gateway balance)
+      const depositAmount = value + BigInt(maxFee);
+
+      // Step 2 — approve USDC → Gateway Wallet (amount + fee)
+      setStep(2); setStatus(`Step 2/6 — Approve ${(Number(depositAmount)/1e6).toFixed(4)} USDC…`);
+      const approveData = "0x095ea7b3"
+        + GATEWAY_WALLET.toLowerCase().replace("0x","").padStart(64,"0")
+        + depositAmount.toString(16).padStart(64,"0");
+      const approveTx = await eth.request({
+        method: "eth_sendTransaction",
+        params: [{ from, to: ARC_USDC, value: "0x0", data: approveData }],
+      });
+      setStatus("Confirming approve…");
+      await waitTx(eth, approveTx);
+
+      // Step 3 — deposit USDC into Gateway Wallet
+      setStep(3); setStatus("Step 3/6 — Depositing into Gateway Wallet…");
+      const depositData = "0x47e7ef24"
+        + ARC_USDC.toLowerCase().replace("0x","").padStart(64,"0")
+        + depositAmount.toString(16).padStart(64,"0");
+      const depositTx = await eth.request({
+        method: "eth_sendTransaction",
+        params: [{ from, to: GATEWAY_WALLET, value: "0x0", data: depositData }],
+      });
+      setStatus("Confirming deposit…");
+      await waitTx(eth, depositTx);
+
+      // Step 4 — sign
       setStep(4); setStatus("Step 4/6 — Sign burn intent in MetaMask…");
       const message = { maxBlockHeight, maxFee, spec };
       const typedData = {
@@ -224,9 +226,9 @@ export default function Bridge() {
   }
 
   const STEPS = [
-    { n: 1, label: "Approve USDC",        desc: "Allow Gateway Wallet to spend your USDC" },
-    { n: 2, label: "Deposit to Gateway",  desc: "Move USDC into Circle Gateway Wallet" },
-    { n: 3, label: "Estimate fees",       desc: "Get exact fee from Circle API" },
+    { n: 1, label: "Estimate fees",       desc: "Calculate exact amount to deposit" },
+    { n: 2, label: "Approve USDC",        desc: "Allow Gateway to spend amount + fee" },
+    { n: 3, label: "Deposit to Gateway",  desc: "Move USDC into Circle Gateway Wallet" },
     { n: 4, label: "Sign burn intent",    desc: "1× EIP-712 signature — no gas" },
     { n: 5, label: "Submit to Gateway",   desc: "Circle receives the signed intent" },
     { n: 6, label: "Auto-mint on dest",   desc: "Circle mints USDC on destination" },
