@@ -60,13 +60,21 @@ function bigintReplacer(_: string, v: unknown) {
   return typeof v === "bigint" ? v.toString() : v;
 }
 
+async function waitTx(eth: any, hash: string) {
+  while (true) {
+    await new Promise(r => setTimeout(r, 500));
+    const receipt = await eth.request({ method: "eth_getTransactionReceipt", params: [hash] });
+    if (receipt) return receipt;
+  }
+}
+
 export default function Bridge() {
   const { account, isConnected, connect } = useWallet();
   const [toChain,   setToChain]   = useState(DEST_CHAINS[1].id); // Base Sepolia default
   const [amount,    setAmount]    = useState("");
   const [recipient, setRecipient] = useState("");
   const [status,    setStatus]    = useState("");
-  const [step,      setStep]      = useState<0|1|2|3|4>(0); // 0=idle,1=estimate,2=sign,3=submit,4=done
+  const [step,      setStep]      = useState<0|1|2|3|4|5|6>(0); // 0=idle,1=approve,2=deposit,3=estimate,4=sign,5=submit,6=poll
   const [txId,      setTxId]      = useState("");
   const [feeInfo,   setFeeInfo]   = useState<{total:string;forwarding:string}|null>(null);
   const [history,   setHistory]   = useState<any[]>([]);
@@ -85,6 +93,33 @@ export default function Bridge() {
     try {
       const value = BigInt(Math.floor(amtNum * 1_000_000));
       const salt  = randomSalt();
+      const accs  = await eth.request({ method: "eth_accounts" });
+      const from  = accs[0] as string;
+
+      // Step 1 — approve USDC → Gateway Wallet
+      setStep(1); setStatus("Step 1/6 — Approve USDC to Gateway Wallet…");
+      const approveData = "0x095ea7b3"
+        + GATEWAY_WALLET.toLowerCase().replace("0x","").padStart(64,"0")
+        + value.toString(16).padStart(64,"0");
+      const approveTx = await eth.request({
+        method: "eth_sendTransaction",
+        params: [{ from, to: ARC_USDC, value: "0x0", data: approveData }],
+      });
+      setStatus("Confirming approve…");
+      await waitTx(eth, approveTx);
+
+      // Step 2 — deposit USDC into Gateway Wallet
+      setStep(2); setStatus("Step 2/6 — Deposit USDC into Gateway Wallet…");
+      // deposit(address token, uint256 amount) = 0x47e7ef24
+      const depositData = "0x47e7ef24"
+        + ARC_USDC.toLowerCase().replace("0x","").padStart(64,"0")
+        + value.toString(16).padStart(64,"0");
+      const depositTx = await eth.request({
+        method: "eth_sendTransaction",
+        params: [{ from, to: GATEWAY_WALLET, value: "0x0", data: depositData }],
+      });
+      setStatus("Confirming deposit…");
+      await waitTx(eth, depositTx);
 
       const spec = {
         version:              1 as number,
@@ -103,8 +138,8 @@ export default function Bridge() {
         hookData:             "0x",
       };
 
-      // Step 1 — estimate fees
-      setStep(1); setStatus("Estimating fees…");
+      // Step 3 — estimate fees
+      setStep(3); setStatus("Step 3/6 — Estimating fees…");
       const estimateRes = await fetch(`${GATEWAY_API}/v1/estimate?enableForwarder=true`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -122,8 +157,8 @@ export default function Bridge() {
         forwarding: fees?.forwardingFee ?? "0.20",
       });
 
-      // Step 2 — sign EIP-712
-      setStep(2); setStatus("Sign in MetaMask (1 confirmation)…");
+      // Step 4 — sign EIP-712
+      setStep(4); setStatus("Step 4/6 — Sign burn intent in MetaMask…");
       const message = { maxBlockHeight, maxFee, spec };
       const typedData = {
         domain:      { name: "GatewayWallet", version: "1" },
@@ -141,8 +176,8 @@ export default function Bridge() {
         params: [account, JSON.stringify(typedData, bigintReplacer)],
       });
 
-      // Step 3 — submit
-      setStep(3); setStatus("Submitting to Circle Gateway…");
+      // Step 5 — submit
+      setStep(5); setStatus("Step 5/6 — Submitting to Circle Gateway…");
       const transferRes = await fetch(`${GATEWAY_API}/v1/transfer?enableForwarder=true`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -156,8 +191,8 @@ export default function Bridge() {
       const transferId   = transferJson.transferId;
       setTxId(transferId);
 
-      // Step 4 — poll
-      setStep(4); setStatus("Waiting for Circle to mint on destination…");
+      // Step 6 — poll
+      setStep(6); setStatus("Step 6/6 — Circle minting on destination…");
       const deadline = Date.now() + 300_000; // 5 min timeout
       while (Date.now() < deadline) {
         await new Promise(r => setTimeout(r, 5_000));
@@ -189,10 +224,12 @@ export default function Bridge() {
   }
 
   const STEPS = [
-    { n: 1, label: "Estimate fees",       desc: "Call Gateway API to get exact fee" },
-    { n: 2, label: "Sign burn intent",    desc: "1× MetaMask signature (EIP-712)" },
-    { n: 3, label: "Submit to Gateway",   desc: "Circle receives the signed intent" },
-    { n: 4, label: "Auto-mint on dest",   desc: "Circle mints USDC — no more confirmations" },
+    { n: 1, label: "Approve USDC",        desc: "Allow Gateway Wallet to spend your USDC" },
+    { n: 2, label: "Deposit to Gateway",  desc: "Move USDC into Circle Gateway Wallet" },
+    { n: 3, label: "Estimate fees",       desc: "Get exact fee from Circle API" },
+    { n: 4, label: "Sign burn intent",    desc: "1× EIP-712 signature — no gas" },
+    { n: 5, label: "Submit to Gateway",   desc: "Circle receives the signed intent" },
+    { n: 6, label: "Auto-mint on dest",   desc: "Circle mints USDC on destination" },
   ];
 
   return (
@@ -316,7 +353,7 @@ export default function Bridge() {
           <div className="bg-surface border border-white/8 rounded-lg">
             <div className="px-5 py-4 border-b border-white/8">
               <div className="font-semibold text-sm">How it works</div>
-              <div className="text-[11.5px] text-muted mt-0.5">1 MetaMask signature · Circle handles the rest</div>
+              <div className="text-[11.5px] text-muted mt-0.5">2 tx + 1 signature · Circle mints on destination</div>
             </div>
             <div className="p-4 flex flex-col gap-2">
               {STEPS.map(s => (
