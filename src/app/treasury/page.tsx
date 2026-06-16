@@ -137,8 +137,6 @@ export default function Treasury() {
               <div className="text-[11px] text-muted mt-0.5">Arc App Kit · Arc Testnet</div>
             </div>
             <div className="flex items-center gap-3">
-              {isConnected && (
-                )}
               <div className="flex gap-1.5">
                 {!isConnected ? (
                   <button onClick={connect}
