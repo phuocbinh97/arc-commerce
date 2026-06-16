@@ -39,7 +39,7 @@ export default function Treasury() {
   const { account, isConnected, connect, getUsdcBalance, walletName } = useWallet();
   const [usdcBalance, setUsdcBalance] = useState("—");
   const [eurcBalance, setEurcBalance] = useState("—");
-  const swapFrom = "USDC"; // Arc Testnet only supports USDC → EURC
+  const [swapFrom, setSwapFrom] = useState("USDC");
   const [swapAmount, setSwapAmount] = useState("");
   const [swapStatus, setSwapStatus] = useState("");
   const [swapping, setSwapping] = useState(false);
@@ -178,9 +178,11 @@ export default function Treasury() {
                   Balance: <span className="text-ink font-mono">{swapFrom === "USDC" ? usdcBalance : eurcBalance} {swapFrom}</span>
                 </span>
               </div>
-              <div className="w-full bg-surface2 border border-white/6 rounded-lg px-3 py-2.5 text-[13px] text-ink">
-                $ USDC
-              </div>
+              <select value={swapFrom} onChange={e => { setSwapFrom(e.target.value); setSwapStatus(""); }}
+                className="w-full bg-surface2 border border-white/6 rounded-lg px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
+                <option value="USDC">$ USDC</option>
+                <option value="EURC">€ EURC</option>
+              </select>
               <div className="flex items-center gap-3">
                 <input type="number" value={swapAmount} onChange={e => { setSwapAmount(e.target.value); setSwapStatus(""); }}
                   placeholder="0.00"
@@ -189,11 +191,12 @@ export default function Treasury() {
               </div>
             </div>
 
-            {/* Direction indicator — one-way only on Arc Testnet */}
+            {/* Swap direction button */}
             <div className="flex justify-center -my-1">
-              <div className="px-3 py-1 rounded-full bg-surface2 border border-white/6 text-[11px] text-muted">
-                → EURC
-              </div>
+              <button onClick={() => { setSwapFrom(swapTo); setSwapStatus(""); }} title="Swap direction"
+                className="w-8 h-8 rounded-full bg-surface2 border border-white/8 grid place-items-center text-muted hover:text-white hover:border-accent hover:bg-accent/10 transition-all text-sm font-bold select-none">
+                ⇅
+              </button>
             </div>
 
             {/* TO block */}
@@ -237,7 +240,7 @@ export default function Treasury() {
               Powered by{" "}
               <a href="https://docs.arc.io/app-kit/swap" target="_blank" rel="noreferrer"
                 className="text-accent hover:underline">Arc App Kit</a>
-              {" · "}Only USDC → EURC available on Arc Testnet
+              {" · "}USDC ↔ EURC on Arc Testnet
             </p>
           </div>
         </div>
