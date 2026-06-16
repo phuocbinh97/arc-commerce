@@ -291,11 +291,23 @@ export default function Bridge() {
                 </select>
               </div>
 
-              {/* Non-Arc source note */}
-              {fromChain !== "Arc_Testnet" && (
+              {/* Non-Arc → Arc: unsupported */}
+              {fromChain !== "Arc_Testnet" && toChain === "Arc_Testnet" && (
+                <div className="flex items-start gap-2.5 bg-red/6 border border-red/20 rounded-xl px-4 py-3 text-[12px] text-red">
+                  <span className="mt-0.5 shrink-0">⚠</span>
+                  <span>
+                    Arc Testnet is not supported as a bridge destination.
+                    To get USDC on Arc, use{" "}
+                    <a href="https://faucet.circle.com" target="_blank" rel="noreferrer" className="underline font-medium">faucet.circle.com</a>
+                  </span>
+                </div>
+              )}
+
+              {/* Non-Arc → Non-Arc: App Kit */}
+              {fromChain !== "Arc_Testnet" && toChain !== "Arc_Testnet" && (
                 <div className="flex items-start gap-2.5 bg-accent/6 border border-accent/20 rounded-xl px-4 py-3 text-[12px] text-accent">
                   <span className="mt-0.5 shrink-0">ℹ</span>
-                  <span>Bridging via <strong>Circle App Kit</strong> (CCTP standard). MetaMask sẽ hỏi ~3 lần.</span>
+                  <span>Bridging via <strong>Circle App Kit</strong> (CCTP standard, ~3 MetaMask confirmations).</span>
                 </div>
               )}
 
@@ -370,7 +382,7 @@ export default function Bridge() {
                   Connect Wallet
                 </button>
               ) : (
-                <button onClick={doBridge} disabled={step > 0 || !amount || amtNum <= 0 || fromChain === toChain}
+                <button onClick={doBridge} disabled={step > 0 || !amount || amtNum <= 0 || fromChain === toChain || (fromChain !== "Arc_Testnet" && toChain === "Arc_Testnet")}
                   className="w-full py-3.5 bg-accent text-white rounded-xl text-[14px] font-bold disabled:opacity-40 hover:bg-accent/90 transition-colors">
                   {step > 0 ? "Bridging…" : `Bridge ${amount || "—"} USDC  ${src.icon} → ${dst.icon}`}
                 </button>
