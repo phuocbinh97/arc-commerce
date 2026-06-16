@@ -173,12 +173,18 @@ export default function Bridge() {
         // App Kit returns state:"error" on any failure (cancel approve, cancel burn, cancel mint)
         if (!bridgeResult || bridgeResult.state !== "success") {
           const steps = (bridgeResult?.steps || []) as any[];
-          const burnOk = steps.some((s: any) => s.name === "burn" && s.state === "success");
-          if (burnOk) {
-            // USDC was burned on source but mint was rejected — CCTP attestation exists, can be recovered
-            throw new Error("Mint was rejected on destination chain.\nYour USDC was burned on source — it can be recovered via Circle CCTP.\nTry bridging again or contact Circle support.");
+          const burnStep = steps.find((s: any) => s.name === "burn" && s.state === "success");
+          if (burnStep) {
+            const burnTx = burnStep.txHash || burnStep.batchId || "";
+            const explorerLink = burnTx ? `${src.label} explorer: ${burnTx}` : "";
+            throw new Error(
+              `⚠️ USDC đã bị burn trên ${src.label} nhưng chưa mint trên ${dst.label}.\n\n` +
+              `Tiền KHÔNG mất — Circle giữ attestation hợp lệ.\n` +
+              `Để nhận lại: bridge lại với cùng số tiền, Circle sẽ dùng attestation cũ.\n` +
+              (explorerLink ? `\nBurn TX: ${explorerLink}` : "")
+            );
           }
-          throw new Error("Bridge was cancelled.");
+          throw new Error("Bridge cancelled.");
         }
 
         // Extra: verify balance decreased (catches edge cases where state="success" but nothing happened)
