@@ -85,6 +85,7 @@ export default function Bridge() {
   const [recipient, setRecipient] = useState("");
   const [status,    setStatus]    = useState("");
   const [step,      setStep]      = useState(0);
+  const [done,      setDone]      = useState(false); // keep progress visible after success
   const [txId,      setTxId]      = useState("");
   const [feeInfo,   setFeeInfo]   = useState<{ forwarding: string; receive: string } | null>(null);
   const [history,   setHistory]   = useState<any[]>([]);
@@ -105,14 +106,14 @@ export default function Bridge() {
   const pagedHistory = history.slice((page-1)*HISTORY_PER_PAGE, page*HISTORY_PER_PAGE);
 
   function swapChains() {
-    setFromChain(toChain); setToChain(fromChain); setFeeInfo(null); setStatus(""); setStep(0);
+    setFromChain(toChain); setToChain(fromChain); setFeeInfo(null); setStatus(""); setStep(0); setDone(false);
   }
 
   async function doBridge() {
     if (!account || amtNum <= 0 || fromChain === toChain) return;
     const eth = (window as any).ethereum;
     if (!eth) return;
-    setTxId(""); setStatus("");
+    setTxId(""); setStatus(""); setDone(false);
 
     try {
       // Step 1 — switch network
@@ -155,8 +156,9 @@ export default function Bridge() {
         });
         setStep(KIT_STEP_BRIDGE);
         saveBridgeEntry({ from: fromChain, to: toChain, amount, token: "USDC", ts: Date.now(), status: "completed" }, account);
-        const updated = getBridgeHistory(account); setHistory(updated); setPage(1); setStep(0);
+        const updated = getBridgeHistory(account); setHistory(updated); setPage(1);
         setStatus(`✅ ${amount} USDC bridged via CCTP!`);
+        setDone(true); setTimeout(() => { setStep(0); setDone(false); }, 6000);
         return;
       }
 
@@ -237,8 +239,9 @@ export default function Bridge() {
         if (d.status === "confirmed" || d.status === "finalized") {
           saveBridgeEntry({ from: fromChain, to: toChain, amount, token: "USDC", ts: Date.now(), status: "completed", txId: transferId }, account);
           const updated = getBridgeHistory(account);
-          setHistory(updated); setPage(1); setStep(0);
+          setHistory(updated); setPage(1);
           setStatus(`✅ ${amount} USDC arrived on ${dst.label}!`);
+          setDone(true); setTimeout(() => { setStep(0); setDone(false); }, 6000);
           return;
         }
         if (d.status === "failed")  throw new Error(`Bridge failed: ${d.forwardingDetails?.failureReason ?? "unknown"}`);
@@ -264,7 +267,7 @@ export default function Bridge() {
       <div className="p-6 flex-1 flex flex-col gap-5 max-w-[1100px] mx-auto w-full">
 
         {/* Main row: form + live steps (progress only visible when bridging) */}
-        <div className={`grid gap-5 items-start transition-all`} style={{ gridTemplateColumns: step > 0 ? "1fr 320px" : "1fr" }}>
+        <div className={`grid gap-5 items-start transition-all`} style={{ gridTemplateColumns: (step > 0 || done) ? "1fr 320px" : "1fr" }}>
 
           {/* ── Bridge form ── */}
           <div className="bg-surface border border-white/8 rounded-2xl overflow-hidden">
@@ -402,7 +405,7 @@ export default function Bridge() {
           </div>
 
           {/* ── Live progress panel (hidden when idle) ── */}
-          {step > 0 && <div className="bg-surface border border-white/8 rounded-2xl overflow-hidden sticky top-6">
+          {(step > 0 || done) && <div className="bg-surface border border-white/8 rounded-2xl overflow-hidden sticky top-6">
             <div className="px-5 py-4 border-b border-white/8">
               <div className="font-bold text-[13.5px]">Bridge Progress</div>
               <div className="text-[11.5px] text-muted mt-0.5">
@@ -495,6 +498,7 @@ export default function Bridge() {
                     <th className="px-6 py-3 text-right">Amount</th>
                     <th className="px-6 py-3 text-left">Date</th>
                     <th className="px-6 py-3 text-left">Status</th>
+                    <th className="px-6 py-3 text-left">TX</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -515,6 +519,16 @@ export default function Bridge() {
                         <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full bg-green/10 border border-green/20 text-green">
                           ✓ {h.status}
                         </span>
+                      </td>
+                      <td className="px-6 py-3.5">
+                        {h.txId ? (
+                          <a href={`https://testnet.arcscan.app/tx/${h.txId}`} target="_blank" rel="noreferrer"
+                            className="font-mono text-[11px] text-accent hover:underline">
+                            {h.txId.slice(0,8)}…
+                          </a>
+                        ) : (
+                          <span className="text-muted text-[11px]">—</span>
+                        )}
                       </td>
                     </tr>
                   ))}
