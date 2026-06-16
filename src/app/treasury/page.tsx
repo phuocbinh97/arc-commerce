@@ -19,22 +19,49 @@ function Accordion({ title, children, defaultOpen = false }: { title: string; ch
   );
 }
 
+const EURC_ADDRESS = "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a";
+const ARC_RPC = "https://rpc.testnet.arc.network";
+
+async function fetchTokenBalance(token: "USDC" | "EURC", addr: string): Promise<string> {
+  const contractAddr = token === "USDC"
+    ? "0x3600000000000000000000000000000000000000"
+    : EURC_ADDRESS;
+  const data = "0x70a08231" + addr.toLowerCase().replace("0x", "").padStart(64, "0");
+  const res = await fetch(ARC_RPC, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [{ to: contractAddr, data }, "latest"] }),
+  }).then(r => r.json());
+  const raw = res.result && res.result !== "0x" ? res.result : "0x0";
+  return (Number(BigInt(raw)) / 1e6).toFixed(2);
+}
+
 export default function Treasury() {
   const { account, isConnected, connect, getUsdcBalance, walletName } = useWallet();
   const [usdcBalance, setUsdcBalance] = useState("—");
+  const [eurcBalance, setEurcBalance] = useState("—");
   const [swapFrom, setSwapFrom] = useState("USDC");
   const [swapAmount, setSwapAmount] = useState("");
   const [swapStatus, setSwapStatus] = useState("");
   const [swapping, setSwapping] = useState(false);
   const [swapHist, setSwapHist] = useState<ReturnType<typeof getSwapHistory>>([]);
 
+  const refreshBalances = useCallback(async () => {
+    if (!account) return;
+    const [usdc, eurc] = await Promise.all([
+      fetchTokenBalance("USDC", account),
+      fetchTokenBalance("EURC", account),
+    ]);
+    setUsdcBalance(usdc);
+    setEurcBalance(eurc);
+  }, [account]);
+
   // Load balance + history when account is ready
   useEffect(() => {
     if (account) {
-      getUsdcBalance().then(setUsdcBalance);
+      refreshBalances();
       setSwapHist(getSwapHistory(account));
     }
-  }, [account, getUsdcBalance]);
+  }, [account, refreshBalances]);
 
   const swapTo = swapFrom === "USDC" ? "EURC" : "USDC";
   const amtNum = parseFloat(swapAmount) || 0;
@@ -82,7 +109,7 @@ export default function Treasury() {
       const updated = getSwapHistory(account);
       setSwapHist(updated);
       setSwapStatus(`✅ Swap complete! ${swapAmount} ${swapFrom} → ${swapTo}`);
-      getUsdcBalance().then(setUsdcBalance);
+      refreshBalances();
     } catch (e: any) {
       if (e?.code === 4001 || e?.message?.toLowerCase().includes("rejected") || e?.message?.toLowerCase().includes("cancel")) {
         setSwapStatus("Swap cancelled.");
@@ -111,9 +138,15 @@ export default function Treasury() {
             </div>
             <div className="flex items-center gap-3">
               {isConnected && (
-                <div className="text-right">
-                  <div className="text-[11px] text-muted">USDC Balance</div>
-                  <div className="font-bold font-mono text-[15px] text-ink">{usdcBalance}</div>
+                <div className="text-right flex gap-4">
+                  <div>
+                    <div className="text-[11px] text-muted">USDC</div>
+                    <div className="font-bold font-mono text-[14px] text-ink">{usdcBalance}</div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] text-muted">EURC</div>
+                    <div className="font-bold font-mono text-[14px] text-ink">{eurcBalance}</div>
+                  </div>
                 </div>
               )}
               <div className="flex gap-1.5">
@@ -123,7 +156,7 @@ export default function Treasury() {
                     Connect Wallet
                   </button>
                 ) : (
-                  <button onClick={() => getUsdcBalance().then(setUsdcBalance)}
+                  <button onClick={refreshBalances}
                     className="px-3 py-1.5 bg-surface2 border border-white/8 text-muted rounded-lg text-[12px] font-semibold hover:text-ink transition-colors">
                     ↻ Refresh
                   </button>
@@ -139,7 +172,12 @@ export default function Treasury() {
           <div className="p-4 flex flex-col gap-3">
             {/* FROM block */}
             <div className="bg-bg rounded-xl p-4 flex flex-col gap-3">
-              <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">From</span>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">From</span>
+                <span className="text-[11px] text-muted">
+                  Balance: <span className="text-ink font-mono">{swapFrom === "USDC" ? usdcBalance : eurcBalance} {swapFrom}</span>
+                </span>
+              </div>
               <select value={swapFrom} onChange={e => { setSwapFrom(e.target.value); setSwapStatus(""); }}
                 className="w-full bg-surface2 border border-white/6 rounded-lg px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
                 <option value="USDC">$ USDC</option>
