@@ -266,13 +266,13 @@ export default function Bridge() {
   return (
     <>
       <Topbar title="Bridge" />
-      <div className="p-6 flex-1 flex flex-col items-center gap-5">
+      <div className="p-6 flex-1 flex flex-col items-center gap-5 max-w-[860px] mx-auto w-full">
 
-        {/* Main row: centered card + progress panel */}
-        <div className="flex gap-5 items-start w-full max-w-[860px] justify-center">
+        {/* Main row: form + progress panel */}
+        <div className="flex gap-5 items-start w-full">
 
           {/* ── Bridge card ── */}
-          <div className="w-full max-w-[460px] bg-surface border border-white/8 rounded-2xl overflow-hidden">
+          <div className="flex-1 bg-surface border border-white/8 rounded-2xl overflow-hidden">
             {/* Header */}
             <div className="px-5 py-4 border-b border-white/8 flex items-center justify-between">
               <div>
@@ -431,7 +431,7 @@ export default function Bridge() {
         </div>
 
         {/* ── Info row: accordions ── */}
-        <div className="flex gap-4 w-full max-w-[860px]">
+        <div className="flex gap-4 w-full">
           <div className="flex-1">
             <Accordion key="how-it-works" title="How it works">
               <div className="p-4 flex flex-col gap-2">
@@ -468,7 +468,7 @@ export default function Bridge() {
         </div>
 
         {/* ── Bridge History ── */}
-        <div className="w-full max-w-[860px] bg-surface border border-white/8 rounded-2xl overflow-hidden">
+        <div className="w-full bg-surface border border-white/8 rounded-2xl overflow-hidden">
           <div className="px-6 py-4 border-b border-white/8 flex items-center justify-between">
             <div className="font-bold text-[13.5px]">Bridge History</div>
             <div className="text-[12px] text-muted">{history.length} total</div>
