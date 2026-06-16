@@ -168,15 +168,23 @@ export default function Bridge() {
           to:   { adapter, chain: toChain },
           amount: amtNum.toFixed(2), token: "USDC",
         });
-        console.log("[Bridge] App Kit result:", JSON.stringify(bridgeResult, bigintReplacer));
+        console.log("[Bridge] App Kit result state:", bridgeResult?.state);
 
-        // Verify balance actually decreased — at least 90% of amount must have left
+        // App Kit returns state:"error" on any failure (cancel approve, cancel burn, cancel mint)
+        if (!bridgeResult || bridgeResult.state !== "success") {
+          const steps = (bridgeResult?.steps || []) as any[];
+          const burnOk = steps.some((s: any) => s.name === "burn" && s.state === "success");
+          if (burnOk) {
+            // USDC was burned on source but mint was rejected — CCTP attestation exists, can be recovered
+            throw new Error("Mint was rejected on destination chain.\nYour USDC was burned on source — it can be recovered via Circle CCTP.\nTry bridging again or contact Circle support.");
+          }
+          throw new Error("Bridge was cancelled.");
+        }
+
+        // Extra: verify balance decreased (catches edge cases where state="success" but nothing happened)
         const balAfter = await getUsdcBal();
-        const diff = balBefore - balAfter;
-        console.log("[Bridge] USDC after:", Number(balAfter)/1e6, "| diff:", Number(diff)/1e6, "| minRequired:", amtNum * 0.9);
-        const minDecrease = BigInt(Math.floor(amtNum * 900_000)); // 90% of amount in 6-decimal units
-        if (diff < minDecrease) {
-          throw new Error("Bridge was cancelled or did not complete.");
+        if (balBefore - balAfter < BigInt(Math.floor(amtNum * 900_000))) {
+          throw new Error("Bridge did not complete — balance unchanged.");
         }
 
         setStep(KIT_STEP_BRIDGE);
