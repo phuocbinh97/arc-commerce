@@ -302,7 +302,7 @@ export default function Bridge() {
                 <div className="flex items-center gap-3">
                   <input type="number" value={amount} onChange={e => { setAmount(e.target.value); setFeeInfo(null); }}
                     placeholder="0.00"
-                    className="flex-1 bg-transparent text-[28px] font-bold text-ink outline-none placeholder:text-white/35 w-0" />
+                    className="flex-1 bg-transparent text-[28px] font-bold text-ink outline-none placeholder:text-muted w-0" />
                   <span className="text-[13px] text-muted font-medium shrink-0">USDC</span>
                 </div>
               </div>
@@ -330,7 +330,7 @@ export default function Bridge() {
                   ))}
                 </select>
                 <div className="flex items-center gap-3">
-                  <span className={`flex-1 text-[28px] font-bold ${amtNum > 0 ? "text-green" : "text-white/35"}`}>
+                  <span className={`flex-1 text-[28px] font-bold ${amtNum > 0 ? "text-green" : "text-muted"}`}>
                     {amtNum > 0
                       ? (isKitMode
                           ? `~${(amtNum - amtNum*0.00005).toFixed(4)}`
