@@ -151,11 +151,16 @@ export default function Bridge() {
         const kit     = new AppKit();
         const adapter = await createAdapterFromProvider({ provider: eth });
         setStep(KIT_STEP_APPROVE); setStatus("Approve & confirm in MetaMask…");
-        await (kit as any).bridge({
+        const toAddress = recipient.trim() || from;
+        const bridgeResult = await (kit as any).bridge({
           from: { adapter, chain: fromChain },
-          to:   { adapter, chain: toChain },
+          to:   { adapter, chain: toChain, address: toAddress },
           amount: amtNum.toFixed(2), token: "USDC",
         });
+        // App Kit resolves even on cancel — check result
+        if (!bridgeResult || bridgeResult.error || bridgeResult.status === "failed" || bridgeResult.status === "cancelled" || bridgeResult.status === "rejected") {
+          throw new Error(bridgeResult?.error?.message || "Bridge was cancelled or failed.");
+        }
         setStep(KIT_STEP_BRIDGE);
         saveBridgeEntry({ from: fromChain, to: toChain, amount, token: "USDC", ts: Date.now(), status: "completed" }, account);
         const updated = getBridgeHistory(account); setHistory(updated); setPage(1);
