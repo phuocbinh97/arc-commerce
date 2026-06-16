@@ -121,25 +121,14 @@ export default function Bridge() {
           throw new Error(`Insufficient ETH on ${src.label}.\nYou need at least 0.01 ETH for gas.\nCurrent: ${(Number(ethBal)/1e18).toFixed(6)} ETH\nGet ETH: sepoliafaucet.com`);
       }
 
-      // Non-Arc source → use App Kit (CCTP standard)
+      // Non-Arc source → not supported (Circle Gateway & App Kit only support Arc as source)
       if (fromChain !== "Arc_Testnet") {
-        setStep(6); setStatus("Connecting to Arc App Kit…");
-        const appKitModule  = await import("@circle-fin/app-kit");
-        const adapterModule = await import("@circle-fin/adapter-viem-v2");
-        const AppKit = (appKitModule as any).AppKit;
-        const createAdapterFromProvider = (adapterModule as any).createAdapterFromProvider;
-        const kit     = new AppKit();
-        const adapter = await createAdapterFromProvider({ provider: eth });
-        setStatus(`Confirm bridge in MetaMask…`);
-        await (kit as any).bridge({
-          from: { adapter, chain: fromChain },
-          to:   { chain: toChain },
-          amount: amtNum.toFixed(2), token: "USDC",
-        });
-        saveBridgeEntry({ from: fromChain, to: toChain, amount, token: "USDC", ts: Date.now(), status: "completed" }, account);
-        const updated = getBridgeHistory(account); setHistory(updated); setPage(1); setStep(0);
-        setStatus(`✅ ${amount} USDC bridged via CCTP!`);
-        return;
+        throw new Error(
+          `Bridging from ${src.label} to Arc is not supported in testnet.\n` +
+          `Circle Gateway Forwarding only works with Arc as source.\n\n` +
+          `To get USDC on Arc: faucet.circle.com\n` +
+          `Tip: Bridge Arc → ${dst.label} first, then swap back.`
+        );
       }
 
       const spec = {
@@ -245,8 +234,8 @@ export default function Bridge() {
       <Topbar title="Bridge" />
       <div className="p-6 flex-1 flex flex-col gap-5 max-w-[1100px] mx-auto w-full">
 
-        {/* Main row: form + live steps */}
-        <div className="grid grid-cols-[1fr_320px] gap-5 items-start">
+        {/* Main row: form + live steps (progress only visible when bridging) */}
+        <div className={`grid gap-5 items-start transition-all`} style={{ gridTemplateColumns: step > 0 ? "1fr 320px" : "1fr" }}>
 
           {/* ── Bridge form ── */}
           <div className="bg-surface border border-white/8 rounded-2xl overflow-hidden">
@@ -261,13 +250,7 @@ export default function Bridge() {
             <div className="p-6 flex flex-col gap-5">
               {/* From */}
               <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-[11.5px] font-semibold text-muted uppercase tracking-wider">From</label>
-                  <button onClick={swapChains}
-                    className="flex items-center gap-1 text-[11.5px] text-accent hover:text-white px-2.5 py-1 rounded-lg border border-accent/30 hover:border-accent hover:bg-accent/10 transition-all">
-                    ⇄ Swap chains
-                  </button>
-                </div>
+                <label className="text-[11.5px] font-semibold text-muted uppercase tracking-wider">From</label>
                 <select value={fromChain} onChange={e => { setFromChain(e.target.value); setFeeInfo(null); setStatus(""); setStep(0); }}
                   className="w-full bg-bg border border-white/14 rounded-xl px-4 py-3 text-[13.5px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
                   {CHAIN_IDS.filter(id => id !== toChain).map(id => (
@@ -276,10 +259,13 @@ export default function Bridge() {
                 </select>
               </div>
 
-              {/* Arrow */}
+              {/* Swap arrow button */}
               <div className="flex items-center gap-3">
                 <div className="flex-1 h-px bg-white/8" />
-                <div className="w-8 h-8 rounded-full bg-surface2 border border-white/14 grid place-items-center text-muted text-sm">↓</div>
+                <button onClick={swapChains} title="Swap chains"
+                  className="w-9 h-9 rounded-full bg-surface2 border border-white/14 grid place-items-center text-muted hover:text-white hover:border-accent hover:bg-accent/10 transition-all text-base font-bold select-none">
+                  ⇅
+                </button>
                 <div className="flex-1 h-px bg-white/8" />
               </div>
 
@@ -293,6 +279,18 @@ export default function Bridge() {
                   ))}
                 </select>
               </div>
+
+              {/* Arc-as-source-only notice */}
+              {fromChain !== "Arc_Testnet" && (
+                <div className="flex items-start gap-2.5 bg-red/6 border border-red/20 rounded-xl px-4 py-3 text-[12px] text-red">
+                  <span className="mt-0.5 shrink-0">⚠</span>
+                  <span>
+                    Circle Gateway only supports <strong>Arc as source</strong> in testnet.
+                    Bridging from {src.label} to Arc is not available.{" "}
+                    <a href="https://faucet.circle.com" target="_blank" rel="noreferrer" className="underline font-medium">Get USDC on Arc via faucet</a>
+                  </span>
+                </div>
+              )}
 
               {/* ETH warning */}
               {src.gas === "ETH" && (
@@ -365,7 +363,7 @@ export default function Bridge() {
                   Connect Wallet
                 </button>
               ) : (
-                <button onClick={doBridge} disabled={step > 0 || !amount || amtNum <= 0 || fromChain === toChain}
+                <button onClick={doBridge} disabled={step > 0 || !amount || amtNum <= 0 || fromChain === toChain || fromChain !== "Arc_Testnet"}
                   className="w-full py-3.5 bg-accent text-white rounded-xl text-[14px] font-bold disabled:opacity-40 hover:bg-accent/90 transition-colors">
                   {step > 0 ? "Bridging…" : `Bridge ${amount || "—"} USDC  ${src.icon} → ${dst.icon}`}
                 </button>
@@ -373,8 +371,8 @@ export default function Bridge() {
             </div>
           </div>
 
-          {/* ── Live progress panel ── */}
-          <div className="bg-surface border border-white/8 rounded-2xl overflow-hidden sticky top-6">
+          {/* ── Live progress panel (hidden when idle) ── */}
+          {step > 0 && <div className="bg-surface border border-white/8 rounded-2xl overflow-hidden sticky top-6">
             <div className="px-5 py-4 border-b border-white/8">
               <div className="font-bold text-[13.5px]">Bridge Progress</div>
               <div className="text-[11.5px] text-muted mt-0.5">
@@ -413,7 +411,7 @@ export default function Bridge() {
                 ✓ No gas needed on destination · Circle pays it
               </div>
             </div>
-          </div>
+          </div>}
         </div>
 
         {/* ── Accordions row ── */}
