@@ -467,15 +467,10 @@ export default function Bridge() {
           </div>
         </div>
 
-        {/* ── Bridge History ── */}
-        <div className="w-full bg-surface border border-white/8 rounded-2xl overflow-hidden">
-          <div className="px-6 py-4 border-b border-white/8 flex items-center justify-between">
-            <div className="font-bold text-[13.5px]">Bridge History</div>
-            <div className="text-[12px] text-muted">{history.length} total</div>
-          </div>
-
+        {/* ── Bridge History (dropdown) ── */}
+        <Accordion key="bridge-history" title={`Bridge History  (${history.length})`}>
           {history.length === 0 ? (
-            <div className="py-14 text-center text-muted text-[13px]">No bridges yet</div>
+            <div className="py-10 text-center text-muted text-[13px]">No bridges yet</div>
           ) : (
             <>
               <table className="w-full">
@@ -521,30 +516,21 @@ export default function Bridge() {
                   ))}
                 </tbody>
               </table>
-
-              {/* Pagination */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-center gap-1.5 px-6 py-4 border-t border-white/8">
                   <button onClick={() => setPage(p => Math.max(1,p-1))} disabled={page===1}
-                    className="px-3 py-1.5 rounded-lg text-[12px] border border-white/14 text-muted hover:text-ink disabled:opacity-30 transition-colors">
-                    ← Prev
-                  </button>
+                    className="px-3 py-1.5 rounded-lg text-[12px] border border-white/14 text-muted hover:text-ink disabled:opacity-30 transition-colors">← Prev</button>
                   {Array.from({ length: totalPages }, (_,i) => i+1).map(p => (
                     <button key={p} onClick={() => setPage(p)}
-                      className={`w-8 h-8 rounded-lg text-[12px] font-semibold border transition-colors ${
-                        page===p ? "bg-accent border-accent text-white" : "border-white/14 text-muted hover:text-ink"}`}>
-                      {p}
-                    </button>
+                      className={`w-8 h-8 rounded-lg text-[12px] font-semibold border transition-colors ${page===p ? "bg-accent border-accent text-white" : "border-white/14 text-muted hover:text-ink"}`}>{p}</button>
                   ))}
                   <button onClick={() => setPage(p => Math.min(totalPages,p+1))} disabled={page===totalPages}
-                    className="px-3 py-1.5 rounded-lg text-[12px] border border-white/14 text-muted hover:text-ink disabled:opacity-30 transition-colors">
-                    Next →
-                  </button>
+                    className="px-3 py-1.5 rounded-lg text-[12px] border border-white/14 text-muted hover:text-ink disabled:opacity-30 transition-colors">Next →</button>
                 </div>
               )}
             </>
           )}
-        </div>
+        </Accordion>
 
       </div>
     </>
