@@ -121,6 +121,27 @@ export default function Bridge() {
           throw new Error(`Insufficient ETH on ${src.label}.\nYou need at least 0.01 ETH for gas.\nCurrent: ${(Number(ethBal)/1e18).toFixed(6)} ETH\nGet ETH: sepoliafaucet.com`);
       }
 
+      // Non-Arc source → use App Kit (CCTP standard)
+      if (fromChain !== "Arc_Testnet") {
+        setStep(6); setStatus("Connecting to Arc App Kit…");
+        const appKitModule  = await import("@circle-fin/app-kit");
+        const adapterModule = await import("@circle-fin/adapter-viem-v2");
+        const AppKit = (appKitModule as any).AppKit;
+        const createAdapterFromProvider = (adapterModule as any).createAdapterFromProvider;
+        const kit     = new AppKit();
+        const adapter = await createAdapterFromProvider({ provider: eth });
+        setStatus(`Confirm bridge in MetaMask…`);
+        await (kit as any).bridge({
+          from: { adapter, chain: fromChain },
+          to:   { chain: toChain },
+          amount: amtNum.toFixed(2), token: "USDC",
+        });
+        saveBridgeEntry({ from: fromChain, to: toChain, amount, token: "USDC", ts: Date.now(), status: "completed" }, account);
+        const updated = getBridgeHistory(account); setHistory(updated); setPage(1); setStep(0);
+        setStatus(`✅ ${amount} USDC bridged via CCTP!`);
+        return;
+      }
+
       const spec = {
         version: 1, sourceDomain: src.domain, destinationDomain: dst.domain,
         sourceContract: pad32(GATEWAY_WALLET), destinationContract: pad32(GATEWAY_MINTER),
