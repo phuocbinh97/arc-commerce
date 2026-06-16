@@ -208,6 +208,25 @@ export default function Bridge() {
       setFeeInfo({ forwarding: (Number(rawMaxFee) / 1e6).toFixed(4) });
       const depositAmount = value + BigInt(maxFee);
 
+      // Check USDC balance on source chain
+      const usdcBalRes = await fetch(src.rpc, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [{
+          to: src.usdc,
+          data: "0x70a08231" + from.toLowerCase().replace("0x","").padStart(64,"0"),
+        }, "latest"] }),
+      }).then(r => r.json());
+      const usdcBal = BigInt(usdcBalRes.result && usdcBalRes.result !== "0x" ? usdcBalRes.result : "0x0");
+      if (usdcBal < depositAmount) {
+        throw new Error(
+          `Insufficient USDC on ${src.label}.\n` +
+          `You have: ${(Number(usdcBal)/1e6).toFixed(4)} USDC\n` +
+          `Required: ${(Number(depositAmount)/1e6).toFixed(4)} USDC (amount + forwarding fee)\n` +
+          `Get USDC from: https://faucet.circle.com`
+        );
+      }
+
       // Step 3 — approve USDC
       setStep(3); setStatus(`Step 3/6 — Approve ${(Number(depositAmount)/1e6).toFixed(4)} USDC…`);
       const approveData = "0x095ea7b3"
