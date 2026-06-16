@@ -138,17 +138,7 @@ export default function Treasury() {
             </div>
             <div className="flex items-center gap-3">
               {isConnected && (
-                <div className="text-right flex gap-4">
-                  <div>
-                    <div className="text-[11px] text-muted">USDC</div>
-                    <div className="font-bold font-mono text-[14px] text-ink">{usdcBalance}</div>
-                  </div>
-                  <div>
-                    <div className="text-[11px] text-muted">EURC</div>
-                    <div className="font-bold font-mono text-[14px] text-ink">{eurcBalance}</div>
-                  </div>
-                </div>
-              )}
+                )}
               <div className="flex gap-1.5">
                 {!isConnected ? (
                   <button onClick={connect}
