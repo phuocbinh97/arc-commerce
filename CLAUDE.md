@@ -90,7 +90,7 @@ C:\Users\pc\Documents\Codex\2026-06-02\b-c-th-t-d-c\
 
 ### .env.local (local dev)
 ```
-NEXT_PUBLIC_KIT_KEY=05b9c7f9ec64e8efa7aa6936077f5295:8f1128bfbfd3679df703cf10e36d7ae9
+NEXT_PUBLIC_KIT_KEY=6d50d2a...  # key mới tạo 2026-06-16, key cũ 05b9c7f9 đã expired
 NEXT_PUBLIC_HUB_CONTRACT=0xc7cb4f5ace70a4febc3b260591832af72563e988
 NEXT_PUBLIC_MERCHANT_WALLET=0x5e86FCe1b94772Ff6a9632FA8BEc82BA59e24f02
 NEXT_PUBLIC_ARC_RPC=https://rpc.testnet.arc.network
@@ -102,7 +102,7 @@ NEXT_PUBLIC_USDC_ADDRESS=0x3600000000000000000000000000000000000000
 - Code trong `lib/arc.ts` export `KIT_KEY = process.env.NEXT_PUBLIC_KIT_KEY`
 - Code trong `treasury/page.tsx` dùng: `config: { kitKey: \`KIT_KEY:\${KIT_KEY}\` }`
 - Vì vậy env var chỉ chứa `keyId:keySecret` — KHÔNG có prefix `KIT_KEY:`
-- Vercel env var phải là: `05b9c7f9ec64e8efa7aa6936077f5295:8f1128bfbfd3679df703cf10e36d7ae9`
+- Vercel env var phải là phần sau `KIT_KEY:` trong full key Circle Console hiển thị khi tạo
 
 ---
 
