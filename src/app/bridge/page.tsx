@@ -266,224 +266,209 @@ export default function Bridge() {
   return (
     <>
       <Topbar title="Bridge" />
-      <div className="p-6 flex-1 flex flex-col gap-5 max-w-[1100px] mx-auto w-full">
+      <div className="p-6 flex-1 flex flex-col items-center gap-5">
 
-        {/* Main row: form + live steps (progress only visible when bridging) */}
-        <div className={`grid gap-5 items-start transition-all`} style={{ gridTemplateColumns: (step > 0 || succeeded) ? "1fr 320px" : "1fr" }}>
+        {/* Main row: centered card + progress panel */}
+        <div className="flex gap-5 items-start w-full max-w-[860px] justify-center">
 
-          {/* ── Bridge form ── */}
-          <div className="bg-surface border border-white/8 rounded-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-white/8 flex items-center justify-between">
+          {/* ── Bridge card ── */}
+          <div className="w-full max-w-[460px] bg-surface border border-white/8 rounded-2xl overflow-hidden">
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-white/8 flex items-center justify-between">
               <div>
-                <div className="font-bold text-[15px]">Bridge USDC</div>
-                <div className="text-[11.5px] text-muted mt-0.5">Circle Gateway Forwarding · Any chain ↔ Any chain</div>
+                <div className="font-bold text-[14px]">Cross-chain transfer</div>
+                <div className="text-[11px] text-muted mt-0.5">
+                  {isKitMode ? "Circle CCTP" : "Circle Gateway Forwarding"}
+                </div>
               </div>
-              <span className="text-[11px] px-2 py-1 rounded-full bg-green/10 border border-green/20 text-green font-medium">● Live</span>
+              <span className="text-[11px] px-2 py-0.5 rounded-full bg-green/10 border border-green/20 text-green font-medium">● Live</span>
             </div>
 
-            <div className="p-6 flex flex-col gap-5">
-              {/* From */}
-              <div className="flex flex-col gap-2">
-                <label className="text-[11.5px] font-semibold text-muted uppercase tracking-wider">From</label>
-                <select value={fromChain} onChange={e => { setFromChain(e.target.value); setFeeInfo(null); setStatus(""); setStep(0); }}
-                  className="w-full bg-bg border border-white/14 rounded-xl px-4 py-3 text-[13.5px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
+            <div className="p-4 flex flex-col gap-3">
+              {/* FROM block */}
+              <div className="bg-bg border border-white/8 rounded-xl p-4 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">From</span>
+                  {src.gas === "ETH" && (
+                    <span className="text-[11px] text-amber">⚠ Need ETH for gas</span>
+                  )}
+                </div>
+                <select value={fromChain} onChange={e => { setFromChain(e.target.value); setFeeInfo(null); setStatus(""); setStep(0); setSucceeded(false); }}
+                  className="w-full bg-surface border border-white/14 rounded-lg px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
                   {CHAIN_IDS.filter(id => id !== toChain).map(id => (
                     <option key={id} value={id}>{CHAINS[id].icon}  {CHAINS[id].label}</option>
                   ))}
                 </select>
+                <div className="flex items-center gap-3">
+                  <input type="number" value={amount} onChange={e => { setAmount(e.target.value); setFeeInfo(null); }}
+                    placeholder="0.00"
+                    className="flex-1 bg-transparent text-[28px] font-bold text-ink outline-none placeholder:text-white/20 w-0" />
+                  <span className="text-[13px] text-muted font-medium shrink-0">USDC</span>
+                </div>
               </div>
 
-              {/* Swap arrow button */}
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-white/8" />
+              {/* Swap button */}
+              <div className="flex justify-center -my-1">
                 <button onClick={swapChains} title="Swap chains"
-                  className="w-9 h-9 rounded-full bg-surface2 border border-white/14 grid place-items-center text-muted hover:text-white hover:border-accent hover:bg-accent/10 transition-all text-base font-bold select-none">
+                  className="w-8 h-8 rounded-full bg-surface border border-white/14 grid place-items-center text-muted hover:text-white hover:border-accent hover:bg-accent/10 transition-all text-sm font-bold select-none z-10">
                   ⇅
                 </button>
-                <div className="flex-1 h-px bg-white/8" />
               </div>
 
-              {/* To */}
-              <div>
-                <label className="text-[11.5px] font-semibold text-muted uppercase tracking-wider mb-2 block">To</label>
-                <select value={toChain} onChange={e => { setToChain(e.target.value); setFeeInfo(null); setStatus(""); setStep(0); }}
-                  className="w-full bg-bg border border-white/14 rounded-xl px-4 py-3 text-[13.5px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
+              {/* TO block */}
+              <div className="bg-bg border border-white/8 rounded-xl p-4 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">To</span>
+                  {!isKitMode && dst.gwFee !== "—" && (
+                    <span className="text-[11px] text-muted">fwd fee ~{dst.gwFee}</span>
+                  )}
+                </div>
+                <select value={toChain} onChange={e => { setToChain(e.target.value); setFeeInfo(null); setStatus(""); setStep(0); setSucceeded(false); }}
+                  className="w-full bg-surface border border-white/14 rounded-lg px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
                   {CHAIN_IDS.filter(id => id !== fromChain).map(id => (
-                    <option key={id} value={id}>{CHAINS[id].icon}  {CHAINS[id].label}{CHAINS[id].gwFee !== "—" ? `  ·  fwd fee ${CHAINS[id].gwFee}` : ""}</option>
+                    <option key={id} value={id}>{CHAINS[id].icon}  {CHAINS[id].label}</option>
                   ))}
                 </select>
+                <div className="flex items-center gap-3">
+                  <span className={`flex-1 text-[28px] font-bold ${amtNum > 0 ? "text-green" : "text-white/20"}`}>
+                    {amtNum > 0
+                      ? (isKitMode
+                          ? `~${(amtNum - amtNum*0.00005).toFixed(4)}`
+                          : (feeInfo ? feeInfo.receive : `~${(amtNum - 0.20 - amtNum*0.00005).toFixed(4)}`)
+                        )
+                      : "0.00"
+                    }
+                  </span>
+                  <span className="text-[13px] text-muted font-medium shrink-0">USDC</span>
+                </div>
               </div>
 
-              {/* Non-Arc source: App Kit notice */}
-              {fromChain !== "Arc_Testnet" && (
-                <div className="flex items-start gap-2.5 bg-accent/6 border border-accent/20 rounded-xl px-4 py-3 text-[12px] text-accent">
-                  <span className="mt-0.5 shrink-0">ℹ</span>
-                  <span>Bridging via <strong>Circle App Kit</strong> (CCTP, ~3 MetaMask confirmations).</span>
-                </div>
-              )}
+              {/* Recipient */}
+              <input value={recipient} onChange={e => setRecipient(e.target.value)}
+                placeholder="Recipient (optional, default: your wallet)"
+                className="w-full bg-bg border border-white/8 rounded-lg px-3 py-2 text-[12px] text-ink font-mono outline-none focus:border-accent transition-colors placeholder:text-white/25" />
 
-              {/* ETH warning */}
-              {src.gas === "ETH" && (
-                <div className="flex items-start gap-2.5 bg-amber/6 border border-amber/20 rounded-xl px-4 py-3 text-[12px] text-amber">
-                  <span className="mt-0.5 shrink-0">⚠</span>
-                  <span>Need <strong>ETH</strong> on {src.label} for gas (~0.01 ETH min). Get from{" "}
-                    <a href="https://sepoliafaucet.com" target="_blank" rel="noreferrer" className="underline font-medium">sepoliafaucet.com</a>
+              {/* Fee row */}
+              {amtNum > 0 && (
+                <div className="flex items-center justify-between text-[12px] text-muted px-1">
+                  <span>Est. time: <span className="text-accent">{isKitMode ? "~1-2 min" : "~30s"}</span></span>
+                  <span>
+                    {isKitMode
+                      ? `Fee: ${(amtNum*0.00005).toFixed(6)} USDC`
+                      : `Fee: ${feeInfo ? feeInfo.forwarding : `~${dst.gwFee}`} + ${(amtNum*0.00005).toFixed(5)} USDC`
+                    }
                   </span>
                 </div>
               )}
 
-              {/* Amount + Recipient */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[11.5px] font-semibold text-muted uppercase tracking-wider mb-2 block">Amount (USDC)</label>
-                  <input type="number" value={amount} onChange={e => { setAmount(e.target.value); setFeeInfo(null); }} placeholder="10.00"
-                    className="w-full bg-bg border border-white/14 rounded-xl px-4 py-3 text-[14px] text-ink outline-none focus:border-accent transition-colors" />
-                </div>
-                <div>
-                  <label className="text-[11.5px] font-semibold text-muted uppercase tracking-wider mb-2 block">Recipient <span className="normal-case font-normal">(optional)</span></label>
-                  <input value={recipient} onChange={e => setRecipient(e.target.value)} placeholder="0x… (default: you)"
-                    className="w-full bg-bg border border-white/14 rounded-xl px-4 py-3 text-[13px] text-ink font-mono outline-none focus:border-accent transition-colors" />
-                </div>
-              </div>
-
-              {/* Fee summary */}
-              {amtNum > 0 && (
-                <div className="bg-bg border border-white/8 rounded-xl p-4 text-[13px] space-y-2">
-                  <div className="flex justify-between text-muted">
-                    <span>You send</span>
-                    <span className="text-ink font-semibold">{amount} USDC</span>
-                  </div>
-                  {!isKitMode && (
-                    <div className="flex justify-between text-muted">
-                      <span>Forwarding fee</span>
-                      <span>{feeInfo ? `${feeInfo.forwarding} USDC` : `~${dst.gwFee}`}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-muted">
-                    <span>Transfer fee (0.005%)</span>
-                    <span>{(amtNum*0.00005).toFixed(6)} USDC</span>
-                  </div>
-                  <div className="h-px bg-white/8 my-1" />
-                  <div className="flex justify-between font-semibold">
-                    <span className="text-muted">You receive</span>
-                    <span className="text-green text-[14px]">
-                      {isKitMode
-                        ? `~${(amtNum - amtNum*0.00005).toFixed(4)}`
-                        : (feeInfo ? feeInfo.receive : (amtNum - 0.20 - amtNum*0.00005).toFixed(4))
-                      } USDC
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-muted text-[12px]">
-                    <span>Est. time</span>
-                    <span className="text-accent">{isKitMode ? "~1-2 minutes" : "~30 seconds"}</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Status message */}
+              {/* Status */}
               {status && (
-                <div className={`px-4 py-3 rounded-xl text-[12.5px] whitespace-pre-line leading-relaxed border ${
+                <div className={`px-3 py-2.5 rounded-xl text-[12px] whitespace-pre-line leading-relaxed border ${
                   status.startsWith("✅") ? "bg-green/8 text-green border-green/20" :
                   status.startsWith("❌") ? "bg-red/8 text-red border-red/20" :
                   "bg-surface2 text-muted border-white/8"}`}>
                   {status}
-                  {txId && <div className="font-mono text-[10.5px] mt-1.5 opacity-50">Transfer ID: {txId}</div>}
+                  {txId && <div className="font-mono text-[10px] mt-1 opacity-50">ID: {txId}</div>}
                 </div>
               )}
 
               {/* CTA */}
               {!isConnected ? (
                 <button onClick={connect}
-                  className="w-full py-3.5 bg-accent text-white rounded-xl text-[14px] font-bold hover:bg-accent/90 transition-colors">
+                  className="w-full py-3 bg-accent text-white rounded-xl text-[13.5px] font-bold hover:bg-accent/90 transition-colors">
                   Connect Wallet
                 </button>
               ) : (
                 <button onClick={doBridge} disabled={step > 0 || !amount || amtNum <= 0 || fromChain === toChain}
-                  className="w-full py-3.5 bg-accent text-white rounded-xl text-[14px] font-bold disabled:opacity-40 hover:bg-accent/90 transition-colors">
-                  {step > 0 ? "Bridging…" : `Bridge ${amount || "—"} USDC  ${src.icon} → ${dst.icon}`}
+                  className="w-full py-3 bg-accent text-white rounded-xl text-[13.5px] font-bold disabled:opacity-40 hover:bg-accent/90 transition-colors tracking-wide">
+                  {step > 0 ? "Processing…" : `Bridge ${amount || "—"} USDC  ${src.icon} → ${dst.icon}`}
                 </button>
               )}
             </div>
           </div>
 
-          {/* ── Live progress panel (hidden when idle) ── */}
-          {(step > 0 || succeeded) && <div className="bg-surface border border-white/8 rounded-2xl overflow-hidden sticky top-6">
-            <div className="px-5 py-4 border-b border-white/8">
-              <div className="font-bold text-[13.5px]">Bridge Progress</div>
-              <div className="text-[11.5px] text-muted mt-0.5">
-                {succeeded ? "Completed ✓" : step === 0 ? "Ready to bridge" : `Step ${displayStep} of ${STEPS.length}`}
+          {/* ── Progress panel ── */}
+          {(step > 0 || succeeded) && (
+            <div className="w-[280px] shrink-0 bg-surface border border-white/8 rounded-2xl overflow-hidden sticky top-6">
+              <div className="px-4 py-3.5 border-b border-white/8">
+                <div className="font-bold text-[13px]">Bridge Progress</div>
+                <div className="text-[11px] text-muted mt-0.5">
+                  {succeeded ? "All done ✓" : `Step ${displayStep} of ${STEPS.length}`}
+                </div>
               </div>
-            </div>
-            <div className="p-4 flex flex-col gap-2">
-              {STEPS.map(s => {
-                const done   = displayStep > s.n;
-                const active = displayStep === s.n;
-                return (
-                  <div key={s.n} className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl border transition-all duration-300 ${
-                    active  ? "bg-accent/10 border-accent/30" :
-                    done    ? "bg-green/6  border-green/20"  :
-                              "bg-surface2 border-white/6 opacity-50"}`}>
-                    <div className={`w-6 h-6 rounded-full grid place-items-center text-[11px] font-bold shrink-0 border transition-colors ${
-                      active ? "border-accent text-accent bg-accent/10" :
-                      done   ? "border-green  text-green  bg-green/10"  :
-                               "border-white/20 text-muted"}`}>
-                      {done ? "✓" : s.n}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className={`text-[12.5px] font-semibold ${active ? "text-ink" : done ? "text-green" : "text-muted"}`}>
-                        {s.label}
+              <div className="p-3 flex flex-col gap-2">
+                {STEPS.map(s => {
+                  const isDone   = displayStep > s.n;
+                  const isActive = displayStep === s.n;
+                  return (
+                    <div key={s.n} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all duration-300 ${
+                      isActive ? "bg-accent/10 border-accent/30" :
+                      isDone   ? "bg-green/6  border-green/20"   :
+                                 "bg-surface2 border-white/6 opacity-40"}`}>
+                      <div className={`w-5 h-5 rounded-full grid place-items-center text-[10px] font-bold shrink-0 border transition-colors ${
+                        isActive ? "border-accent text-accent" :
+                        isDone   ? "border-green  text-green"  :
+                                   "border-white/20 text-muted"}`}>
+                        {isDone ? "✓" : s.n}
                       </div>
-                      {active && <div className="text-[11px] text-muted truncate">{s.desc}</div>}
+                      <div className="flex-1 min-w-0">
+                        <div className={`text-[12px] font-semibold truncate ${isActive ? "text-ink" : isDone ? "text-green" : "text-muted"}`}>
+                          {s.label}
+                        </div>
+                      </div>
+                      {isActive && <span className="text-accent text-[9px] animate-pulse shrink-0">●</span>}
                     </div>
-                    {active && <span className="text-accent text-[10px] animate-pulse shrink-0">●</span>}
-                  </div>
-                );
-              })}
-            </div>
-            <div className="px-5 pb-4">
-              <div className="text-[11px] text-muted text-center bg-green/6 border border-green/15 rounded-lg py-2">
-                {isKitMode ? "✓ Circle App Kit handles network switching" : "✓ No gas needed on destination · Circle pays it"}
+                  );
+                })}
+              </div>
+              <div className="px-4 pb-4">
+                <div className="text-[10.5px] text-muted text-center bg-green/6 border border-green/15 rounded-lg py-1.5">
+                  {isKitMode ? "Circle App Kit · CCTP" : "No gas on destination · Circle pays"}
+                </div>
               </div>
             </div>
-          </div>}
+          )}
         </div>
 
-        {/* ── Accordions row ── */}
-        <div className="grid grid-cols-2 gap-5">
-          <Accordion title="How it works">
-            <div className="p-4 flex flex-col gap-2">
-              {STEPS.map(s => (
-                <div key={s.n} className="flex items-start gap-3 py-2.5 border-b border-white/6 last:border-0">
-                  <div className="w-6 h-6 rounded-full bg-accent/10 text-accent grid place-items-center text-[11px] font-bold shrink-0 mt-0.5">{s.n}</div>
-                  <div>
-                    <div className="text-[13px] font-semibold text-ink">{s.label}</div>
-                    <div className="text-[11.5px] text-muted">{s.desc}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Accordion>
-
-          <Accordion title="Supported Chains">
-            <div className="p-4 grid grid-cols-2 gap-2">
-              {CHAIN_IDS.map(id => {
-                const c = CHAINS[id];
-                return (
-                  <div key={id} className="flex items-center gap-2.5 p-3 bg-bg border border-white/8 rounded-xl">
-                    <span className="text-xl shrink-0">{c.icon}</span>
+        {/* ── Info row: accordions ── */}
+        <div className="flex gap-4 w-full max-w-[860px]">
+          <div className="flex-1">
+            <Accordion key="how-it-works" title="How it works">
+              <div className="p-4 flex flex-col gap-2">
+                {(isKitMode ? STEPS_KIT : STEPS_GW).map(s => (
+                  <div key={s.n} className="flex items-start gap-3 py-2 border-b border-white/6 last:border-0">
+                    <div className="w-5 h-5 rounded-full bg-accent/10 text-accent grid place-items-center text-[10px] font-bold shrink-0 mt-0.5">{s.n}</div>
                     <div>
-                      <div className="text-[12.5px] font-semibold">{c.label}</div>
-                      <div className="text-[11px] text-muted">Gas: {c.gas} · fwd {c.gwFee}</div>
+                      <div className="text-[12.5px] font-semibold text-ink">{s.label}</div>
+                      <div className="text-[11px] text-muted">{s.desc}</div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </Accordion>
+                ))}
+              </div>
+            </Accordion>
+          </div>
+          <div className="flex-1">
+            <Accordion key="supported-chains" title="Supported Chains">
+              <div className="p-3 grid grid-cols-2 gap-2">
+                {CHAIN_IDS.map(id => {
+                  const c = CHAINS[id];
+                  return (
+                    <div key={id} className="flex items-center gap-2 p-2.5 bg-bg border border-white/8 rounded-xl">
+                      <span className="text-lg shrink-0">{c.icon}</span>
+                      <div>
+                        <div className="text-[12px] font-semibold">{c.label}</div>
+                        <div className="text-[10.5px] text-muted">Gas: {c.gas}{c.gwFee !== "—" ? ` · fwd ${c.gwFee}` : ""}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Accordion>
+          </div>
         </div>
 
         {/* ── Bridge History ── */}
-        <div className="bg-surface border border-white/8 rounded-2xl overflow-hidden">
+        <div className="w-full max-w-[860px] bg-surface border border-white/8 rounded-2xl overflow-hidden">
           <div className="px-6 py-4 border-b border-white/8 flex items-center justify-between">
             <div className="font-bold text-[13.5px]">Bridge History</div>
             <div className="text-[12px] text-muted">{history.length} total</div>
