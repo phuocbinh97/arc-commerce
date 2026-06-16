@@ -121,14 +121,25 @@ export default function Bridge() {
           throw new Error(`Insufficient ETH on ${src.label}.\nYou need at least 0.01 ETH for gas.\nCurrent: ${(Number(ethBal)/1e18).toFixed(6)} ETH\nGet ETH: sepoliafaucet.com`);
       }
 
-      // Non-Arc source → not supported (Circle Gateway & App Kit only support Arc as source)
+      // Non-Arc source → use App Kit (standard CCTP, 3 MetaMask confirmations)
       if (fromChain !== "Arc_Testnet") {
-        throw new Error(
-          `Bridging from ${src.label} to Arc is not supported in testnet.\n` +
-          `Circle Gateway Forwarding only works with Arc as source.\n\n` +
-          `To get USDC on Arc: faucet.circle.com\n` +
-          `Tip: Bridge Arc → ${dst.label} first, then swap back.`
-        );
+        setStep(6); setStatus("Connecting to Circle App Kit…");
+        const appKitModule  = await import("@circle-fin/app-kit");
+        const adapterModule = await import("@circle-fin/adapter-viem-v2");
+        const AppKit = (appKitModule as any).AppKit;
+        const createAdapterFromProvider = (adapterModule as any).createAdapterFromProvider;
+        const kit     = new AppKit();
+        const adapter = await createAdapterFromProvider({ provider: eth });
+        setStatus("Follow MetaMask prompts…");
+        await (kit as any).bridge({
+          from: { adapter, chain: fromChain },
+          to:   { chain: toChain },
+          amount: amtNum.toFixed(2), token: "USDC",
+        });
+        saveBridgeEntry({ from: fromChain, to: toChain, amount, token: "USDC", ts: Date.now(), status: "completed" }, account);
+        const updated = getBridgeHistory(account); setHistory(updated); setPage(1); setStep(0);
+        setStatus(`✅ ${amount} USDC bridged via CCTP!`);
+        return;
       }
 
       const spec = {
@@ -280,15 +291,11 @@ export default function Bridge() {
                 </select>
               </div>
 
-              {/* Arc-as-source-only notice */}
+              {/* Non-Arc source note */}
               {fromChain !== "Arc_Testnet" && (
-                <div className="flex items-start gap-2.5 bg-red/6 border border-red/20 rounded-xl px-4 py-3 text-[12px] text-red">
-                  <span className="mt-0.5 shrink-0">⚠</span>
-                  <span>
-                    Circle Gateway only supports <strong>Arc as source</strong> in testnet.
-                    Bridging from {src.label} to Arc is not available.{" "}
-                    <a href="https://faucet.circle.com" target="_blank" rel="noreferrer" className="underline font-medium">Get USDC on Arc via faucet</a>
-                  </span>
+                <div className="flex items-start gap-2.5 bg-accent/6 border border-accent/20 rounded-xl px-4 py-3 text-[12px] text-accent">
+                  <span className="mt-0.5 shrink-0">ℹ</span>
+                  <span>Bridging via <strong>Circle App Kit</strong> (CCTP standard). MetaMask sẽ hỏi ~3 lần.</span>
                 </div>
               )}
 
@@ -363,7 +370,7 @@ export default function Bridge() {
                   Connect Wallet
                 </button>
               ) : (
-                <button onClick={doBridge} disabled={step > 0 || !amount || amtNum <= 0 || fromChain === toChain || fromChain !== "Arc_Testnet"}
+                <button onClick={doBridge} disabled={step > 0 || !amount || amtNum <= 0 || fromChain === toChain}
                   className="w-full py-3.5 bg-accent text-white rounded-xl text-[14px] font-bold disabled:opacity-40 hover:bg-accent/90 transition-colors">
                   {step > 0 ? "Bridging…" : `Bridge ${amount || "—"} USDC  ${src.icon} → ${dst.icon}`}
                 </button>
