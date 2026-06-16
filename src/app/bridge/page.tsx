@@ -150,16 +150,30 @@ export default function Bridge() {
         const createAdapterFromProvider = (adapterModule as any).createAdapterFromProvider;
         const kit     = new AppKit();
         const adapter = await createAdapterFromProvider({ provider: eth });
+
+        // Snapshot USDC balance before — used to detect cancel (App Kit resolves even on cancel)
+        const getUsdcBal = async () => {
+          const r = await fetch(src.rpc, { method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ jsonrpc:"2.0", id:1, method:"eth_call",
+              params:[{ to: src.usdc, data: "0x70a08231" + from.toLowerCase().replace("0x","").padStart(64,"0") }, "latest"] }) }).then(r => r.json());
+          return BigInt(r.result && r.result !== "0x" ? r.result : "0x0");
+        };
+        const balBefore = await getUsdcBal();
+
         setStep(KIT_STEP_APPROVE); setStatus("Approve & confirm in MetaMask…");
-        const bridgeResult = await (kit as any).bridge({
+        await (kit as any).bridge({
           from: { adapter, chain: fromChain },
           to:   { adapter, chain: toChain },
           amount: amtNum.toFixed(2), token: "USDC",
         });
-        // App Kit resolves even on cancel — check result
-        if (!bridgeResult || bridgeResult.error || bridgeResult.status === "failed" || bridgeResult.status === "cancelled" || bridgeResult.status === "rejected") {
-          throw new Error(bridgeResult?.error?.message || "Bridge was cancelled or failed.");
+
+        // Verify balance actually decreased — minimum 50% of amount must have left
+        const balAfter = await getUsdcBal();
+        const minDecrease = BigInt(Math.floor(amtNum * 500_000)); // 50% of amount in 6-decimal units
+        if (balBefore - balAfter < minDecrease) {
+          throw new Error("Bridge was cancelled or did not complete.");
         }
+
         setStep(KIT_STEP_BRIDGE);
         saveBridgeEntry({ from: fromChain, to: toChain, amount, token: "USDC", ts: Date.now(), status: "completed" }, account);
         const updated = getBridgeHistory(account); setHistory(updated); setPage(1);
