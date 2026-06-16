@@ -286,7 +286,7 @@ export default function Bridge() {
 
             <div className="p-4 flex flex-col gap-3">
               {/* FROM block */}
-              <div className="bg-bg border border-white/8 rounded-xl p-4 flex flex-col gap-3">
+              <div className="bg-bg rounded-xl p-4 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">From</span>
                   {src.gas === "ETH" && (
@@ -294,7 +294,7 @@ export default function Bridge() {
                   )}
                 </div>
                 <select value={fromChain} onChange={e => { setFromChain(e.target.value); setFeeInfo(null); setStatus(""); setStep(0); setSucceeded(false); }}
-                  className="w-full bg-surface border border-white/14 rounded-lg px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
+                  className="w-full bg-surface2 border border-white/6 rounded-lg px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
                   {CHAIN_IDS.filter(id => id !== toChain).map(id => (
                     <option key={id} value={id}>{CHAINS[id].icon}  {CHAINS[id].label}</option>
                   ))}
@@ -302,7 +302,7 @@ export default function Bridge() {
                 <div className="flex items-center gap-3">
                   <input type="number" value={amount} onChange={e => { setAmount(e.target.value); setFeeInfo(null); }}
                     placeholder="0.00"
-                    className="flex-1 bg-transparent text-[28px] font-bold text-ink outline-none placeholder:text-white/20 w-0" />
+                    className="flex-1 bg-transparent text-[28px] font-bold text-ink outline-none placeholder:text-white/35 w-0" />
                   <span className="text-[13px] text-muted font-medium shrink-0">USDC</span>
                 </div>
               </div>
@@ -310,13 +310,13 @@ export default function Bridge() {
               {/* Swap button */}
               <div className="flex justify-center -my-1">
                 <button onClick={swapChains} title="Swap chains"
-                  className="w-8 h-8 rounded-full bg-surface border border-white/14 grid place-items-center text-muted hover:text-white hover:border-accent hover:bg-accent/10 transition-all text-sm font-bold select-none z-10">
+                  className="w-8 h-8 rounded-full bg-surface2 border border-white/8 grid place-items-center text-muted hover:text-white hover:border-accent hover:bg-accent/10 transition-all text-sm font-bold select-none z-10">
                   ⇅
                 </button>
               </div>
 
               {/* TO block */}
-              <div className="bg-bg border border-white/8 rounded-xl p-4 flex flex-col gap-3">
+              <div className="bg-bg rounded-xl p-4 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">To</span>
                   {!isKitMode && dst.gwFee !== "—" && (
@@ -324,13 +324,13 @@ export default function Bridge() {
                   )}
                 </div>
                 <select value={toChain} onChange={e => { setToChain(e.target.value); setFeeInfo(null); setStatus(""); setStep(0); setSucceeded(false); }}
-                  className="w-full bg-surface border border-white/14 rounded-lg px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
+                  className="w-full bg-surface2 border border-white/6 rounded-lg px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
                   {CHAIN_IDS.filter(id => id !== fromChain).map(id => (
                     <option key={id} value={id}>{CHAINS[id].icon}  {CHAINS[id].label}</option>
                   ))}
                 </select>
                 <div className="flex items-center gap-3">
-                  <span className={`flex-1 text-[28px] font-bold ${amtNum > 0 ? "text-green" : "text-white/20"}`}>
+                  <span className={`flex-1 text-[28px] font-bold ${amtNum > 0 ? "text-green" : "text-white/35"}`}>
                     {amtNum > 0
                       ? (isKitMode
                           ? `~${(amtNum - amtNum*0.00005).toFixed(4)}`
@@ -346,7 +346,7 @@ export default function Bridge() {
               {/* Recipient */}
               <input value={recipient} onChange={e => setRecipient(e.target.value)}
                 placeholder="Recipient (optional, default: your wallet)"
-                className="w-full bg-bg border border-white/8 rounded-lg px-3 py-2 text-[12px] text-ink font-mono outline-none focus:border-accent transition-colors placeholder:text-white/25" />
+                className="w-full bg-bg border border-white/6 rounded-lg px-3 py-2 text-[12px] text-ink font-mono outline-none focus:border-accent transition-colors placeholder:text-white/30" />
 
               {/* Fee row */}
               {amtNum > 0 && (
@@ -381,7 +381,7 @@ export default function Bridge() {
               ) : (
                 <button onClick={doBridge} disabled={step > 0 || !amount || amtNum <= 0 || fromChain === toChain}
                   className="w-full py-3 bg-accent text-white rounded-xl text-[13.5px] font-bold disabled:opacity-40 hover:bg-accent/90 transition-colors tracking-wide">
-                  {step > 0 ? "Processing…" : `Bridge ${amount || "—"} USDC  ${src.icon} → ${dst.icon}`}
+                  {step > 0 ? "Processing…" : amtNum > 0 ? `Bridge ${amount} USDC  ${src.icon} → ${dst.icon}` : "Enter amount to bridge"}
                 </button>
               )}
             </div>
