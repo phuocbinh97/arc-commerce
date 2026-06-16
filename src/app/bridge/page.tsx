@@ -31,7 +31,8 @@ const TRANSFER_SPEC_TYPES = [
 const BURN_INTENT_TYPES  = [{ name: "maxBlockHeight", type: "uint256" }, { name: "maxFee", type: "uint256" }, { name: "spec", type: "TransferSpec" }];
 const EIP712_DOMAIN_TYPE = [{ name: "name", type: "string" }, { name: "version", type: "string" }];
 
-const STEPS = [
+// Steps for Arc source (Gateway Forwarding)
+const STEPS_GW = [
   { n: 1, label: "Switch network",     desc: "MetaMask switches to source chain" },
   { n: 2, label: "Estimate fees",      desc: "Calculate exact deposit amount" },
   { n: 3, label: "Check balance",      desc: "Verify USDC balance" },
@@ -40,6 +41,16 @@ const STEPS = [
   { n: 6, label: "Sign intent",        desc: "EIP-712 signature (no gas)" },
   { n: 7, label: "Submit & mint",      desc: "Circle mints on destination" },
 ];
+// Steps for non-Arc source (App Kit / CCTP)
+const STEPS_KIT = [
+  { n: 1, label: "Switch network",  desc: "MetaMask switches to source chain" },
+  { n: 2, label: "Approve USDC",   desc: "Authorize Circle to burn USDC" },
+  { n: 3, label: "Burn & bridge",  desc: "Circle burns on source, mints on destination" },
+];
+// Sentinel step numbers for App Kit mode
+const KIT_STEP_SWITCH  = 10;
+const KIT_STEP_APPROVE = 11;
+const KIT_STEP_BRIDGE  = 12;
 
 function pad32(a: string) { return "0x" + a.toLowerCase().replace("0x","").padStart(64,"0"); }
 function randomSalt() { const b = new Uint8Array(32); crypto.getRandomValues(b); return "0x" + Array.from(b).map(x=>x.toString(16).padStart(2,"0")).join(""); }
@@ -84,6 +95,12 @@ export default function Bridge() {
   const src    = CHAINS[fromChain];
   const dst    = CHAINS[toChain];
   const amtNum = parseFloat(amount) || 0;
+  const isKitMode = fromChain !== "Arc_Testnet";
+  const STEPS = isKitMode ? STEPS_KIT : STEPS_GW;
+  // Map kit sentinel steps to display step numbers
+  const displayStep = step >= 10
+    ? (step === KIT_STEP_SWITCH ? 1 : step === KIT_STEP_APPROVE ? 2 : 3)
+    : step;
   const totalPages = Math.ceil(history.length / HISTORY_PER_PAGE);
   const pagedHistory = history.slice((page-1)*HISTORY_PER_PAGE, page*HISTORY_PER_PAGE);
 
@@ -121,21 +138,22 @@ export default function Bridge() {
           throw new Error(`Insufficient ETH on ${src.label}.\nYou need at least 0.01 ETH for gas.\nCurrent: ${(Number(ethBal)/1e18).toFixed(6)} ETH\nGet ETH: sepoliafaucet.com`);
       }
 
-      // Non-Arc source → use App Kit (adapter required on both sides)
+      // Non-Arc source → use App Kit (CCTP, adapter required on both sides)
       if (fromChain !== "Arc_Testnet") {
-        setStep(6); setStatus("Connecting to Circle App Kit…");
+        setStep(KIT_STEP_SWITCH); setStatus("Connecting to Circle App Kit…");
         const appKitModule  = await import("@circle-fin/app-kit");
         const adapterModule = await import("@circle-fin/adapter-viem-v2");
         const AppKit = (appKitModule as any).AppKit;
         const createAdapterFromProvider = (adapterModule as any).createAdapterFromProvider;
         const kit     = new AppKit();
         const adapter = await createAdapterFromProvider({ provider: eth });
-        setStatus("Follow MetaMask prompts…");
+        setStep(KIT_STEP_APPROVE); setStatus("Approve & confirm in MetaMask…");
         await (kit as any).bridge({
           from: { adapter, chain: fromChain },
           to:   { adapter, chain: toChain },
           amount: amtNum.toFixed(2), token: "USDC",
         });
+        setStep(KIT_STEP_BRIDGE);
         saveBridgeEntry({ from: fromChain, to: toChain, amount, token: "USDC", ts: Date.now(), status: "completed" }, account);
         const updated = getBridgeHistory(account); setHistory(updated); setPage(1); setStep(0);
         setStatus(`✅ ${amount} USDC bridged via CCTP!`);
@@ -330,10 +348,12 @@ export default function Bridge() {
                     <span>You send</span>
                     <span className="text-ink font-semibold">{amount} USDC</span>
                   </div>
-                  <div className="flex justify-between text-muted">
-                    <span>Forwarding fee</span>
-                    <span>{feeInfo ? `${feeInfo.forwarding} USDC` : `~${dst.gwFee}`}</span>
-                  </div>
+                  {!isKitMode && (
+                    <div className="flex justify-between text-muted">
+                      <span>Forwarding fee</span>
+                      <span>{feeInfo ? `${feeInfo.forwarding} USDC` : `~${dst.gwFee}`}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-muted">
                     <span>Transfer fee (0.005%)</span>
                     <span>{(amtNum*0.00005).toFixed(6)} USDC</span>
@@ -342,12 +362,15 @@ export default function Bridge() {
                   <div className="flex justify-between font-semibold">
                     <span className="text-muted">You receive</span>
                     <span className="text-green text-[14px]">
-                      {feeInfo ? feeInfo.receive : (amtNum - 0.20 - amtNum*0.00005).toFixed(4)} USDC
+                      {isKitMode
+                        ? `~${(amtNum - amtNum*0.00005).toFixed(4)}`
+                        : (feeInfo ? feeInfo.receive : (amtNum - 0.20 - amtNum*0.00005).toFixed(4))
+                      } USDC
                     </span>
                   </div>
                   <div className="flex justify-between text-muted text-[12px]">
                     <span>Est. time</span>
-                    <span className="text-accent">~30 seconds</span>
+                    <span className="text-accent">{isKitMode ? "~1-2 minutes" : "~30 seconds"}</span>
                   </div>
                 </div>
               )}
@@ -383,14 +406,13 @@ export default function Bridge() {
             <div className="px-5 py-4 border-b border-white/8">
               <div className="font-bold text-[13.5px]">Bridge Progress</div>
               <div className="text-[11.5px] text-muted mt-0.5">
-                {step === 0 ? "Ready to bridge" : `Step ${step} of ${STEPS.length}`}
+                {step === 0 ? "Ready to bridge" : `Step ${displayStep} of ${STEPS.length}`}
               </div>
             </div>
             <div className="p-4 flex flex-col gap-2">
               {STEPS.map(s => {
-                const done    = step > s.n;
-                const active  = step === s.n;
-                const pending = step < s.n;
+                const done   = displayStep > s.n;
+                const active = displayStep === s.n;
                 return (
                   <div key={s.n} className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl border transition-all duration-300 ${
                     active  ? "bg-accent/10 border-accent/30" :
@@ -415,7 +437,7 @@ export default function Bridge() {
             </div>
             <div className="px-5 pb-4">
               <div className="text-[11px] text-muted text-center bg-green/6 border border-green/15 rounded-lg py-2">
-                ✓ No gas needed on destination · Circle pays it
+                {isKitMode ? "✓ Circle App Kit handles network switching" : "✓ No gas needed on destination · Circle pays it"}
               </div>
             </div>
           </div>}
