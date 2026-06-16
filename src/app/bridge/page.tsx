@@ -168,7 +168,7 @@ export default function Bridge() {
           to:   { adapter, chain: toChain },
           amount: amtNum.toFixed(2), token: "USDC",
         });
-        console.log("[Bridge] App Kit result:", JSON.stringify(bridgeResult));
+        console.log("[Bridge] App Kit result:", JSON.stringify(bridgeResult, bigintReplacer));
 
         // Verify balance actually decreased — at least 90% of amount must have left
         const balAfter = await getUsdcBal();
