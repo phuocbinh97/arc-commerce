@@ -121,7 +121,7 @@ export default function Bridge() {
           throw new Error(`Insufficient ETH on ${src.label}.\nYou need at least 0.01 ETH for gas.\nCurrent: ${(Number(ethBal)/1e18).toFixed(6)} ETH\nGet ETH: sepoliafaucet.com`);
       }
 
-      // Non-Arc source → use App Kit (standard CCTP, 3 MetaMask confirmations)
+      // Non-Arc source → use App Kit (adapter required on both sides)
       if (fromChain !== "Arc_Testnet") {
         setStep(6); setStatus("Connecting to Circle App Kit…");
         const appKitModule  = await import("@circle-fin/app-kit");
@@ -133,7 +133,7 @@ export default function Bridge() {
         setStatus("Follow MetaMask prompts…");
         await (kit as any).bridge({
           from: { adapter, chain: fromChain },
-          to:   { chain: toChain },
+          to:   { adapter, chain: toChain },
           amount: amtNum.toFixed(2), token: "USDC",
         });
         saveBridgeEntry({ from: fromChain, to: toChain, amount, token: "USDC", ts: Date.now(), status: "completed" }, account);
@@ -291,23 +291,11 @@ export default function Bridge() {
                 </select>
               </div>
 
-              {/* Non-Arc → Arc: unsupported */}
-              {fromChain !== "Arc_Testnet" && toChain === "Arc_Testnet" && (
-                <div className="flex items-start gap-2.5 bg-red/6 border border-red/20 rounded-xl px-4 py-3 text-[12px] text-red">
-                  <span className="mt-0.5 shrink-0">⚠</span>
-                  <span>
-                    Arc Testnet is not supported as a bridge destination.
-                    To get USDC on Arc, use{" "}
-                    <a href="https://faucet.circle.com" target="_blank" rel="noreferrer" className="underline font-medium">faucet.circle.com</a>
-                  </span>
-                </div>
-              )}
-
-              {/* Non-Arc → Non-Arc: App Kit */}
-              {fromChain !== "Arc_Testnet" && toChain !== "Arc_Testnet" && (
+              {/* Non-Arc source: App Kit notice */}
+              {fromChain !== "Arc_Testnet" && (
                 <div className="flex items-start gap-2.5 bg-accent/6 border border-accent/20 rounded-xl px-4 py-3 text-[12px] text-accent">
                   <span className="mt-0.5 shrink-0">ℹ</span>
-                  <span>Bridging via <strong>Circle App Kit</strong> (CCTP standard, ~3 MetaMask confirmations).</span>
+                  <span>Bridging via <strong>Circle App Kit</strong> (CCTP, ~3 MetaMask confirmations).</span>
                 </div>
               )}
 
@@ -382,7 +370,7 @@ export default function Bridge() {
                   Connect Wallet
                 </button>
               ) : (
-                <button onClick={doBridge} disabled={step > 0 || !amount || amtNum <= 0 || fromChain === toChain || (fromChain !== "Arc_Testnet" && toChain === "Arc_Testnet")}
+                <button onClick={doBridge} disabled={step > 0 || !amount || amtNum <= 0 || fromChain === toChain}
                   className="w-full py-3.5 bg-accent text-white rounded-xl text-[14px] font-bold disabled:opacity-40 hover:bg-accent/90 transition-colors">
                   {step > 0 ? "Bridging…" : `Bridge ${amount || "—"} USDC  ${src.icon} → ${dst.icon}`}
                 </button>
