@@ -151,10 +151,9 @@ export default function Bridge() {
         const kit     = new AppKit();
         const adapter = await createAdapterFromProvider({ provider: eth });
         setStep(KIT_STEP_APPROVE); setStatus("Approve & confirm in MetaMask…");
-        const toAddress = recipient.trim() || from;
         const bridgeResult = await (kit as any).bridge({
           from: { adapter, chain: fromChain },
-          to:   { adapter, chain: toChain, address: toAddress },
+          to:   { adapter, chain: toChain },
           amount: amtNum.toFixed(2), token: "USDC",
         });
         // App Kit resolves even on cancel — check result
@@ -348,10 +347,12 @@ export default function Bridge() {
                 </div>
               </div>
 
-              {/* Recipient */}
-              <input value={recipient} onChange={e => setRecipient(e.target.value)}
-                placeholder="Recipient (optional, default: your wallet)"
-                className="w-full bg-bg border border-white/6 rounded-lg px-3 py-2 text-[12px] text-ink font-mono outline-none focus:border-accent transition-colors placeholder:text-white/30" />
+              {/* Recipient — only for Gateway Forwarding (Arc source); App Kit resolves from connected wallet */}
+              {!isKitMode && (
+                <input value={recipient} onChange={e => setRecipient(e.target.value)}
+                  placeholder="Recipient (optional, default: your wallet)"
+                  className="w-full bg-bg border border-white/6 rounded-lg px-3 py-2 text-[12px] text-ink font-mono outline-none focus:border-accent transition-colors placeholder:text-muted" />
+              )}
 
               {/* Fee row */}
               {amtNum > 0 && (
