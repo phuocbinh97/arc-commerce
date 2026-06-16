@@ -89,6 +89,7 @@ export default function Treasury() {
 
       const nonceBefore = parseInt(await arcRpc("eth_getTransactionCount", [account, "latest"]), 16);
 
+      console.log("[Swap] kitKey prefix:", `KIT_KEY:${KIT_KEY}`.slice(0, 20) + "...");
       await kit.swap({
         from: { adapter, chain: "Arc_Testnet" },
         tokenIn: swapFrom as "USDC" | "EURC",
