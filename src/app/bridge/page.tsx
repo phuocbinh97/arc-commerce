@@ -151,26 +151,31 @@ export default function Bridge() {
         const kit     = new AppKit();
         const adapter = await createAdapterFromProvider({ provider: eth });
 
-        // Snapshot USDC balance before — used to detect cancel (App Kit resolves even on cancel)
+        // Snapshot USDC balance via MetaMask (avoids RPC caching)
         const getUsdcBal = async () => {
-          const r = await fetch(src.rpc, { method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ jsonrpc:"2.0", id:1, method:"eth_call",
-              params:[{ to: src.usdc, data: "0x70a08231" + from.toLowerCase().replace("0x","").padStart(64,"0") }, "latest"] }) }).then(r => r.json());
-          return BigInt(r.result && r.result !== "0x" ? r.result : "0x0");
+          const result = await eth.request({ method: "eth_call", params: [
+            { to: src.usdc, data: "0x70a08231" + from.toLowerCase().replace("0x","").padStart(64,"0") },
+            "latest",
+          ]});
+          return BigInt(result && result !== "0x" ? result : "0x0");
         };
         const balBefore = await getUsdcBal();
+        console.log("[Bridge] USDC before:", Number(balBefore)/1e6);
 
         setStep(KIT_STEP_APPROVE); setStatus("Approve & confirm in MetaMask…");
-        await (kit as any).bridge({
+        const bridgeResult = await (kit as any).bridge({
           from: { adapter, chain: fromChain },
           to:   { adapter, chain: toChain },
           amount: amtNum.toFixed(2), token: "USDC",
         });
+        console.log("[Bridge] App Kit result:", JSON.stringify(bridgeResult));
 
-        // Verify balance actually decreased — minimum 50% of amount must have left
+        // Verify balance actually decreased — at least 90% of amount must have left
         const balAfter = await getUsdcBal();
-        const minDecrease = BigInt(Math.floor(amtNum * 500_000)); // 50% of amount in 6-decimal units
-        if (balBefore - balAfter < minDecrease) {
+        const diff = balBefore - balAfter;
+        console.log("[Bridge] USDC after:", Number(balAfter)/1e6, "| diff:", Number(diff)/1e6, "| minRequired:", amtNum * 0.9);
+        const minDecrease = BigInt(Math.floor(amtNum * 900_000)); // 90% of amount in 6-decimal units
+        if (diff < minDecrease) {
           throw new Error("Bridge was cancelled or did not complete.");
         }
 
