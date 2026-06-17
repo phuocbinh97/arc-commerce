@@ -270,10 +270,10 @@ export default function Invoices() {
       <Topbar title="Invoices"
         action={{ label: "+ New Invoice", onClick: () => setShowForm(true) }} />
 
-      <div className="p-6 flex-1 flex flex-col gap-5 max-w-[1100px] mx-auto w-full">
+      <div className="p-4 lg:p-6 flex-1 flex flex-col gap-4 lg:gap-5 max-w-[1100px] mx-auto w-full">
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2 lg:gap-3">
           <div className="bg-surface border border-white/8 rounded-xl p-4">
             <div className="text-[11px] text-muted mb-2">Total Invoiced</div>
             <div className="text-[22px] font-bold font-mono leading-none">
@@ -313,7 +313,7 @@ export default function Invoices() {
 
           {sorted.length === 0 ? (
             /* Empty state */
-            <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <div className="flex flex-col items-center justify-center py-16 lg:py-20 gap-4">
               <div className="w-16 h-16 rounded-2xl bg-surface2 border border-white/8 grid place-items-center text-3xl">🧾</div>
               <div className="text-center">
                 <div className="font-semibold text-[14px] mb-1">No invoices yet</div>
@@ -325,79 +325,108 @@ export default function Invoices() {
               </div>
             </div>
           ) : (
-            /* Table */
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-white/8 text-[11px] font-semibold text-muted uppercase tracking-wider">
-                    <th className="px-5 py-3 text-left">Invoice</th>
-                    <th className="px-5 py-3 text-left">Client</th>
-                    <th className="px-5 py-3 text-left">Description</th>
-                    <th className="px-5 py-3 text-right">Amount</th>
-                    <th className="px-5 py-3 text-left">Status</th>
-                    <th className="px-5 py-3 text-left">Date</th>
-                    <th className="px-5 py-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sorted.map(inv => {
-                    const st = STATUS[inv.status] ?? STATUS.pending;
-                    return (
-                      <tr key={inv.id} onClick={() => setSelected(inv)}
-                        className="border-b border-white/6 last:border-0 hover:bg-surface2/60 transition-colors cursor-pointer">
-                        <td className="px-5 py-3.5">
-                          <div className="font-mono text-[12.5px] font-semibold text-ink">{inv.id}</div>
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <div className="text-[12.5px] text-muted">{inv.clientName || "—"}</div>
-                        </td>
-                        <td className="px-5 py-3.5 max-w-[200px]">
-                          <div className="text-[12.5px] truncate">{inv.description}</div>
-                        </td>
-                        <td className="px-5 py-3.5 text-right">
-                          <div className="font-mono text-[13px] font-bold">{formatUsdc(inv.amount)}</div>
-                          <div className="text-[10.5px] text-muted">USDC</div>
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <span className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${st.bg} ${st.text}`}>
+            <>
+              {/* Mobile card list */}
+              <div className="lg:hidden flex flex-col divide-y divide-white/6">
+                {sorted.map(inv => {
+                  const st = STATUS[inv.status] ?? STATUS.pending;
+                  return (
+                    <div key={inv.id} onClick={() => setSelected(inv)}
+                      className="flex items-center gap-3 px-4 py-3.5 hover:bg-surface2/60 transition-colors cursor-pointer active:bg-surface2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="font-mono text-[12px] font-bold text-ink">{inv.id}</span>
+                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${st.bg} ${st.text}`}>
                             {st.label}
                           </span>
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <div className="text-[12px] text-muted">{new Date(inv.createdAt).toLocaleDateString()}</div>
-                          {inv.expiresAt && inv.status === "pending" && (
-                            <div className={`text-[10.5px] ${Date.now() > inv.expiresAt ? "text-red" : "text-muted"}`}>
-                              exp {new Date(inv.expiresAt).toLocaleDateString()}
+                        </div>
+                        <div className="text-[12px] text-muted truncate">{inv.description}</div>
+                        {inv.clientName && <div className="text-[11px] text-muted/70 truncate">{inv.clientName}</div>}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="font-mono text-[13px] font-bold">{formatUsdc(inv.amount)}</div>
+                        <div className="text-[10px] text-muted">USDC</div>
+                      </div>
+                      <span className="text-muted text-[11px]">›</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden lg:block overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-white/8 text-[11px] font-semibold text-muted uppercase tracking-wider">
+                      <th className="px-5 py-3 text-left">Invoice</th>
+                      <th className="px-5 py-3 text-left">Client</th>
+                      <th className="px-5 py-3 text-left">Description</th>
+                      <th className="px-5 py-3 text-right">Amount</th>
+                      <th className="px-5 py-3 text-left">Status</th>
+                      <th className="px-5 py-3 text-left">Date</th>
+                      <th className="px-5 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sorted.map(inv => {
+                      const st = STATUS[inv.status] ?? STATUS.pending;
+                      return (
+                        <tr key={inv.id} onClick={() => setSelected(inv)}
+                          className="border-b border-white/6 last:border-0 hover:bg-surface2/60 transition-colors cursor-pointer">
+                          <td className="px-5 py-3.5">
+                            <div className="font-mono text-[12.5px] font-semibold text-ink">{inv.id}</div>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <div className="text-[12.5px] text-muted">{inv.clientName || "—"}</div>
+                          </td>
+                          <td className="px-5 py-3.5 max-w-[200px]">
+                            <div className="text-[12.5px] truncate">{inv.description}</div>
+                          </td>
+                          <td className="px-5 py-3.5 text-right">
+                            <div className="font-mono text-[13px] font-bold">{formatUsdc(inv.amount)}</div>
+                            <div className="text-[10.5px] text-muted">USDC</div>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <span className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${st.bg} ${st.text}`}>
+                              {st.label}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <div className="text-[12px] text-muted">{new Date(inv.createdAt).toLocaleDateString()}</div>
+                            {inv.expiresAt && inv.status === "pending" && (
+                              <div className={`text-[10.5px] ${Date.now() > inv.expiresAt ? "text-red" : "text-muted"}`}>
+                                exp {new Date(inv.expiresAt).toLocaleDateString()}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <div className="flex items-center justify-end gap-1.5" onClick={e => e.stopPropagation()}>
+                              {inv.status === "pending" && (
+                                <button onClick={e => copyLink(inv, e)}
+                                  className={`px-2.5 py-1.5 rounded-lg text-[11.5px] font-semibold border transition-colors
+                                    ${copied === inv.id ? "bg-green/10 border-green/20 text-green" : "bg-surface2 border-white/8 text-muted hover:text-ink"}`}>
+                                  {copied === inv.id ? "✓" : "Copy Link"}
+                                </button>
+                              )}
+                              {inv.status === "pending" && (
+                                <button onClick={() => markPaid(inv.id)}
+                                  className="px-2.5 py-1.5 rounded-lg text-[11.5px] font-semibold bg-green/8 border border-green/20 text-green hover:bg-green/15 transition-colors">
+                                  Mark Paid
+                                </button>
+                              )}
+                              <button onClick={() => setSelected(inv)}
+                                className="px-2.5 py-1.5 rounded-lg text-[11.5px] font-semibold bg-surface2 border border-white/8 text-muted hover:text-ink transition-colors">
+                                View
+                              </button>
                             </div>
-                          )}
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <div className="flex items-center justify-end gap-1.5" onClick={e => e.stopPropagation()}>
-                            {inv.status === "pending" && (
-                              <button onClick={e => copyLink(inv, e)}
-                                className={`px-2.5 py-1.5 rounded-lg text-[11.5px] font-semibold border transition-colors
-                                  ${copied === inv.id ? "bg-green/10 border-green/20 text-green" : "bg-surface2 border-white/8 text-muted hover:text-ink"}`}>
-                                {copied === inv.id ? "✓" : "Copy Link"}
-                              </button>
-                            )}
-                            {inv.status === "pending" && (
-                              <button onClick={() => markPaid(inv.id)}
-                                className="px-2.5 py-1.5 rounded-lg text-[11.5px] font-semibold bg-green/8 border border-green/20 text-green hover:bg-green/15 transition-colors">
-                                Mark Paid
-                              </button>
-                            )}
-                            <button onClick={() => setSelected(inv)}
-                              className="px-2.5 py-1.5 rounded-lg text-[11.5px] font-semibold bg-surface2 border border-white/8 text-muted hover:text-ink transition-colors">
-                              View
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                          </td>
+                        </tr>
+                      );
+                    })}
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </div>
       </div>

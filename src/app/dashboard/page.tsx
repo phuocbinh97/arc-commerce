@@ -95,8 +95,8 @@ export default function Dashboard() {
   return (
     <>
       <Topbar title="Overview" action={{ label: "+ New Invoice", href: "/invoices" }} />
-      <div className="p-7 flex-1">
-        <div className="flex items-center justify-between mb-5">
+      <div className="p-4 lg:p-7 flex-1">
+        <div className="flex items-center justify-between mb-4 lg:mb-5">
           <h1 className="text-xl font-bold tracking-tight">Dashboard</h1>
           <div className="flex gap-1">
             {[7, 30, 90].map(r => (
@@ -110,7 +110,7 @@ export default function Dashboard() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-4 gap-3.5 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 lg:gap-3.5 mb-4 lg:mb-6">
           <StatCard label="💰 Total Revenue" value={formatUsdc(total)} unit="USDC" sub={`${hist.length} txns all time`} />
           <StatCard label="📅 This Period" value={formatUsdc(periodTotal)} unit="USDC" sub={`${filtered.length} tx in range`} />
           <StatCard label="⚡ Transactions" value={String(filtered.length)} sub={`avg ${formatUsdc(aov)} USDC/tx`} />
@@ -118,7 +118,7 @@ export default function Dashboard() {
         </div>
 
         {/* Chart + Feed */}
-        <div className="grid grid-cols-[1fr_360px] gap-3.5 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-3 lg:gap-3.5 mb-4 lg:mb-6">
           <div className="bg-surface border border-white/8 rounded-lg">
             <div className="px-5 py-4 border-b border-white/8">
               <div className="font-semibold text-sm">Revenue</div>
@@ -179,7 +179,7 @@ export default function Dashboard() {
         </div>
 
         {/* Bottom: Table + Actions */}
-        <div className="grid grid-cols-2 gap-3.5">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-3.5">
           <div className="bg-surface border border-white/8 rounded-lg">
             <div className="px-5 py-4 border-b border-white/8">
               <div className="font-semibold text-sm">Recent Transactions</div>

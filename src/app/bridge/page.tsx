@@ -303,10 +303,10 @@ export default function Bridge() {
   return (
     <>
       <Topbar title="Bridge" />
-      <div className="p-6 flex-1 flex flex-col items-center gap-5 max-w-[860px] mx-auto w-full">
+      <div className="p-4 lg:p-6 flex-1 flex flex-col items-center gap-4 lg:gap-5 max-w-[860px] mx-auto w-full">
 
         {/* Main row: form + progress panel */}
-        <div className="flex gap-5 items-start w-full">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-5 items-start w-full">
 
           {/* ── Bridge card ── */}
           <div className="flex-1 bg-surface border border-white/8 rounded-2xl overflow-hidden">
@@ -428,7 +428,7 @@ export default function Bridge() {
 
           {/* ── Progress panel ── */}
           {(step > 0 || succeeded) && (
-            <div className="w-[280px] shrink-0 bg-surface border border-white/8 rounded-2xl overflow-hidden sticky top-6">
+            <div className="w-full lg:w-[280px] shrink-0 bg-surface border border-white/8 rounded-2xl overflow-hidden lg:sticky top-6">
               <div className="px-4 py-3.5 border-b border-white/8">
                 <div className="font-bold text-[13px]">Bridge Progress</div>
                 <div className="text-[11px] text-muted mt-0.5">
@@ -470,7 +470,7 @@ export default function Bridge() {
         </div>
 
         {/* ── Info row: accordions ── */}
-        <div className="flex gap-4 w-full">
+        <div className="flex flex-col sm:flex-row gap-4 w-full">
           <div className="flex-1">
             <Accordion key="how-it-works" title="How it works">
               <div className="p-4 flex flex-col gap-2">
