@@ -79,13 +79,12 @@ export function useCheckout() {
       }
 
       const units = parseUsdcErc20(amount);
-      const gas = await fetchGasPrice(eth);
 
-      // Step 1: Approve USDC
+      // Step 1: Approve USDC — no gas pricing, let MetaMask handle it; only set gas limit
       setStep("approving");
       const approveTx = await eth.request({
         method: "eth_sendTransaction",
-        params: [{ from: account, to: USDC_ADDRESS, value: "0x0", data: encodeApprove(contract, units), gas: "0x186a0", ...gas }],
+        params: [{ from: account, to: USDC_ADDRESS, value: "0x0", data: encodeApprove(contract, units), gas: "0x186a0" }],
       });
 
       setStep("confirming-approve");
@@ -93,11 +92,10 @@ export function useCheckout() {
 
       // Step 2: Pay
       setStep("paying");
-      const gas2 = await fetchGasPrice(eth);
       const payTx = await eth.request({
         method: "eth_sendTransaction",
         params: [{ from: account, to: contract, value: "0x0",
-          data: encodeHubPay(merchant, merchantId, orderId, units, memo), gas: "0x493e0", ...gas2 }],
+          data: encodeHubPay(merchant, merchantId, orderId, units, memo), gas: "0x493e0" }],
       });
 
       setStep("confirming-pay");
