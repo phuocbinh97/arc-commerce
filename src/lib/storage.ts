@@ -13,7 +13,8 @@ export interface Invoice {
   amount: string;
   description: string;
   memo: string;
-  status: "pending" | "paid" | "expired";
+  clientName?: string;
+  status: "pending" | "paid" | "expired" | "void";
   createdAt: number;
   expiresAt: number | null;
 }
