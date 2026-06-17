@@ -41,6 +41,24 @@ export function useCheckout() {
     setStep("swapping"); setError(""); setTxHash("");
 
     try {
+      // Guard: if orderId is an invoice, check it hasn't been paid already
+      if (orderId.startsWith("INV-")) {
+        const checkRes = await fetch(`/api/invoices/status?invoiceId=${orderId}`).catch(() => null);
+        if (checkRes?.ok) {
+          const { status } = await checkRes.json();
+          if (status === "paid") {
+            setError("This invoice has already been paid.");
+            setStep("error");
+            return;
+          }
+          if (status === "void" || status === "expired") {
+            setError(`This invoice is ${status} and can no longer be paid.`);
+            setStep("error");
+            return;
+          }
+        }
+      }
+
       const accs = await eth.request({ method: "eth_accounts" });
       const account = accs[0];
 
