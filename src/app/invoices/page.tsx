@@ -171,7 +171,7 @@ export default function Invoices() {
   const [desc,       setDesc]       = useState("");
   const [memo,       setMemo]       = useState("");
   const [clientName, setClientName] = useState("");
-  const [expiry,     setExpiry]     = useState("86400000");
+  const [expiry,     setExpiry]     = useState("604800000");
 
   const settings = typeof window !== "undefined" ? getSettings() : { businessName: "", merchantId: "", merchantWallet: "", hubContract: "" };
 
