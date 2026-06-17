@@ -85,7 +85,7 @@ export function useCheckout() {
       setStep("approving");
       const approveTx = await eth.request({
         method: "eth_sendTransaction",
-        params: [{ from: account, to: USDC_ADDRESS, value: "0x0", data: encodeApprove(contract, units), ...gas }],
+        params: [{ from: account, to: USDC_ADDRESS, value: "0x0", data: encodeApprove(contract, units), gas: "0x186a0", ...gas }],
       });
 
       setStep("confirming-approve");
@@ -97,7 +97,7 @@ export function useCheckout() {
       const payTx = await eth.request({
         method: "eth_sendTransaction",
         params: [{ from: account, to: contract, value: "0x0",
-          data: encodeHubPay(merchant, merchantId, orderId, units, memo), ...gas2 }],
+          data: encodeHubPay(merchant, merchantId, orderId, units, memo), gas: "0x493e0", ...gas2 }],
       });
 
       setStep("confirming-pay");
