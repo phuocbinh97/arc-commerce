@@ -77,6 +77,19 @@ function Accordion({ title, children, defaultOpen = false }: { title: string; ch
   );
 }
 
+async function fetchChainUsdcBalance(chainKey: string, addr: string): Promise<string> {
+  const chain = CHAINS[chainKey];
+  const data  = "0x70a08231" + addr.toLowerCase().replace("0x","").padStart(64,"0");
+  try {
+    const res = await fetch(chain.rpc, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc:"2.0", id:1, method:"eth_call", params:[{ to: chain.usdc, data }, "latest"] }),
+    }).then(r => r.json());
+    const raw = res.result && res.result !== "0x" ? res.result : "0x0";
+    return (Number(BigInt(raw)) / 1e6).toFixed(2);
+  } catch { return "—"; }
+}
+
 export default function Bridge() {
   const { account, isConnected, connect } = useWallet();
   const [fromChain, setFromChain] = useState("Arc_Testnet");
@@ -85,13 +98,33 @@ export default function Bridge() {
   const [recipient, setRecipient] = useState("");
   const [status,    setStatus]    = useState("");
   const [step,      setStep]      = useState(0);
-  const [succeeded, setSucceeded] = useState(false); // keep progress visible after success
+  const [succeeded, setSucceeded] = useState(false);
   const [txId,      setTxId]      = useState("");
   const [feeInfo,   setFeeInfo]   = useState<{ forwarding: string; receive: string } | null>(null);
   const [history,   setHistory]   = useState<any[]>([]);
   const [page,      setPage]      = useState(1);
+  const [chainBals, setChainBals] = useState<Record<string, string>>({});
 
-  useEffect(() => { if (account) setHistory(getBridgeHistory(account)); }, [account]);
+  // Fetch USDC balances on all chains + auto-suggest richest as FROM
+  useEffect(() => {
+    if (!account) return;
+    setHistory(getBridgeHistory(account));
+    Promise.all(
+      CHAIN_IDS.map(id => fetchChainUsdcBalance(id, account).then(bal => ({ id, bal })))
+    ).then(results => {
+      const bals: Record<string, string> = {};
+      results.forEach(r => { bals[r.id] = r.bal; });
+      setChainBals(bals);
+      // Auto-suggest chain with highest USDC balance
+      const best = results
+        .filter(r => r.bal !== "—")
+        .sort((a, b) => parseFloat(b.bal) - parseFloat(a.bal))[0];
+      if (best && parseFloat(best.bal) > 0) {
+        setFromChain(prev => prev === best.id ? prev : best.id);
+        setToChain(prev => prev === best.id ? (best.id === "Arc_Testnet" ? "Base_Sepolia" : "Arc_Testnet") : prev);
+      }
+    });
+  }, [account]);
 
   const src    = CHAINS[fromChain];
   const dst    = CHAINS[toChain];
@@ -326,15 +359,24 @@ export default function Bridge() {
               <div className="bg-bg rounded-xl p-4 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">From</span>
-                  {src.gas === "ETH" && (
-                    <span className="text-[11px] text-amber">⚠ Need ETH for gas</span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {chainBals[fromChain] && chainBals[fromChain] !== "—" && (
+                      <span className="text-[11px] text-muted">
+                        Balance: <span className="text-ink font-mono">{chainBals[fromChain]} USDC</span>
+                      </span>
+                    )}
+                    {src.gas === "ETH" && (
+                      <span className="text-[11px] text-amber">⚠ Need ETH for gas</span>
+                    )}
+                  </div>
                 </div>
                 <select value={fromChain} onChange={e => { setFromChain(e.target.value); setFeeInfo(null); setStatus(""); setStep(0); setSucceeded(false); }}
                   className="w-full bg-surface2 border border-white/6 rounded-lg px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
-                  {CHAIN_IDS.filter(id => id !== toChain).map(id => (
-                    <option key={id} value={id}>{CHAINS[id].icon}  {CHAINS[id].label}</option>
-                  ))}
+                  {CHAIN_IDS.filter(id => id !== toChain).map(id => {
+                    const bal = chainBals[id];
+                    const balStr = bal && bal !== "—" ? ` · ${bal} USDC` : "";
+                    return <option key={id} value={id}>{CHAINS[id].icon}  {CHAINS[id].label}{balStr}</option>;
+                  })}
                 </select>
                 <div className="flex items-center gap-3">
                   <input type="number" value={amount} onChange={e => { setAmount(e.target.value); setFeeInfo(null); }}

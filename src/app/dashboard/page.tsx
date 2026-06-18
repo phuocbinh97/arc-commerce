@@ -23,10 +23,31 @@ function StatCard({ label, value, unit, sub }: { label: string; value: string; u
   );
 }
 
+const UNIFIED_CHAINS = [
+  { key: "Arc_Testnet",      label: "Arc",     icon: "⚡", rpc: "https://rpc.testnet.arc.network",             usdc: "0x3600000000000000000000000000000000000000" },
+  { key: "Ethereum_Sepolia", label: "Sepolia",  icon: "Ξ",  rpc: "https://rpc.sepolia.org",                     usdc: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238" },
+  { key: "Base_Sepolia",     label: "Base",     icon: "🔵", rpc: "https://sepolia.base.org",                    usdc: "0x036CbD53842c5426634e7929541eC2318f3dCF7e" },
+  { key: "Arbitrum_Sepolia", label: "Arbitrum", icon: "🔷", rpc: "https://sepolia-rollup.arbitrum.io/rpc",      usdc: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d" },
+  { key: "OP_Sepolia",       label: "OP",       icon: "🔴", rpc: "https://sepolia.optimism.io",                 usdc: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7" },
+];
+
+async function fetchUsdcOn(chain: typeof UNIFIED_CHAINS[0], addr: string): Promise<string> {
+  const data = "0x70a08231" + addr.toLowerCase().replace("0x","").padStart(64,"0");
+  try {
+    const res = await fetch(chain.rpc, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc:"2.0", id:1, method:"eth_call", params:[{ to: chain.usdc, data }, "latest"] }),
+    }).then(r => r.json());
+    const raw = res.result && res.result !== "0x" ? res.result : "0x0";
+    return (Number(BigInt(raw)) / 1e6).toFixed(2);
+  } catch { return "—"; }
+}
+
 export default function Dashboard() {
   const [hist, setHist] = useState<PaymentHistory[]>([]);
   const [range, setRange] = useState(7);
   const [mounted, setMounted] = useState(false);
+  const [chainBals, setChainBals] = useState<Record<string, string>>({});
 
   useEffect(() => {
     setMounted(true);
@@ -69,6 +90,20 @@ export default function Dashboard() {
     }
 
     load();
+
+    // Unified Balance: fetch USDC on all chains if wallet available
+    const eth = (window as any).ethereum;
+    if (eth) {
+      eth.request({ method: "eth_accounts" }).then((accs: string[]) => {
+        if (!accs[0]) return;
+        Promise.all(UNIFIED_CHAINS.map(c => fetchUsdcOn(c, accs[0]).then(bal => ({ key: c.key, bal }))))
+          .then(results => {
+            const bals: Record<string, string> = {};
+            results.forEach(r => { bals[r.key] = r.bal; });
+            setChainBals(bals);
+          });
+      }).catch(() => {});
+    }
   }, []);
 
   const filtered = range >= 90 ? hist : hist.filter(h => h.ts >= Date.now() - range * 86400000);
@@ -108,6 +143,31 @@ export default function Dashboard() {
             ))}
           </div>
         </div>
+
+        {/* Unified Balance — USDC across all chains */}
+        {Object.keys(chainBals).length > 0 && (
+          <div className="mb-4 lg:mb-5 bg-surface border border-white/8 rounded-lg overflow-hidden">
+            <div className="px-4 py-3 border-b border-white/8 flex items-center justify-between">
+              <div className="text-[12.5px] font-semibold">USDC Balance · All Chains</div>
+              <span className="text-[11px] text-muted">Arc Testnet ecosystem</span>
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-5 divide-x divide-white/8">
+              {UNIFIED_CHAINS.map(c => {
+                const bal = chainBals[c.key] ?? "…";
+                const hasBalance = bal !== "—" && bal !== "…" && parseFloat(bal) > 0;
+                return (
+                  <div key={c.key} className="px-3 py-3 flex flex-col gap-0.5">
+                    <div className="text-[11px] text-muted flex items-center gap-1">
+                      <span>{c.icon}</span><span>{c.label}</span>
+                    </div>
+                    <div className={`font-mono text-[13px] font-bold ${hasBalance ? "text-ink" : "text-muted"}`}>{bal}</div>
+                    {hasBalance && <div className="text-[10px] text-muted">USDC</div>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 lg:gap-3.5 mb-4 lg:mb-6">
