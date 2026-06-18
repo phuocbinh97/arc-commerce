@@ -126,6 +126,7 @@ function CheckoutContent() {
   const [payToken, setPayToken]       = useState<PayToken>("USDC");
   const [payerName, setPayerName]     = useState("");
   const [merchantOverride, setMerchantOverride] = useState<{ wallet: string; merchantId: string } | undefined>();
+  const [merchantSiteUrl, setMerchantSiteUrl]   = useState("");
   const [loadingMerchant, setLoadingMerchant]   = useState(false);
 
   const settings = typeof window !== "undefined"
@@ -142,7 +143,12 @@ function CheckoutContent() {
     setLoadingMerchant(true);
     fetch(`/api/merchants/${merchantParam}`)
       .then(r => r.json())
-      .then(data => { if (data.merchant) setMerchantOverride({ wallet: data.merchant.wallet, merchantId: data.merchant.merchantId }); })
+      .then(data => {
+        if (data.merchant) {
+          setMerchantOverride({ wallet: data.merchant.wallet, merchantId: data.merchant.merchantId });
+          if (data.merchant.siteUrl) setMerchantSiteUrl(data.merchant.siteUrl);
+        }
+      })
       .catch(console.error)
       .finally(() => setLoadingMerchant(false));
   }, [merchantParam]);
@@ -263,12 +269,18 @@ function CheckoutContent() {
 
             {/* Merchant */}
             <div className="mb-5 p-3.5 bg-surface2 border border-white/8 rounded-lg flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-accent grid place-items-center text-white font-bold text-lg">{displayName.charAt(0).toUpperCase()}</div>
-              <div>
+              <div className="w-10 h-10 rounded-lg bg-accent grid place-items-center text-white font-bold text-lg shrink-0">{displayName.charAt(0).toUpperCase()}</div>
+              <div className="flex-1 min-w-0">
                 <div className="text-[11px] font-semibold text-muted uppercase">Merchant</div>
                 <div className="font-semibold text-ink">{loadingMerchant ? "Loading…" : displayName}</div>
+                {merchantSiteUrl && (
+                  <a href={merchantSiteUrl} target="_blank" rel="noreferrer"
+                    className="text-[11px] text-accent hover:underline truncate block">
+                    {merchantSiteUrl.replace(/^https?:\/\//, "")}
+                  </a>
+                )}
               </div>
-              <div className="ml-auto text-xs text-green font-semibold bg-green/10 px-2 py-0.5 rounded-full">✓ Verified</div>
+              <div className="ml-auto text-xs text-green font-semibold bg-green/10 px-2 py-0.5 rounded-full shrink-0">✓ Verified</div>
             </div>
 
             {/* Token selector */}

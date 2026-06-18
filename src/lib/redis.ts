@@ -10,4 +10,5 @@ export interface Merchant {
   name: string;
   wallet: string;       // "0x..."
   createdAt: number;
+  siteUrl?: string;     // merchant website, shown on checkout
 }

@@ -6,7 +6,7 @@ import { useWallet } from "@/hooks/useWallet";
 
 export default function Settings() {
   const { account, connect } = useWallet();
-  const [form, setForm] = useState({ businessName: "", merchantId: "", merchantWallet: "", hubContract: "" });
+  const [form, setForm] = useState({ businessName: "", merchantId: "", merchantWallet: "", hubContract: "", siteUrl: "" });
   const [saved, setSaved] = useState(false);
   const [msg, setMsg] = useState("");
   const [registering, setRegistering] = useState(false);
@@ -36,7 +36,7 @@ export default function Settings() {
             hubContract: "0xc7cb4f5ace70a4febc3b260591832af72563e988",
           };
           saveSettings(newSettings);
-          setForm(newSettings);
+          setForm({ ...newSettings, siteUrl: m.siteUrl || "" });
           // Auto-set session
           localStorage.setItem("arcMerchantSession", JSON.stringify({
             merchantId: m.merchantId, name: m.name, wallet: m.wallet,
@@ -73,7 +73,7 @@ export default function Settings() {
       await fetch("/api/merchants/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: updated.businessName, wallet: updated.merchantWallet }),
+        body: JSON.stringify({ name: updated.businessName, wallet: updated.merchantWallet, siteUrl: updated.siteUrl || "" }),
       }).catch(() => {});
       // Update session name too
       try {
@@ -113,7 +113,7 @@ export default function Settings() {
       const res = await fetch("/api/merchants/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: form.businessName, wallet }),
+        body: JSON.stringify({ name: form.businessName, wallet, siteUrl: form.siteUrl || "" }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -176,6 +176,13 @@ export default function Settings() {
               <label className="text-[12.5px] font-semibold text-muted mb-1.5 block">Business Name</label>
               <input value={form.businessName} onChange={e => setForm(f => ({ ...f, businessName: e.target.value }))} placeholder="My Shop"
                 className="w-full bg-surface2 border border-white/14 rounded-lg px-3 py-2 text-[13.5px] text-ink outline-none focus:border-accent" />
+            </div>
+            <div className="mb-4">
+              <label className="text-[12.5px] font-semibold text-muted mb-1.5 block">Website URL <span className="normal-case font-normal">(optional)</span></label>
+              <input value={form.siteUrl} onChange={e => setForm(f => ({ ...f, siteUrl: e.target.value }))}
+                placeholder="https://yourshop.com"
+                className="w-full bg-surface2 border border-white/14 rounded-lg px-3 py-2 text-[13.5px] text-ink outline-none focus:border-accent" />
+              <div className="text-[11.5px] text-muted mt-1">Shown as a link on your checkout page.</div>
             </div>
             <div className="mb-4">
               <label className="text-[12.5px] font-semibold text-muted mb-1.5 block">Merchant ID</label>

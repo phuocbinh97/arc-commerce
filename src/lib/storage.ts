@@ -25,6 +25,7 @@ export interface MerchantSettings {
   merchantId: string;
   merchantWallet: string;
   hubContract: string;
+  siteUrl?: string;
   savedAt?: number;
 }
 
