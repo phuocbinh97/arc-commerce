@@ -67,34 +67,34 @@ export default function Shop() {
 
       {/* Nav */}
       <nav className="sticky top-0 z-40 bg-[#faf8f4]/90 backdrop-blur border-b border-[#e8e0d4]">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 lg:px-6 h-14 lg:h-16 flex items-center justify-between">
           <div className="font-serif font-bold text-xl">Moc<span className="text-[#c45c2a]">.</span></div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 rounded-full text-[12px] font-semibold text-blue-700">
+          <div className="flex items-center gap-2 lg:gap-3">
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-blue-50 rounded-full text-[12px] font-semibold text-blue-700">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />Arc Testnet
             </div>
             <button onClick={()=>setDrawerOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#1c1410] text-white rounded-full text-[13px] font-semibold">
-              🛒 Cart <span className="w-5 h-5 bg-[#c45c2a] rounded-full grid place-items-center text-[11px] font-bold">{cart.length}</span>
+              className="flex items-center gap-2 px-3 lg:px-4 py-2 bg-[#1c1410] text-white rounded-full text-[13px] font-semibold">
+              🛒 <span className="hidden sm:inline">Cart</span> <span className="w-5 h-5 bg-[#c45c2a] rounded-full grid place-items-center text-[11px] font-bold">{cart.length}</span>
             </button>
           </div>
         </div>
       </nav>
 
       {/* Hero */}
-      <div className="max-w-6xl mx-auto px-6 py-14">
-        <div className="grid grid-cols-2 gap-12 items-center mb-16">
+      <div className="max-w-6xl mx-auto px-4 lg:px-6 py-8 lg:py-14">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center mb-10 lg:mb-16">
           <div>
-            <h1 className="font-serif text-5xl font-bold leading-tight tracking-tight mb-4">Handcrafted<br /><em className="text-[#c45c2a]">with care</em><br />from nature</h1>
+            <h1 className="font-serif text-3xl lg:text-5xl font-bold leading-tight tracking-tight mb-3 lg:mb-4">Handcrafted<br /><em className="text-[#c45c2a]">with care</em><br />from nature</h1>
             <p className="text-[#8a7968] text-base mb-3">Artisan goods from wood, rattan, and ceramic.</p>
-            <div className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg text-[13px] font-medium text-blue-700 mb-5">⚡ Pay with USDC on Arc Testnet</div>
-            <div className="flex gap-2">
+            <div className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg text-[13px] font-medium text-blue-700 mb-4 lg:mb-5">⚡ Pay with USDC on Arc Testnet</div>
+            <div className="flex flex-wrap gap-x-3 gap-y-1">
               <div className="text-[13px] text-[#8a7968]">⚡ Sub-second finality</div>
-              <div className="text-[13px] text-[#8a7968]">· 💵 No ETH needed</div>
-              <div className="text-[13px] text-[#8a7968]">· 🔗 On-chain receipt</div>
+              <div className="text-[13px] text-[#8a7968]">💵 No ETH needed</div>
+              <div className="text-[13px] text-[#8a7968]">🔗 On-chain receipt</div>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="hidden lg:grid grid-cols-2 gap-3">
             {["🪵","🧺","🪴"].map((e,i)=>(
               <div key={i} className={`bg-gradient-to-br from-[#f0e8df] to-[#e8ddd2] rounded-xl flex items-center justify-center text-5xl ${i===0?"row-span-2":"aspect-square"}`} style={{minHeight:i===0?"200px":"auto"}}>
                 {e}
@@ -104,7 +104,7 @@ export default function Shop() {
         </div>
 
         {/* Category filter */}
-        <div className="flex gap-2 mb-6 flex-wrap">
+        <div className="flex gap-2 mb-5 lg:mb-6 flex-wrap">
           {cats.map(c=>(
             <button key={c} onClick={()=>setCatFilter(c)}
               className={`px-4 py-1.5 rounded-full text-[13px] font-medium border transition-all ${catFilter===c?"bg-[#1c1410] text-white border-[#1c1410]":"bg-white text-[#8a7968] border-[#e8e0d4] hover:border-[#1c1410]"}`}>
@@ -114,21 +114,21 @@ export default function Shop() {
         </div>
 
         {/* Products */}
-        <div className="grid grid-cols-4 gap-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-5">
           {filtered.map(p=>(
             <div key={p.id} className="bg-white border border-[#e8e0d4] rounded-xl overflow-hidden hover:-translate-y-1 hover:shadow-xl transition-all cursor-pointer">
-              <div className="aspect-square bg-gradient-to-br from-[#f0ebe4] to-[#e8e0d5] flex items-center justify-center text-6xl relative">
+              <div className="aspect-square bg-gradient-to-br from-[#f0ebe4] to-[#e8e0d5] flex items-center justify-center text-5xl lg:text-6xl relative">
                 {p.emoji}
                 {p.tag && <span className={`absolute top-2 left-2 text-[11px] font-bold px-2 py-0.5 rounded text-white ${p.tag==="new"?"bg-[#c45c2a]":"bg-[#3a6b45]"}`}>{p.tag==="new"?"New":"Sale"}</span>}
               </div>
-              <div className="p-4">
-                <div className="text-[11px] font-bold text-[#8a7968] uppercase tracking-wider mb-1">{p.cat}</div>
-                <div className="font-serif font-semibold text-base mb-1.5">{p.name}</div>
-                <p className="text-[#8a7968] text-[12.5px] mb-3 leading-relaxed">{p.desc}</p>
+              <div className="p-3 lg:p-4">
+                <div className="text-[10px] lg:text-[11px] font-bold text-[#8a7968] uppercase tracking-wider mb-1">{p.cat}</div>
+                <div className="font-serif font-semibold text-sm lg:text-base mb-1">{p.name}</div>
+                <p className="text-[#8a7968] text-[11.5px] lg:text-[12.5px] mb-3 leading-relaxed hidden sm:block">{p.desc}</p>
                 <div className="flex items-center justify-between">
-                  <div className="text-lg font-bold">{p.price.toFixed(2)} <span className="text-[12px] text-[#8a7968] font-normal">USDC</span></div>
+                  <div className="text-sm lg:text-lg font-bold">{p.price.toFixed(2)} <span className="text-[11px] lg:text-[12px] text-[#8a7968] font-normal">USDC</span></div>
                   <button onClick={()=>addToCart(p)}
-                    className="px-3 py-1.5 bg-[#c45c2a] text-white rounded-lg text-[13px] font-semibold hover:bg-[#a84d22]">
+                    className="px-2.5 lg:px-3 py-1.5 bg-[#c45c2a] text-white rounded-lg text-[12px] lg:text-[13px] font-semibold hover:bg-[#a84d22]">
                     Add
                   </button>
                 </div>
@@ -140,7 +140,7 @@ export default function Shop() {
 
       {/* Cart Drawer */}
       {drawerOpen && <div className="fixed inset-0 bg-black/50 z-50" onClick={()=>setDrawerOpen(false)} />}
-      <div className={`fixed top-0 right-0 bottom-0 w-[400px] bg-white z-50 flex flex-col shadow-2xl transition-transform ${drawerOpen?"translate-x-0":"translate-x-full"}`}>
+      <div className={`fixed top-0 right-0 bottom-0 w-full sm:w-[400px] bg-white z-50 flex flex-col shadow-2xl transition-transform ${drawerOpen?"translate-x-0":"translate-x-full"}`}>
         <div className="px-5 py-4 border-b flex items-center justify-between">
           <div className="font-serif font-bold text-lg">Your Cart</div>
           <button onClick={()=>setDrawerOpen(false)} className="text-2xl text-gray-400 hover:text-gray-600">×</button>
