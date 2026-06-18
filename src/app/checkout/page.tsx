@@ -125,6 +125,7 @@ function CheckoutContent() {
   const [eurcBalance, setEurcBalance] = useState("—");
   const [payToken, setPayToken]       = useState<PayToken>("USDC");
   const [payerName, setPayerName]     = useState("");
+  const [feeEst, setFeeEst]           = useState<{ gas: string; total: string } | null>(null);
   const [merchantOverride, setMerchantOverride] = useState<{ wallet: string; merchantId: string } | undefined>();
   const [merchantSiteUrl, setMerchantSiteUrl]   = useState("");
   const [loadingMerchant, setLoadingMerchant]   = useState(false);
@@ -165,6 +166,24 @@ function CheckoutContent() {
     fetchBal("0x3600000000000000000000000000000000000000").then(setUsdcBalance).catch(() => setUsdcBalance("0.00"));
     fetchBal(EURC_ADDRESS).then(setEurcBalance).catch(() => setEurcBalance("0.00"));
   }, [account]);
+
+  // Pre-flight: estimate gas fee in USDC (Arc uses USDC as gas token)
+  useEffect(() => {
+    if (!isConnected || !isArcNetwork) { setFeeEst(null); return; }
+    const eth = (window as any).ethereum;
+    if (!eth) return;
+    eth.request({ method: "eth_gasPrice" }).then((hex: string) => {
+      const gasPrice  = BigInt(hex);
+      const totalGas  = 600_000n; // approve (~100k) + memo-wrapped payToMerchant (~500k)
+      const feeUnits  = gasPrice * totalGas;             // in USDC micro-units (6 dec)
+      const feeUsdc   = Number(feeUnits) / 1e6;
+      const totalUsdc = parseFloat(amount) + feeUsdc;
+      setFeeEst({
+        gas:   feeUsdc  < 0.0001 ? "<0.0001" : feeUsdc.toFixed(4),
+        total: totalUsdc.toFixed(4),
+      });
+    }).catch(() => setFeeEst(null));
+  }, [isConnected, isArcNetwork, amount]);
 
   // Redirect + postMessage on success
   useEffect(() => {
@@ -357,6 +376,20 @@ function CheckoutContent() {
               <div className="mb-4">
                 <label className="text-xs font-semibold text-muted uppercase mb-1 block">Memo</label>
                 <textarea value={memo} readOnly rows={2} className="w-full border border-white/8 rounded-lg px-3 py-2.5 text-sm bg-surface2 text-ink resize-none" />
+              </div>
+            )}
+
+            {/* Pre-flight fee estimate */}
+            {feeEst && isConnected && isArcNetwork && (
+              <div className="mb-3 px-3 py-2.5 bg-surface2 border border-white/8 rounded-lg text-[12px]">
+                <div className="flex items-center justify-between text-muted mb-1">
+                  <span>Network fee (gas)</span>
+                  <span className="font-mono text-ink">~{feeEst.gas} USDC</span>
+                </div>
+                <div className="flex items-center justify-between font-semibold">
+                  <span className="text-muted">Total (amount + fee)</span>
+                  <span className="font-mono text-ink">~{feeEst.total} USDC</span>
+                </div>
               </div>
             )}
 

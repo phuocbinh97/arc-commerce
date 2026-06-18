@@ -22,14 +22,14 @@ function Accordion({ title, children, defaultOpen = false }: { title: string; ch
 const EURC_ADDRESS = "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a";
 const ARC_RPC = "https://rpc.testnet.arc.network";
 
-async function fetchTokenBalance(token: "USDC" | "EURC", addr: string): Promise<string> {
+async function fetchTokenBalance(token: "USDC" | "EURC", addr: string, tag: "latest" | "pending" = "latest"): Promise<string> {
   const contractAddr = token === "USDC"
     ? "0x3600000000000000000000000000000000000000"
     : EURC_ADDRESS;
   const data = "0x70a08231" + addr.toLowerCase().replace("0x", "").padStart(64, "0");
   const res = await fetch(ARC_RPC, {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [{ to: contractAddr, data }, "latest"] }),
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [{ to: contractAddr, data }, tag] }),
   }).then(r => r.json());
   const raw = res.result && res.result !== "0x" ? res.result : "0x0";
   return (Number(BigInt(raw)) / 1e6).toFixed(2);
@@ -37,8 +37,9 @@ async function fetchTokenBalance(token: "USDC" | "EURC", addr: string): Promise<
 
 export default function Treasury() {
   const { account, isConnected, connect, getUsdcBalance, walletName } = useWallet();
-  const [usdcBalance, setUsdcBalance] = useState("—");
-  const [eurcBalance, setEurcBalance] = useState("—");
+  const [usdcBalance, setUsdcBalance]         = useState("—");
+  const [usdcPending, setUsdcPending]         = useState("—");
+  const [eurcBalance, setEurcBalance]         = useState("—");
   const [swapFrom, setSwapFrom] = useState("USDC");
   const [swapAmount, setSwapAmount] = useState("");
   const [swapStatus, setSwapStatus] = useState("");
@@ -47,11 +48,13 @@ export default function Treasury() {
 
   const refreshBalances = useCallback(async () => {
     if (!account) return;
-    const [usdc, eurc] = await Promise.all([
-      fetchTokenBalance("USDC", account),
-      fetchTokenBalance("EURC", account),
+    const [usdc, usdcPend, eurc] = await Promise.all([
+      fetchTokenBalance("USDC", account, "latest"),
+      fetchTokenBalance("USDC", account, "pending"),
+      fetchTokenBalance("EURC", account, "latest"),
     ]);
     setUsdcBalance(usdc);
+    setUsdcPending(usdcPend);
     setEurcBalance(eurc);
   }, [account]);
 
@@ -127,6 +130,43 @@ export default function Treasury() {
     <>
       <Topbar title="Treasury" />
       <div className="p-6 flex-1 flex flex-col items-center gap-5 max-w-[860px] mx-auto w-full">
+
+        {/* Balance Overview — Confirmed / Pending / In Motion */}
+        {isConnected && (
+          <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Confirmed */}
+            <div className="bg-surface border border-white/8 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="w-2 h-2 rounded-full bg-green shrink-0" />
+                <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">Confirmed</span>
+              </div>
+              <div className="font-mono text-2xl font-bold text-ink">{usdcBalance}</div>
+              <div className="text-[11px] text-muted mt-0.5">USDC · spendable now</div>
+            </div>
+            {/* Pending */}
+            <div className="bg-surface border border-white/8 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="w-2 h-2 rounded-full bg-amber animate-pulse shrink-0" />
+                <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">Pending</span>
+              </div>
+              <div className="font-mono text-2xl font-bold text-ink">
+                {usdcPending !== "—" && usdcBalance !== "—"
+                  ? (parseFloat(usdcPending) - parseFloat(usdcBalance)).toFixed(2)
+                  : "—"}
+              </div>
+              <div className="text-[11px] text-muted mt-0.5">USDC · confirming on-chain</div>
+            </div>
+            {/* EURC */}
+            <div className="bg-surface border border-white/8 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="w-2 h-2 rounded-full bg-accent shrink-0" />
+                <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">EURC</span>
+              </div>
+              <div className="font-mono text-2xl font-bold text-ink">{eurcBalance}</div>
+              <div className="text-[11px] text-muted mt-0.5">EURC · Euro stablecoin</div>
+            </div>
+          </div>
+        )}
 
         {/* Swap card */}
         <div className="bg-surface border border-white/8 rounded-2xl overflow-hidden w-full">
