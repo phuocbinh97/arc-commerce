@@ -22,11 +22,12 @@ export function useCheckout() {
   const [error, setError] = useState("");
 
   const pay = useCallback(async ({
-    amount, orderId, memo, merchantOverride, payToken = "USDC",
+    amount, orderId, memo, payerName, merchantOverride, payToken = "USDC",
   }: {
     amount: string;
     orderId: string;
     memo: string;
+    payerName?: string;
     merchantOverride?: { wallet: string; merchantId: string };
     payToken?: "USDC" | "EURC";
   }) => {
@@ -119,7 +120,7 @@ export function useCheckout() {
       setStep("confirming-pay");
       await waitForReceipt(eth, payTx);
 
-      savePayment({ txHash: payTx, amount, orderId, merchant: account, ts: Date.now() });
+      savePayment({ txHash: payTx, amount, orderId, merchant: account, ts: Date.now(), payerName });
       fetch("/api/transactions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

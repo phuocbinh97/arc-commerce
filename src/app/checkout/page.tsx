@@ -124,6 +124,7 @@ function CheckoutContent() {
   const [usdcBalance, setUsdcBalance] = useState("—");
   const [eurcBalance, setEurcBalance] = useState("—");
   const [payToken, setPayToken]       = useState<PayToken>("USDC");
+  const [payerName, setPayerName]     = useState("");
   const [merchantOverride, setMerchantOverride] = useState<{ wallet: string; merchantId: string } | undefined>();
   const [loadingMerchant, setLoadingMerchant]   = useState(false);
 
@@ -207,7 +208,7 @@ function CheckoutContent() {
   async function handlePay() {
     if (!isConnected) { await connect(); return; }
     if (!isArcNetwork) { await switchToArc(); return; }
-    await pay({ amount, orderId, memo, merchantOverride, payToken: payToken as "USDC" | "EURC" }).catch(() => {});
+    await pay({ amount, orderId, memo, payerName: payerName.trim() || undefined, merchantOverride, payToken: payToken as "USDC" | "EURC" }).catch(() => {});
   }
 
   const payLabel = (step === "idle" || step === "error")
@@ -333,6 +334,12 @@ function CheckoutContent() {
             <div className="mb-3">
               <label className="text-xs font-semibold text-muted uppercase mb-1 block">Order ID</label>
               <input value={orderId} readOnly className="w-full border border-white/8 rounded-lg px-3 py-2.5 text-sm bg-surface2 text-ink font-mono" />
+            </div>
+            <div className="mb-3">
+              <label className="text-xs font-semibold text-muted uppercase mb-1 block">Your name <span className="normal-case font-normal text-muted">(optional)</span></label>
+              <input value={payerName} onChange={e => setPayerName(e.target.value)}
+                placeholder="e.g. John Doe"
+                className="w-full border border-white/8 rounded-lg px-3 py-2.5 text-sm bg-surface2 text-ink outline-none focus:border-accent transition-colors" />
             </div>
             {memo && (
               <div className="mb-4">

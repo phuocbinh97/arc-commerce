@@ -6,6 +6,7 @@ export interface PaymentHistory {
   orderId: string;
   merchant: string;
   ts: number;
+  payerName?: string;
 }
 
 export interface Invoice {
