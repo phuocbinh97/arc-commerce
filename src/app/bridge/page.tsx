@@ -306,7 +306,7 @@ export default function Bridge() {
       <div className="p-4 lg:p-6 flex-1 flex flex-col items-center gap-4 lg:gap-5 max-w-[860px] mx-auto w-full">
 
         {/* Main row: form + progress panel */}
-        <div className="flex flex-col lg:flex-row gap-4 lg:gap-5 items-start w-full">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-5 lg:items-start w-full">
 
           {/* ── Bridge card ── */}
           <div className="flex-1 bg-surface border border-white/8 rounded-2xl overflow-hidden">
