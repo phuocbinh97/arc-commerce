@@ -57,8 +57,8 @@ export default function Customers() {
   return (
     <>
       <Topbar title="Customers" />
-      <div className="p-7 flex-1">
-        <div className="grid grid-cols-3 gap-3.5 mb-6">
+      <div className="p-4 lg:p-7 flex-1">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-3.5 mb-6">
           <div className="bg-surface border border-white/8 rounded-lg p-4">
             <div className="text-xs text-muted mb-1">Total Customers</div>
             <div className="text-2xl font-bold font-mono">{customers.length}</div>
@@ -73,11 +73,11 @@ export default function Customers() {
           </div>
         </div>
 
-        <div className="bg-surface border border-white/8 rounded-lg">
-          <div className="px-5 py-4 border-b border-white/8 flex items-center justify-between">
+        <div className="bg-surface border border-white/8 rounded-lg overflow-x-auto">
+          <div className="px-4 lg:px-5 py-4 border-b border-white/8 flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-between">
             <div className="font-semibold text-sm">All Customers</div>
             <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search by address…"
-              className="bg-surface2 border border-white/14 rounded-lg px-3 py-1.5 text-[13px] text-ink outline-none focus:border-accent w-[220px]" />
+              className="bg-surface2 border border-white/14 rounded-lg px-3 py-1.5 text-[13px] text-ink outline-none focus:border-accent w-full sm:w-[220px]" />
           </div>
           <table className="w-full">
             <thead>

@@ -79,7 +79,7 @@ export default function Analytics() {
   return (
     <>
       <Topbar title="Analytics" />
-      <div className="p-7 flex-1">
+      <div className="p-4 lg:p-7 flex-1">
         <div className="flex justify-end mb-5 gap-1">
           {[7,30,90].map(r=>(
             <button key={r} onClick={()=>setRange(r)} className={`px-3 py-1 rounded-md text-[12.5px] font-semibold transition-all ${range===r?"bg-surface2 text-ink border border-white/14":"text-muted hover:text-ink"}`}>
@@ -88,7 +88,7 @@ export default function Analytics() {
           ))}
         </div>
 
-        <div className="grid grid-cols-4 gap-3.5 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-3.5 mb-6">
           {[["Total Revenue",formatUsdc(total),"USDC"],["Transactions",String(filtered.length),"confirmed"],["Avg Order",formatUsdc(aov),"USDC/tx"],["Unique Wallets",String(wallets),"customers"]].map(([l,v,u])=>(
             <div key={l} className="bg-surface border border-white/8 rounded-lg p-4">
               <div className="text-xs text-muted mb-2">{l}</div>
@@ -98,7 +98,7 @@ export default function Analytics() {
           ))}
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
           <div className="bg-surface border border-white/8 rounded-lg">
             <div className="px-5 py-4 border-b border-white/8 font-semibold text-sm">Revenue Trend</div>
             <div className="p-5 h-[220px]">
@@ -114,7 +114,7 @@ export default function Analytics() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="bg-surface border border-white/8 rounded-lg">
             <div className="px-5 py-4 border-b border-white/8 font-semibold text-sm">Top Customers by Spend</div>
             <div className="p-4">

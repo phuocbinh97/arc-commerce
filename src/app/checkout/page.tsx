@@ -248,7 +248,7 @@ function CheckoutContent() {
 
   return (
     <div className={`min-h-screen bg-bg flex items-center justify-center ${isEmbed ? "p-3" : "p-6"}`}>
-      <div className={isEmbed ? "w-full max-w-md" : "grid grid-cols-[1fr_360px] gap-5 w-full max-w-4xl items-start"}>
+      <div className={isEmbed ? "w-full max-w-md" : "grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5 w-full max-w-4xl items-start"}>
 
         {/* Left: form */}
         <div className="bg-surface border border-white/8 rounded-xl shadow-lg">

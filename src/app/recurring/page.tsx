@@ -199,10 +199,10 @@ export default function Recurring() {
   return (
     <>
       <Topbar title="Recurring Payments" action={{ label: "+ New Schedule", onClick: () => setShowForm(true) }} />
-      <div className="p-7 flex-1">
+      <div className="p-4 lg:p-7 flex-1">
 
         {/* Stats */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6">
           {[
             { label: "Active",        value: active.length,         color: "text-green"  },
             { label: "Due / Overdue", value: dueNow.length,         color: dueNow.length > 0 ? "text-amber" : "text-ink" },
@@ -223,7 +223,7 @@ export default function Recurring() {
               <div className="font-semibold text-sm">New Recurring Payment</div>
               <button onClick={() => setShowForm(false)} className="text-muted hover:text-ink text-lg">×</button>
             </div>
-            <div className="grid grid-cols-2 gap-3 mb-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
               <div>
                 <label className="text-[11.5px] font-semibold text-muted uppercase mb-1 block">Name</label>
                 <input value={form.name} onChange={e => setForm(f=>({...f,name:e.target.value}))}
@@ -242,7 +242,7 @@ export default function Recurring() {
               <input value={form.recipientWallet} onChange={e => setForm(f=>({...f,recipientWallet:e.target.value}))}
                 placeholder="0x…" className="w-full bg-surface2 border border-white/14 rounded-lg px-3 py-2 text-[13px] text-ink font-mono outline-none focus:border-accent" />
             </div>
-            <div className="grid grid-cols-2 gap-3 mb-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
               <div>
                 <label className="text-[11.5px] font-semibold text-muted uppercase mb-1 block">Amount (USDC)</label>
                 <input type="number" value={form.amount} onChange={e => setForm(f=>({...f,amount:e.target.value}))}
@@ -441,7 +441,7 @@ function RecurringRow({ rec, paying, payStatus, onPay, onToggle }: {
   const st   = payStatus[rec.id];
 
   return (
-    <div className="bg-surface border border-white/8 rounded-xl p-4 flex items-center gap-4">
+    <div className="bg-surface border border-white/8 rounded-xl p-4 flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4">
       {/* Category icon */}
       <div className="w-10 h-10 rounded-lg bg-surface2 grid place-items-center text-xl shrink-0">{cat.icon}</div>
 
