@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Topbar from "@/components/Topbar";
 import { getPaymentHistory, PaymentHistory } from "@/lib/storage";
-import { formatUsdc, shortAddr } from "@/lib/arc";
+import { formatUsdc, shortAddr, decodeMemoData, ARC_RPC } from "@/lib/arc";
 import { Line, Bar, Doughnut } from "react-chartjs-2";
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Filler, Legend } from "chart.js";
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Filler, Legend);
@@ -14,9 +14,10 @@ const CHART_OPTS: any = {
 };
 
 export default function Analytics() {
-  const [hist, setHist] = useState<PaymentHistory[]>([]);
-  const [range, setRange] = useState(30);
+  const [hist, setHist]     = useState<PaymentHistory[]>([]);
+  const [range, setRange]   = useState(30);
   const [mounted, setMounted] = useState(false);
+  const [memoFeed, setMemoFeed] = useState<{ txHash: string; amount: string; ts: number; memo: Record<string, unknown> | null }[]>([]);
 
   useEffect(() => {
     setMounted(true);
@@ -45,6 +46,29 @@ export default function Analytics() {
     }
     load();
   }, []);
+
+  // Memo Feed: decode on-chain memoData from recent txns
+  useEffect(() => {
+    if (hist.length === 0) return;
+    const recent = hist.slice(0, 6);
+    Promise.all(recent.map(async h => {
+      if (!h.txHash) return null;
+      try {
+        const res = await fetch(ARC_RPC, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jsonrpc:"2.0", id:1, method:"eth_getTransactionByHash", params:[h.txHash] }),
+        }).then(r => r.json());
+        const raw = decodeMemoData(res.result?.input || "");
+        if (!raw) return null;
+        try {
+          const parsed = JSON.parse(raw);
+          return { txHash: h.txHash, amount: h.amount, ts: h.ts, memo: parsed };
+        } catch { return { txHash: h.txHash, amount: h.amount, ts: h.ts, memo: null }; }
+      } catch { return null; }
+    })).then(results => {
+      setMemoFeed(results.filter((r): r is NonNullable<typeof r> => r !== null && r.memo !== null));
+    });
+  }, [hist]);
 
   const filtered = range >= 90 ? hist : hist.filter(h => h.ts >= Date.now() - range * 86400000);
   const total = filtered.reduce((s,h) => s+(parseFloat(h.amount)||0), 0);
@@ -113,6 +137,56 @@ export default function Analytics() {
             </div>
           </div>
         </div>
+
+        {/* On-chain Memo Feed */}
+        {memoFeed.length > 0 && (
+          <div className="mb-4 bg-surface border border-white/8 rounded-lg overflow-hidden">
+            <div className="px-5 py-4 border-b border-white/8 flex items-center justify-between">
+              <div>
+                <div className="font-semibold text-sm">On-chain Memo Feed</div>
+                <div className="text-[11px] text-muted mt-0.5">Structured context attached to each payment via Arc Memo contract</div>
+              </div>
+              <span className="text-[11px] px-2 py-0.5 rounded-full bg-purple/10 border border-purple/20 text-purple font-medium">Arc v0.7.2</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[12.5px]">
+                <thead>
+                  <tr className="border-b border-white/8 text-[11px] font-semibold text-muted uppercase tracking-wider">
+                    <th className="px-4 py-2.5 text-left">Order</th>
+                    <th className="px-4 py-2.5 text-left">Merchant</th>
+                    <th className="px-4 py-2.5 text-left">Payer</th>
+                    <th className="px-4 py-2.5 text-left">Invoice</th>
+                    <th className="px-4 py-2.5 text-right">Amount</th>
+                    <th className="px-4 py-2.5 text-right">Tx</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {memoFeed.map((m, i) => (
+                    <tr key={i} className="border-b border-white/8 last:border-0 hover:bg-surface2/40 transition-colors">
+                      <td className="px-4 py-3 font-mono text-[11.5px]">{(m.memo?.ord as string || "—").slice(0, 20)}</td>
+                      <td className="px-4 py-3 text-muted font-mono text-[11.5px]">{(m.memo?.mid as string || "—").slice(0, 16)}</td>
+                      <td className="px-4 py-3">
+                        {m.memo?.n
+                          ? <span className="text-ink">{m.memo.n as string}</span>
+                          : <span className="text-muted/50">—</span>}
+                      </td>
+                      <td className="px-4 py-3">
+                        {m.memo?.inv
+                          ? <span className="text-purple font-mono text-[11px]">{(m.memo.inv as string).slice(0, 16)}</span>
+                          : <span className="text-muted/50">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono font-semibold text-green">+{formatUsdc(m.amount)}</td>
+                      <td className="px-4 py-3 text-right">
+                        <a href={`https://testnet.arcscan.app/tx/${m.txHash}`} target="_blank" rel="noreferrer"
+                          className="font-mono text-[11px] text-accent hover:underline">{m.txHash.slice(0, 10)}…</a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="bg-surface border border-white/8 rounded-lg">

@@ -7,7 +7,7 @@ import {
   getRecurringPayments, saveRecurringPayments, getRecurringInvoices,
   saveRecurringInvoice, RecurringPayment, RecurringInvoice,
 } from "@/lib/storage";
-import { USDC_ADDRESS, fetchGasPrice, waitForReceipt, parseUsdcErc20, shortAddr, ARC_EXPLORER, timeAgo } from "@/lib/arc";
+import { fetchGasPrice, waitForReceipt, parseUsdcErc20, shortAddr, ARC_EXPLORER, timeAgo, MULTICALL3FROM, encodeBatchTransfers, USDC_ADDRESS } from "@/lib/arc";
 
 const CATEGORIES = [
   { value: "hosting",   label: "Hosting",   icon: "🖥️" },
@@ -89,8 +89,10 @@ export default function Recurring() {
   const [showForm, setShowForm]   = useState(false);
   const [form, setForm]           = useState(EMPTY_FORM);
   const [tab, setTab]             = useState<"schedules" | "invoices">("schedules");
-  const [paying, setPaying]       = useState<string | null>(null);
-  const [payStatus, setPayStatus] = useState<Record<string, string>>({});
+  const [paying, setPaying]         = useState<string | null>(null);
+  const [payStatus, setPayStatus]   = useState<Record<string, string>>({});
+  const [batchPaying, setBatchPaying] = useState(false);
+  const [batchStatus, setBatchStatus] = useState("");
 
   useEffect(() => {
     setPayments(getRecurringPayments());
@@ -186,6 +188,59 @@ export default function Recurring() {
       setPayStatus(s => ({ ...s, [rec.id]: `❌ ${e?.message?.slice(0,60) || "Failed"}` }));
       setTimeout(() => setPayStatus(s => { const n={...s}; delete n[rec.id]; return n; }), 4000);
     } finally { setPaying(null); }
+  }, [isConnected, isArcNetwork, connect, switchToArc, payments]);
+
+  const payAllDue = useCallback(async () => {
+    if (!isConnected) { await connect(); return; }
+    if (!isArcNetwork) { await switchToArc(); return; }
+    const eth = (window as any).ethereum;
+    if (!eth) return;
+    const due = payments.filter(p => p.status === "active" && p.nextDueDate <= Date.now() + 86400000);
+    if (due.length === 0) return;
+    setBatchPaying(true);
+    setBatchStatus(`Building batch for ${due.length} payment${due.length > 1 ? "s" : ""}…`);
+    try {
+      const accs = await eth.request({ method: "eth_accounts" });
+      const from = accs[0];
+      const calls = due.map(rec => ({
+        recipient: rec.recipientWallet as `0x${string}`,
+        units: parseUsdcErc20(rec.amount),
+      }));
+      const batchData = encodeBatchTransfers(calls);
+      const gasLimit = "0x" + Math.min(due.length * 80000 + 60000, 2_000_000).toString(16);
+      const gas = await fetchGasPrice(eth);
+      setBatchStatus(`Confirm ${due.length} payments in 1 MetaMask tx…`);
+      const txHash = await eth.request({
+        method: "eth_sendTransaction",
+        params: [{ from, to: MULTICALL3FROM, value: "0x0", data: batchData, gas: gasLimit, ...gas }],
+      });
+      setBatchStatus("Confirming batch on Arc…");
+      await waitForReceipt(eth, txHash);
+      const now = Date.now();
+      const updatedPayments = payments.map(p => {
+        if (!due.find(d => d.id === p.id)) return p;
+        const newPaid = (p.paidPeriods || 0) + 1;
+        const done = p.totalPeriods && newPaid >= p.totalPeriods;
+        saveRecurringInvoice({
+          id: "inv_" + Math.random().toString(36).slice(2, 9),
+          recurringId: p.id, name: p.name,
+          recipientWallet: p.recipientWallet, amount: p.amount,
+          txHash, paidAt: now,
+        });
+        return { ...p, paidPeriods: newPaid,
+          nextDueDate: done ? p.nextDueDate : nextDue(now, p.interval, p.payDay),
+          status: (done ? "completed" : p.status) as RecurringPayment["status"] };
+      });
+      saveRecurringPayments(updatedPayments);
+      setPayments(updatedPayments);
+      setInvoices(getRecurringInvoices());
+      setBatchStatus(`✅ ${due.length} payments batched in 1 tx! ${txHash.slice(0,10)}…`);
+      setTimeout(() => setBatchStatus(""), 5000);
+    } catch (e: any) {
+      const msg: string = e?.message || "";
+      setBatchStatus(msg.includes("reject") || msg.includes("cancel") ? "Batch cancelled." : `❌ ${msg.slice(0,80) || "Batch failed"}`);
+      setTimeout(() => setBatchStatus(""), 5000);
+    } finally { setBatchPaying(false); }
   }, [isConnected, isArcNetwork, connect, switchToArc, payments]);
 
   const visiblePayments = isConnected ? payments : [];
@@ -347,7 +402,23 @@ export default function Recurring() {
             {/* Due now */}
             {dueNow.length > 0 && (
               <div>
-                <div className="text-[11.5px] font-bold text-amber uppercase tracking-wider mb-2">⚠ Due Now</div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-[11.5px] font-bold text-amber uppercase tracking-wider">⚠ Due Now ({dueNow.length})</div>
+                  <div className="flex flex-col items-end gap-1.5">
+                    {batchStatus && (
+                      <div className={`text-[12px] ${batchStatus.startsWith("✅")?"text-green":batchStatus.startsWith("❌")?"text-red":"text-muted"}`}>
+                        {batchStatus}
+                      </div>
+                    )}
+                    {dueNow.length > 1 && (
+                      <button onClick={payAllDue} disabled={batchPaying || !!paying}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-amber text-[#0d1117] rounded-lg text-[12.5px] font-bold disabled:opacity-50 hover:bg-amber/90 transition-colors">
+                        <span>⚡</span>
+                        <span>{batchPaying ? "Batching…" : `Pay All ${dueNow.length} · 1 tx`}</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
                 {dueNow.map(rec => <RecurringRow key={rec.id} rec={rec} paying={paying} payStatus={payStatus} onPay={payNow} onToggle={toggleStatus} />)}
               </div>
             )}

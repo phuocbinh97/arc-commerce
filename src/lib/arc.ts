@@ -7,7 +7,8 @@ export const USDC_ADDRESS = "0x3600000000000000000000000000000000000000" as `0x$
 export const EURC_ADDRESS = "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a" as `0x${string}`;
 export const HUB_CONTRACT = "0xc7cb4f5ace70a4febc3b260591832af72563e988" as `0x${string}`;
 export const MERCHANT_WALLET = "0x5e86FCe1b94772Ff6a9632FA8BEc82BA59e24f02" as `0x${string}`;
-export const MEMO_CONTRACT   = "0x5294E9927c3306DcBaDb03fe70b92e01cCede505" as `0x${string}`;
+export const MEMO_CONTRACT    = "0x5294E9927c3306DcBaDb03fe70b92e01cCede505" as `0x${string}`;
+export const MULTICALL3FROM   = "0x522fAf9A91c41c443c66765030741e4AaCe147D0" as `0x${string}`;
 export const KIT_KEY = process.env.NEXT_PUBLIC_KIT_KEY ?? "";
 
 // ── Transaction Memo helpers (Arc v0.7.2+) ──────────────────────────────────
@@ -64,6 +65,62 @@ export function buildMemoContent(params: {
   if (params.orderId.startsWith("INV-")) obj.inv = params.orderId;
   if (params.payerName?.trim()) obj.n = params.payerName.trim().slice(0, 28);
   return JSON.stringify(obj).slice(0, 125);
+}
+
+// ── Multicall3From — batch transfers preserving msg.sender (Arc v0.7.2+) ───────
+
+const MULTICALL3_ABI = [{
+  type: "function", name: "aggregate3", stateMutability: "payable",
+  inputs: [{ name: "calls", type: "tuple[]", components: [
+    { name: "target",       type: "address" },
+    { name: "allowFailure", type: "bool"    },
+    { name: "callData",     type: "bytes"   },
+  ]}],
+  outputs: [{ name: "returnData", type: "tuple[]", components: [
+    { name: "success",    type: "bool"  },
+    { name: "returnData", type: "bytes" },
+  ]}],
+}] as const;
+
+/** Encode N direct USDC transfers as a single Multicall3From call */
+export function encodeBatchTransfers(
+  calls: { recipient: `0x${string}`; units: bigint }[]
+): `0x${string}` {
+  return encodeFunctionData({
+    abi: MULTICALL3_ABI,
+    functionName: "aggregate3",
+    args: [calls.map(c => ({
+      target:       USDC_ADDRESS,
+      allowFailure: false as const,
+      callData:     (`0xa9059cbb${c.recipient.slice(2).toLowerCase().padStart(64,"0")}${c.units.toString(16).padStart(64,"0")}`) as `0x${string}`,
+    }))],
+  });
+}
+
+/**
+ * Decode memoData bytes from a Memo contract tx input.
+ * ABI: memo(address target, bytes data, bytes32 memoId, bytes memoData)
+ * Returns the UTF-8 string content, or null if not decodable.
+ */
+export function decodeMemoData(input: string): string | null {
+  try {
+    const hex = input.startsWith("0x") ? input.slice(2) : input;
+    // Layout after 4-byte selector (8 hex chars):
+    //  slot0 [8..72]   = address (fixed 32 bytes)
+    //  slot1 [72..136] = offset of `data` bytes (dynamic)
+    //  slot2 [136..200]= memoId bytes32 (fixed)
+    //  slot3 [200..264]= offset of `memoData` bytes (dynamic)
+    // offsets are in bytes, relative to start of params (position 8)
+    if (hex.length < 264 + 64) return null;
+    const offsetMemoData = parseInt(hex.slice(200, 264), 16); // bytes
+    const pos = 8 + offsetMemoData * 2;                       // hex position
+    const memoLen = parseInt(hex.slice(pos, pos + 64), 16);
+    if (!memoLen || memoLen > 125) return null;
+    const memoHex = hex.slice(pos + 64, pos + 64 + memoLen * 2);
+    const bytes = new Uint8Array(memoLen);
+    for (let i = 0; i < memoLen; i++) bytes[i] = parseInt(memoHex.slice(i * 2, i * 2 + 2), 16);
+    return new TextDecoder().decode(bytes);
+  } catch { return null; }
 }
 
 // Strip X-User-Agent header added by Circle SDK — not allowed by Circle CORS policy in browser
