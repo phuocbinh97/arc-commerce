@@ -1,8 +1,8 @@
 "use client";
 import { useCallback, useState } from "react";
 import {
-  encodeApprove, encodeHubPay, fetchGasPrice,
-  waitForReceipt, parseUsdcErc20, USDC_ADDRESS, HUB_CONTRACT, MERCHANT_WALLET, KIT_KEY
+  encodeApprove, encodeHubPay, encodeMemoCallData, buildMemoContent,
+  waitForReceipt, parseUsdcErc20, USDC_ADDRESS, HUB_CONTRACT, MERCHANT_WALLET, MEMO_CONTRACT, KIT_KEY
 } from "@/lib/arc";
 import { savePayment, getSettings } from "@/lib/storage";
 
@@ -109,12 +109,14 @@ export function useCheckout() {
       setStep("confirming-approve");
       await waitForReceipt(eth, approveTx);
 
-      // Step 2: Pay
+      // Step 2: Pay — wrapped in Arc Memo contract for on-chain structured context
       setStep("paying");
+      const hubData    = encodeHubPay(merchant, merchantId, orderId, units, memo);
+      const memoContent = buildMemoContent({ orderId, merchantId, payerName });
+      const memoData   = encodeMemoCallData(contract as `0x${string}`, hubData, orderId, memoContent);
       const payTx = await eth.request({
         method: "eth_sendTransaction",
-        params: [{ from: account, to: contract, value: "0x0",
-          data: encodeHubPay(merchant, merchantId, orderId, units, memo), gas: "0x493e0" }],
+        params: [{ from: account, to: MEMO_CONTRACT, value: "0x0", data: memoData, gas: "0x7A120" }],
       });
 
       setStep("confirming-pay");

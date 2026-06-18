@@ -1,3 +1,5 @@
+import { encodeFunctionData, keccak256, toHex } from "viem";
+
 export const ARC_CHAIN_ID_HEX = "0x4cef52";
 export const ARC_RPC = "https://rpc.testnet.arc.network";
 export const ARC_EXPLORER = "https://testnet.arcscan.app";
@@ -5,7 +7,64 @@ export const USDC_ADDRESS = "0x3600000000000000000000000000000000000000" as `0x$
 export const EURC_ADDRESS = "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a" as `0x${string}`;
 export const HUB_CONTRACT = "0xc7cb4f5ace70a4febc3b260591832af72563e988" as `0x${string}`;
 export const MERCHANT_WALLET = "0x5e86FCe1b94772Ff6a9632FA8BEc82BA59e24f02" as `0x${string}`;
+export const MEMO_CONTRACT   = "0x5294E9927c3306DcBaDb03fe70b92e01cCede505" as `0x${string}`;
 export const KIT_KEY = process.env.NEXT_PUBLIC_KIT_KEY ?? "";
+
+// ── Transaction Memo helpers (Arc v0.7.2+) ──────────────────────────────────
+
+const MEMO_ABI = [{
+  type: "function",
+  name: "memo",
+  stateMutability: "nonpayable",
+  inputs: [
+    { name: "target",   type: "address" },
+    { name: "data",     type: "bytes"   },
+    { name: "memoId",   type: "bytes32" },
+    { name: "memoData", type: "bytes"   },
+  ],
+  outputs: [],
+}] as const;
+
+/** bytes32 identifier derived from orderId — used to query memo events later */
+export function makeMemoId(orderId: string): `0x${string}` {
+  return keccak256(toHex(orderId));
+}
+
+/**
+ * Wraps any contract calldata in Arc's Memo contract.
+ * Sends to MEMO_CONTRACT instead of target directly.
+ * Arc's CallFrom precompile preserves msg.sender = original EOA.
+ */
+export function encodeMemoCallData(
+  target: `0x${string}`,
+  innerData: `0x${string}`,
+  orderId: string,
+  memoContent: string,    // max 125 chars
+): `0x${string}` {
+  const memoId    = makeMemoId(orderId);
+  const memoBytes = toHex(new TextEncoder().encode(memoContent.slice(0, 125)));
+  return encodeFunctionData({
+    abi: MEMO_ABI,
+    functionName: "memo",
+    args: [target, innerData, memoId, memoBytes],
+  });
+}
+
+/** Build structured memo JSON — stays under 125 chars */
+export function buildMemoContent(params: {
+  orderId: string;
+  merchantId: string;
+  payerName?: string;
+}): string {
+  const obj: Record<string, unknown> = {
+    v:   1,
+    ord: params.orderId.slice(0, 32),
+    mid: params.merchantId.slice(0, 20),
+  };
+  if (params.orderId.startsWith("INV-")) obj.inv = params.orderId;
+  if (params.payerName?.trim()) obj.n = params.payerName.trim().slice(0, 28);
+  return JSON.stringify(obj).slice(0, 125);
+}
 
 // Strip X-User-Agent header added by Circle SDK — not allowed by Circle CORS policy in browser
 if (typeof window !== "undefined") {
