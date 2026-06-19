@@ -10,11 +10,16 @@ const GATEWAY_WALLET = "0x0077777d7EBA4688BDeF3E311b846F25870A19B9";
 const GATEWAY_MINTER = "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B";
 const HISTORY_PER_PAGE = 10;
 
-const CHAINS: Record<string, { label: string; icon: string; domain: number; chainId: string; rpc: string; usdc: string; gas: "USDC"|"ETH"; gwFee: string }> = {
-  Arc_Testnet:      { label: "Arc Testnet",      icon: "⚡", domain: 26, chainId: "0x4CEF52", rpc: "https://rpc.testnet.arc.network",             usdc: "0x3600000000000000000000000000000000000000", gas: "USDC", gwFee: "—"      },
-  Ethereum_Sepolia: { label: "Ethereum Sepolia",  icon: "Ξ",  domain: 0,  chainId: "0xaa36a7", rpc: "https://rpc.sepolia.org",                     usdc: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", gas: "ETH",  gwFee: "$1.00"  },
-  Base_Sepolia:     { label: "Base Sepolia",      icon: "🔵", domain: 6,  chainId: "0x14a34",  rpc: "https://sepolia.base.org",                    usdc: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", gas: "ETH",  gwFee: "$0.01"  },
-  Arbitrum_Sepolia: { label: "Arbitrum Sepolia",  icon: "🔷", domain: 3,  chainId: "0x66eee",  rpc: "https://sepolia-rollup.arbitrum.io/rpc",      usdc: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d", gas: "ETH",  gwFee: "$0.01"  },
+const CHAINS: Record<string, { label: string; icon: string; domain: number; chainId: string; rpc: string; usdc: string; gas: "USDC"|"ETH"|"AVAX"|"MATIC"; gwFee: string }> = {
+  Arc_Testnet:          { label: "Arc Testnet",      icon: "⚡", domain: 26, chainId: "0x4CEF52", rpc: "https://rpc.testnet.arc.network",                   usdc: "0x3600000000000000000000000000000000000000", gas: "USDC",  gwFee: "—"     },
+  Ethereum_Sepolia:     { label: "Ethereum Sepolia",  icon: "Ξ",  domain: 0,  chainId: "0xaa36a7", rpc: "https://rpc.sepolia.org",                           usdc: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", gas: "ETH",   gwFee: "$1.00" },
+  Base_Sepolia:         { label: "Base Sepolia",      icon: "🔵", domain: 6,  chainId: "0x14a34",  rpc: "https://sepolia.base.org",                          usdc: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", gas: "ETH",   gwFee: "$0.01" },
+  Arbitrum_Sepolia:     { label: "Arbitrum Sepolia",  icon: "🔷", domain: 3,  chainId: "0x66eee",  rpc: "https://sepolia-rollup.arbitrum.io/rpc",            usdc: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d", gas: "ETH",   gwFee: "$0.01" },
+  Optimism_Sepolia:     { label: "OP Sepolia",        icon: "🔴", domain: 2,  chainId: "0xaa37dc", rpc: "https://sepolia.optimism.io",                       usdc: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7", gas: "ETH",   gwFee: "$0.01" },
+  Polygon_Amoy_Testnet: { label: "Polygon Amoy",      icon: "🟣", domain: 7,  chainId: "0x13882",  rpc: "https://rpc-amoy.polygon.technology",               usdc: "0x41e94eb019c0762f9bfcf9fb1e58725bfb0e7582", gas: "MATIC", gwFee: "$0.01" },
+  Linea_Sepolia:        { label: "Linea Sepolia",     icon: "🟤", domain: 11, chainId: "0xe705",   rpc: "https://rpc.sepolia.linea.build",                   usdc: "0xfece4462d57bd51a6a552365a011b95f0e16d9b7", gas: "ETH",   gwFee: "—"     },
+  Unichain_Sepolia:     { label: "Unichain Sepolia",  icon: "🦄", domain: 14, chainId: "0x515",    rpc: "https://sepolia.unichain.org",                      usdc: "0x31d0220469e10c4E71834a79b1f276d740d3768F", gas: "ETH",   gwFee: "—"     },
+  Avalanche_Fuji:       { label: "Avalanche Fuji",    icon: "🔺", domain: 1,  chainId: "0xa869",   rpc: "https://api.avax-test.network/ext/bc/C/rpc",        usdc: "0x5425890298aed601595a70AB815c96711a31Bc65", gas: "AVAX",  gwFee: "$0.01" },
 };
 const CHAIN_IDS = Object.keys(CHAINS);
 
@@ -156,8 +161,9 @@ export default function Bridge() {
         await eth.request({ method: "wallet_switchEthereumChain", params: [{ chainId: src.chainId }] });
       } catch (e: any) {
         if (e.code === 4902) {
+          const gasSymbol = src.gas === "USDC" ? "USDC" : src.gas;
           await eth.request({ method: "wallet_addEthereumChain", params: [{ chainId: src.chainId, chainName: src.label, rpcUrls: [src.rpc],
-            nativeCurrency: src.gas === "ETH" ? { name:"ETH", symbol:"ETH", decimals:18 } : { name:"USDC", symbol:"USDC", decimals:6 } }] });
+            nativeCurrency: src.gas === "USDC" ? { name:"USDC", symbol:"USDC", decimals:6 } : { name: gasSymbol, symbol: gasSymbol, decimals:18 } }] });
         } else throw e;
       }
 
@@ -166,11 +172,11 @@ export default function Bridge() {
       const value = BigInt(Math.floor(amtNum * 1_000_000));
       const salt  = randomSalt();
 
-      // ETH gas check
-      if (src.gas === "ETH") {
-        const ethBal = BigInt(await eth.request({ method: "eth_getBalance", params: [from, "latest"] }));
-        if (ethBal < BigInt("10000000000000000"))
-          throw new Error(`Insufficient ETH on ${src.label}.\nYou need at least 0.01 ETH for gas.\nCurrent: ${(Number(ethBal)/1e18).toFixed(6)} ETH\nGet ETH: sepoliafaucet.com`);
+      // Native gas token check (ETH / AVAX / MATIC)
+      if (src.gas !== "USDC") {
+        const nativeBal = BigInt(await eth.request({ method: "eth_getBalance", params: [from, "latest"] }));
+        if (nativeBal < BigInt("10000000000000000"))
+          throw new Error(`Insufficient ${src.gas} on ${src.label}.\nYou need at least 0.01 ${src.gas} for gas.\nCurrent: ${(Number(nativeBal)/1e18).toFixed(6)} ${src.gas}`);
       }
 
       // Non-Arc source → use App Kit (CCTP, adapter required on both sides)
@@ -364,8 +370,8 @@ export default function Bridge() {
                         Balance: <span className="text-ink font-mono">{chainBals[fromChain]} USDC</span>
                       </span>
                     )}
-                    {src.gas === "ETH" && (
-                      <span className="text-[11px] text-amber">⚠ Need ETH for gas</span>
+                    {src.gas !== "USDC" && (
+                      <span className="text-[11px] text-amber">⚠ Need {src.gas} for gas</span>
                     )}
                   </div>
                 </div>

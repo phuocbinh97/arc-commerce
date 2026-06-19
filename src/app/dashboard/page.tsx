@@ -24,10 +24,15 @@ function StatCard({ label, value, unit, sub }: { label: string; value: string; u
 }
 
 const UNIFIED_CHAINS = [
-  { key: "Arc_Testnet",      label: "Arc",     icon: "⚡", rpc: "https://rpc.testnet.arc.network",             usdc: "0x3600000000000000000000000000000000000000" },
-  { key: "Ethereum_Sepolia", label: "Sepolia",  icon: "Ξ",  rpc: "https://rpc.sepolia.org",                     usdc: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238" },
-  { key: "Base_Sepolia",     label: "Base",     icon: "🔵", rpc: "https://sepolia.base.org",                    usdc: "0x036CbD53842c5426634e7929541eC2318f3dCF7e" },
-  { key: "Arbitrum_Sepolia", label: "Arbitrum", icon: "🔷", rpc: "https://sepolia-rollup.arbitrum.io/rpc",      usdc: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d" },
+  { key: "Arc_Testnet",          label: "Arc",      icon: "⚡", rpc: "https://rpc.testnet.arc.network",                   usdc: "0x3600000000000000000000000000000000000000" },
+  { key: "Ethereum_Sepolia",     label: "Sepolia",  icon: "Ξ",  rpc: "https://rpc.sepolia.org",                           usdc: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238" },
+  { key: "Base_Sepolia",         label: "Base",     icon: "🔵", rpc: "https://sepolia.base.org",                          usdc: "0x036CbD53842c5426634e7929541eC2318f3dCF7e" },
+  { key: "Arbitrum_Sepolia",     label: "Arbitrum", icon: "🔷", rpc: "https://sepolia-rollup.arbitrum.io/rpc",            usdc: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d" },
+  { key: "Optimism_Sepolia",     label: "OP",       icon: "🔴", rpc: "https://sepolia.optimism.io",                       usdc: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7" },
+  { key: "Polygon_Amoy_Testnet", label: "Polygon",  icon: "🟣", rpc: "https://rpc-amoy.polygon.technology",               usdc: "0x41e94eb019c0762f9bfcf9fb1e58725bfb0e7582" },
+  { key: "Linea_Sepolia",        label: "Linea",    icon: "🟤", rpc: "https://rpc.sepolia.linea.build",                   usdc: "0xfece4462d57bd51a6a552365a011b95f0e16d9b7" },
+  { key: "Unichain_Sepolia",     label: "Unichain", icon: "🦄", rpc: "https://sepolia.unichain.org",                      usdc: "0x31d0220469e10c4E71834a79b1f276d740d3768F" },
+  { key: "Avalanche_Fuji",       label: "Avax",     icon: "🔺", rpc: "https://api.avax-test.network/ext/bc/C/rpc",        usdc: "0x5425890298aed601595a70AB815c96711a31Bc65" },
 ];
 
 async function fetchUsdcOn(chain: typeof UNIFIED_CHAINS[0], addr: string): Promise<string> {
@@ -150,7 +155,7 @@ export default function Dashboard() {
               <div className="text-[12.5px] font-semibold">USDC Balance · All Chains</div>
               <span className="text-[11px] text-muted">Arc Testnet ecosystem</span>
             </div>
-            <div className="grid grid-cols-3 sm:grid-cols-5 divide-x divide-white/8">
+            <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 divide-x divide-white/8">
               {UNIFIED_CHAINS.map(c => {
                 const bal = chainBals[c.key] ?? "…";
                 const hasBalance = bal !== "—" && bal !== "…" && parseFloat(bal) > 0;
