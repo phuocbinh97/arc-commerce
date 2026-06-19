@@ -140,8 +140,8 @@ function PendingBridgeRow({ p, onDismiss, onArrived }: { p: any; onDismiss: () =
       // 1. Fetch attestation via server-side proxy (avoids CORS)
       const irisRes = await fetch(`/api/cctp-attestation?domain=${src.domain}&txHash=${p.burnTxHash}`).then(r => r.json());
       const msg = irisRes?.messages?.[0];
-      if (!msg) throw new Error("Attestation not found yet — try again in a minute");
-      if (msg.status !== "complete") throw new Error(`Attestation status: ${msg.status} — not ready yet`);
+      if (!msg || irisRes?.error === "no_attestation") throw new Error("Circle has no record of this transfer — it may have been dropped on testnet. Dismiss and try a new bridge.");
+      if (msg.status !== "complete") throw new Error(`Attestation not ready yet (${msg.status}) — wait a moment and try again`);
 
       setCheckMsg("Switching to destination chain…");
       const dst = CHAINS[p.to];

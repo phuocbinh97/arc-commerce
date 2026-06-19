@@ -7,6 +7,13 @@ export async function GET(req: NextRequest) {
 
   const url = `https://iris-api-sandbox.circle.com/v1/messages/${domain}?transactionHash=${txHash}`;
   const res = await fetch(url, { headers: { Accept: "application/json" } });
-  const data = await res.json();
-  return NextResponse.json(data);
+  const text = await res.text();
+  if (!text || !text.trim().startsWith("{")) {
+    return NextResponse.json({ error: "no_attestation", messages: [] });
+  }
+  try {
+    return NextResponse.json(JSON.parse(text));
+  } catch {
+    return NextResponse.json({ error: "parse_error", messages: [] });
+  }
 }
