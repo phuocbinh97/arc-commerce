@@ -110,6 +110,7 @@ export default function Bridge() {
   const [chainBals, setChainBals] = useState<Record<string, string>>({});
   const [pendingBridges, setPendingBridges] = useState<any[]>([]);
   const [relaying, setRelaying] = useState(false);
+  const [relayElapsed, setRelayElapsed] = useState(0);
 
   // Fetch USDC balances on all chains + auto-suggest richest as FROM
   useEffect(() => {
@@ -224,6 +225,7 @@ export default function Bridge() {
             setPendingBridges(prev => [...prev, pending]);
 
             setRelaying(true);
+            setRelayElapsed(0);
             setStep(KIT_STEP_BRIDGE);
 
             const getDstBal = async () => {
@@ -243,6 +245,7 @@ export default function Bridge() {
             while (Date.now() < deadline) {
               await new Promise(r => setTimeout(r, 5000));
               elapsed += 5;
+              setRelayElapsed(elapsed);
               setStatus(`⏳ Circle is relaying your USDC to ${dst.label}… ${elapsed}s`);
               const dstBalNow = await getDstBal();
               if (dstBalNow > dstBalBefore) {
@@ -404,9 +407,15 @@ export default function Bridge() {
         {relaying && (
           <div className="w-full bg-accent/8 border border-accent/25 rounded-xl px-4 py-4 flex items-center gap-4">
             <div className="w-8 h-8 rounded-full border-2 border-accent/30 border-t-accent shrink-0 animate-spin" />
-            <div>
-              <div className="text-[13px] font-semibold text-accent">Circle is relaying your USDC…</div>
-              <div className="text-[11.5px] text-muted mt-0.5">Checking destination balance every 5s. Do NOT bridge again.</div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <div className="text-[13px] font-semibold text-accent">Circle is relaying your USDC…</div>
+                <div className="text-[12px] font-mono text-muted">{relayElapsed}s <span className="text-muted/50">/ ~60–120s</span></div>
+              </div>
+              <div className="mt-1.5 h-1 bg-accent/15 rounded-full overflow-hidden">
+                <div className="h-full bg-accent rounded-full transition-all duration-1000" style={{ width: `${Math.min(relayElapsed / 120 * 100, 95)}%` }} />
+              </div>
+              <div className="text-[11px] text-muted mt-1.5">Checking destination balance every 5s. Do NOT bridge again.</div>
             </div>
           </div>
         )}
