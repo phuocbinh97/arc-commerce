@@ -108,11 +108,14 @@ export default function Bridge() {
   const [history,   setHistory]   = useState<any[]>([]);
   const [page,      setPage]      = useState(1);
   const [chainBals, setChainBals] = useState<Record<string, string>>({});
+  const [pendingBridges, setPendingBridges] = useState<any[]>([]);
+  const [relaying, setRelaying] = useState(false);
 
   // Fetch USDC balances on all chains + auto-suggest richest as FROM
   useEffect(() => {
     if (!account) return;
     setHistory(getBridgeHistory(account));
+    setPendingBridges(JSON.parse(localStorage.getItem("arcPendingBridges") || "[]"));
     Promise.all(
       CHAIN_IDS.map(id => fetchChainUsdcBalance(id, account).then(bal => ({ id, bal })))
     ).then(results => {
@@ -213,14 +216,51 @@ export default function Bridge() {
           const steps = (bridgeResult?.steps || []) as any[];
           const burnStep = steps.find((s: any) => s.name === "burn" && s.state === "success");
           if (burnStep) {
-            const burnTx = burnStep.txHash || burnStep.batchId || "";
-            const explorerLink = burnTx ? `${src.label} explorer: ${burnTx}` : "";
-            throw new Error(
-              `⚠️ USDC was burned on ${src.label} but mint on ${dst.label} is pending.\n\n` +
-              `Your funds are safe — Circle will auto-relay the attestation (usually within 5 min).\n` +
-              `Do NOT bridge again — wait for the USDC to arrive on ${dst.label}.\n` +
-              (explorerLink ? `\nBurn TX: ${explorerLink}` : "")
-            );
+            // Burn succeeded — USDC is safe. Auto-poll destination balance instead of showing an error.
+            const burnTxHash = burnStep.txHash || burnStep.batchId || "";
+            const pending = { burnTxHash, from: fromChain, to: toChain, amount: amtNum.toFixed(2), ts: Date.now(), recipient: recipient || from };
+            const existing = JSON.parse(localStorage.getItem("arcPendingBridges") || "[]");
+            localStorage.setItem("arcPendingBridges", JSON.stringify([...existing, pending]));
+            setPendingBridges(prev => [...prev, pending]);
+
+            setRelaying(true);
+            setStep(KIT_STEP_BRIDGE);
+
+            const getDstBal = async () => {
+              const r = await fetch(dst.rpc, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ jsonrpc:"2.0", id:1, method:"eth_call", params:[
+                  { to: dst.usdc, data: "0x70a08231" + (recipient||from).toLowerCase().replace("0x","").padStart(64,"0") },
+                  "latest",
+                ]}),
+              }).then(r => r.json());
+              return BigInt(r.result && r.result !== "0x" ? r.result : "0x0");
+            };
+
+            const dstBalBefore = await getDstBal();
+            const deadline = Date.now() + 6 * 60 * 1000; // 6 min
+            let elapsed = 0;
+            while (Date.now() < deadline) {
+              await new Promise(r => setTimeout(r, 5000));
+              elapsed += 5;
+              setStatus(`⏳ Circle is relaying your USDC to ${dst.label}… ${elapsed}s`);
+              const dstBalNow = await getDstBal();
+              if (dstBalNow > dstBalBefore) {
+                const arrived = Number(dstBalNow - dstBalBefore) / 1e6;
+                const updated_pending = JSON.parse(localStorage.getItem("arcPendingBridges") || "[]");
+                localStorage.setItem("arcPendingBridges", JSON.stringify(updated_pending.filter((x: any) => x.burnTxHash !== burnTxHash)));
+                setPendingBridges(prev => prev.filter(x => x.burnTxHash !== burnTxHash));
+                saveBridgeEntry({ from: fromChain, to: toChain, amount: arrived.toFixed(2), token: "USDC", ts: Date.now(), status: "completed" }, account);
+                const updated = getBridgeHistory(account); setHistory(updated); setPage(1);
+                setStatus(`✅ ${arrived.toFixed(2)} USDC arrived on ${dst.label}!`);
+                setStep(0); setSucceeded(true); setRelaying(false);
+                return;
+              }
+            }
+            // 6 min timeout — funds are still safe, just taking longer
+            setRelaying(false); setStep(0);
+            setStatus(`Transfer is processing. Your ${amtNum.toFixed(2)} USDC is safe — Circle may take up to 20 min on first relay. Check your ${dst.label} balance later.`);
+            return;
           }
           throw new Error("Bridge cancelled.");
         }
@@ -343,6 +383,34 @@ export default function Bridge() {
       <Topbar title="Bridge" />
       <div className="p-4 lg:p-6 flex-1 flex flex-col items-center gap-4 lg:gap-5 max-w-[860px] mx-auto w-full">
 
+        {/* Pending bridge relay banner */}
+        {pendingBridges.length > 0 && !relaying && (
+          <div className="w-full bg-amber/8 border border-amber/25 rounded-xl px-4 py-3 flex flex-col gap-2">
+            <div className="flex items-center gap-2 text-amber font-semibold text-[13px]">
+              <span>⏳</span>
+              <span>{pendingBridges.length} transfer{pendingBridges.length > 1 ? "s" : ""} waiting for Circle relay</span>
+            </div>
+            {pendingBridges.map((p, i) => (
+              <div key={i} className="flex items-center justify-between text-[11.5px] text-muted bg-bg/60 rounded-lg px-3 py-2">
+                <span className="font-mono">{p.amount} USDC · {CHAINS[p.from]?.label ?? p.from} → {CHAINS[p.to]?.label ?? p.to}</span>
+                <span className="text-muted/60 ml-2">{new Date(p.ts).toLocaleTimeString()}</span>
+              </div>
+            ))}
+            <div className="text-[11px] text-muted/70">Your USDC is safe. Circle typically relays within 1–5 min. Start a new bridge to auto-check when it arrives.</div>
+          </div>
+        )}
+
+        {/* Active relay spinner */}
+        {relaying && (
+          <div className="w-full bg-accent/8 border border-accent/25 rounded-xl px-4 py-4 flex items-center gap-4">
+            <div className="w-8 h-8 rounded-full border-2 border-accent/30 border-t-accent shrink-0 animate-spin" />
+            <div>
+              <div className="text-[13px] font-semibold text-accent">Circle is relaying your USDC…</div>
+              <div className="text-[11.5px] text-muted mt-0.5">Checking destination balance every 5s. Do NOT bridge again.</div>
+            </div>
+          </div>
+        )}
+
         {/* Main row: form + progress panel */}
         <div className="flex flex-col lg:flex-row gap-4 lg:gap-5 lg:items-start w-full">
 
@@ -448,7 +516,7 @@ export default function Bridge() {
               )}
 
               {/* Status */}
-              {status && (
+              {status && !relaying && (
                 <div className={`px-3 py-2.5 rounded-xl text-[12px] whitespace-pre-line leading-relaxed border ${
                   status.startsWith("✅") ? "bg-green/8 text-green border-green/20" :
                   status.startsWith("❌") ? "bg-red/8 text-red border-red/20" :
@@ -465,9 +533,9 @@ export default function Bridge() {
                   Connect Wallet
                 </button>
               ) : (
-                <button onClick={doBridge} disabled={step > 0 || !amount || amtNum <= 0 || fromChain === toChain}
+                <button onClick={doBridge} disabled={step > 0 || relaying || !amount || amtNum <= 0 || fromChain === toChain}
                   className="w-full py-3 bg-accent text-white rounded-xl text-[13.5px] font-bold disabled:opacity-40 hover:bg-accent/90 transition-colors tracking-wide">
-                  {step > 0 ? "Processing…" : amtNum > 0 ? `Bridge ${amount} USDC  ${src.icon} → ${dst.icon}` : "Enter amount to bridge"}
+                  {relaying ? "Relaying in progress…" : step > 0 ? "Processing…" : amtNum > 0 ? `Bridge ${amount} USDC  ${src.icon} → ${dst.icon}` : "Enter amount to bridge"}
                 </button>
               )}
             </div>
