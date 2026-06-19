@@ -15,7 +15,6 @@ const CHAINS: Record<string, { label: string; icon: string; domain: number; chai
   Ethereum_Sepolia: { label: "Ethereum Sepolia",  icon: "Ξ",  domain: 0,  chainId: "0xaa36a7", rpc: "https://rpc.sepolia.org",                     usdc: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", gas: "ETH",  gwFee: "$1.00"  },
   Base_Sepolia:     { label: "Base Sepolia",      icon: "🔵", domain: 6,  chainId: "0x14a34",  rpc: "https://sepolia.base.org",                    usdc: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", gas: "ETH",  gwFee: "$0.01"  },
   Arbitrum_Sepolia: { label: "Arbitrum Sepolia",  icon: "🔷", domain: 3,  chainId: "0x66eee",  rpc: "https://sepolia-rollup.arbitrum.io/rpc",      usdc: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d", gas: "ETH",  gwFee: "$0.01"  },
-  OP_Sepolia:       { label: "OP Sepolia",        icon: "🔴", domain: 2,  chainId: "0xaa37dc", rpc: "https://sepolia.optimism.io",                 usdc: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7", gas: "ETH",  gwFee: "$0.0015"},
 };
 const CHAIN_IDS = Object.keys(CHAINS);
 

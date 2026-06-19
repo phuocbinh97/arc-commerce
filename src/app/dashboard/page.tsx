@@ -28,7 +28,6 @@ const UNIFIED_CHAINS = [
   { key: "Ethereum_Sepolia", label: "Sepolia",  icon: "Ξ",  rpc: "https://rpc.sepolia.org",                     usdc: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238" },
   { key: "Base_Sepolia",     label: "Base",     icon: "🔵", rpc: "https://sepolia.base.org",                    usdc: "0x036CbD53842c5426634e7929541eC2318f3dCF7e" },
   { key: "Arbitrum_Sepolia", label: "Arbitrum", icon: "🔷", rpc: "https://sepolia-rollup.arbitrum.io/rpc",      usdc: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d" },
-  { key: "OP_Sepolia",       label: "OP",       icon: "🔴", rpc: "https://sepolia.optimism.io",                 usdc: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7" },
 ];
 
 async function fetchUsdcOn(chain: typeof UNIFIED_CHAINS[0], addr: string): Promise<string> {
