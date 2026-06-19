@@ -389,14 +389,24 @@ export default function Bridge() {
         {/* Pending bridge relay banner */}
         {pendingBridges.length > 0 && !relaying && (
           <div className="w-full bg-amber/8 border border-amber/25 rounded-xl px-4 py-3 flex flex-col gap-2">
-            <div className="flex items-center gap-2 text-amber font-semibold text-[13px]">
-              <span>⏳</span>
-              <span>{pendingBridges.length} transfer{pendingBridges.length > 1 ? "s" : ""} waiting for Circle relay</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-amber font-semibold text-[13px]">
+                <span>⏳</span>
+                <span>{pendingBridges.length} transfer{pendingBridges.length > 1 ? "s" : ""} waiting for Circle relay</span>
+              </div>
+              <button onClick={() => { localStorage.removeItem("arcPendingBridges"); setPendingBridges([]); }}
+                className="text-[11px] text-muted/60 hover:text-muted border border-white/10 rounded-md px-2 py-0.5 transition-colors">
+                Dismiss all
+              </button>
             </div>
             {pendingBridges.map((p, i) => (
               <div key={i} className="flex items-center justify-between text-[11.5px] text-muted bg-bg/60 rounded-lg px-3 py-2">
                 <span className="font-mono">{p.amount} USDC · {CHAINS[p.from]?.label ?? p.from} → {CHAINS[p.to]?.label ?? p.to}</span>
-                <span className="text-muted/60 ml-2">{new Date(p.ts).toLocaleTimeString()}</span>
+                <div className="flex items-center gap-2 ml-2">
+                  <span className="text-muted/60">{new Date(p.ts).toLocaleTimeString()}</span>
+                  <button onClick={() => { const f = pendingBridges.filter((_,j)=>j!==i); setPendingBridges(f); localStorage.setItem("arcPendingBridges", JSON.stringify(f)); }}
+                    className="text-muted/40 hover:text-muted text-xs">✕</button>
+                </div>
               </div>
             ))}
             <div className="text-[11px] text-muted/70">Your USDC is safe. Circle typically relays within 1–5 min. Start a new bridge to auto-check when it arrives.</div>
@@ -631,8 +641,14 @@ export default function Bridge() {
         </div>
 
         {/* ── Bridge History (dropdown) ── */}
-        <Accordion key="bridge-history" title={`Bridge History  (${history.length})`}>
-          {history.length === 0 ? (
+        {(() => {
+          const pendingRows = pendingBridges.map((p: any) => ({ ...p, status: "pending", txId: p.burnTxHash }));
+          const allRows = [...pendingRows, ...history].sort((a: any, b: any) => b.ts - a.ts);
+          const totalPg = Math.ceil(allRows.length / HISTORY_PER_PAGE);
+          const paged = allRows.slice((page-1)*HISTORY_PER_PAGE, page*HISTORY_PER_PAGE);
+          return (
+        <Accordion key="bridge-history" title={`Bridge History  (${allRows.length})`}>
+          {allRows.length === 0 ? (
             <div className="py-10 text-center text-muted text-[13px]">No bridges yet</div>
           ) : (
             <>
@@ -647,7 +663,7 @@ export default function Bridge() {
                   </tr>
                 </thead>
                 <tbody>
-                  {pagedHistory.map((h: any, i: number) => (
+                  {paged.map((h: any, i: number) => (
                     <tr key={i} className="border-b border-white/6 last:border-0 hover:bg-surface2 transition-colors">
                       <td className="px-6 py-3.5">
                         <div className="flex items-center gap-2 text-[13px] font-medium">
@@ -661,9 +677,15 @@ export default function Bridge() {
                       <td className="px-6 py-3.5 text-right font-mono font-bold text-[13px] text-ink">{h.amount} USDC</td>
                       <td className="px-6 py-3.5 text-[12px] text-muted">{new Date(h.ts).toLocaleString()}</td>
                       <td className="px-6 py-3.5">
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full bg-green/10 border border-green/20 text-green">
-                          ✓ {h.status}
-                        </span>
+                        {h.status === "pending" ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full bg-amber/10 border border-amber/25 text-amber animate-pulse">
+                            ⏳ relaying
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full bg-green/10 border border-green/20 text-green">
+                            ✓ {h.status}
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-3.5">
                         {h.txId ? (
@@ -679,21 +701,23 @@ export default function Bridge() {
                   ))}
                 </tbody>
               </table>
-              {totalPages > 1 && (
+              {totalPg > 1 && (
                 <div className="flex items-center justify-center gap-1.5 px-6 py-4 border-t border-white/8">
                   <button onClick={() => setPage(p => Math.max(1,p-1))} disabled={page===1}
                     className="px-3 py-1.5 rounded-lg text-[12px] border border-white/14 text-muted hover:text-ink disabled:opacity-30 transition-colors">← Prev</button>
-                  {Array.from({ length: totalPages }, (_,i) => i+1).map(p => (
+                  {Array.from({ length: totalPg }, (_,i) => i+1).map(p => (
                     <button key={p} onClick={() => setPage(p)}
                       className={`w-8 h-8 rounded-lg text-[12px] font-semibold border transition-colors ${page===p ? "bg-accent border-accent text-white" : "border-white/14 text-muted hover:text-ink"}`}>{p}</button>
                   ))}
-                  <button onClick={() => setPage(p => Math.min(totalPages,p+1))} disabled={page===totalPages}
+                  <button onClick={() => setPage(p => Math.min(totalPg,p+1))} disabled={page===totalPg}
                     className="px-3 py-1.5 rounded-lg text-[12px] border border-white/14 text-muted hover:text-ink disabled:opacity-30 transition-colors">Next →</button>
                 </div>
               )}
             </>
           )}
         </Accordion>
+          );
+        })()}
 
       </div>
     </>
