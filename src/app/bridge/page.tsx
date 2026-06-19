@@ -94,9 +94,27 @@ async function fetchChainUsdcBalance(chainKey: string, addr: string): Promise<st
   } catch { return "—"; }
 }
 
+// CCTP v1 testnet MessageTransmitter — same address across all EVM testnets
+const MSG_TRANSMITTER = "0x7865fAfC2db2093669d92c0197e5d6f4D14BF9a";
+// receiveMessage(bytes message, bytes attestation) selector
+function encodeReceiveMessage(message: string, attestation: string): string {
+  const sel = "57ecfd28";
+  const enc = (hex: string) => {
+    const h = hex.startsWith("0x") ? hex.slice(2) : hex;
+    const len = (h.length / 2).toString(16).padStart(64, "0");
+    const padded = h.padEnd(Math.ceil(h.length / 64) * 64, "0");
+    return len + padded;
+  };
+  const offset1 = (64).toString(16).padStart(64, "0");
+  const msgHex = (message.startsWith("0x") ? message.slice(2) : message);
+  const offset2 = (64 + 32 + Math.ceil(msgHex.length / 2 / 32) * 32).toString(16).padStart(64, "0");
+  return "0x" + sel + offset1 + offset2 + enc(message) + enc(attestation);
+}
+
 function PendingBridgeRow({ p, onDismiss, onArrived }: { p: any; onDismiss: () => void; onArrived: () => void }) {
   const [checking, setChecking] = useState(false);
   const [checkMsg, setCheckMsg] = useState("");
+  const [claiming, setClaiming] = useState(false);
   const [elapsed, setElapsed] = useState(Math.floor((Date.now() - p.ts) / 1000));
 
   useEffect(() => {
@@ -104,11 +122,64 @@ function PendingBridgeRow({ p, onDismiss, onArrived }: { p: any; onDismiss: () =
     return () => clearInterval(t);
   }, [p.ts]);
 
-  const ETA_S = 5 * 60; // 5 min typical
+  const ETA_S = 5 * 60;
   const remaining = ETA_S - elapsed;
   const pct = Math.min(elapsed / ETA_S * 100, 99);
   const fmtTime = (s: number) => s <= 0 ? "any moment" : `~${Math.floor(s/60)}m ${s%60}s`;
   const elapsedLabel = elapsed < 60 ? `${elapsed}s` : `${Math.floor(elapsed/60)}m ${elapsed%60}s`;
+  const isStuck = elapsed > 8 * 60; // show Manual Claim after 8 min
+
+  async function manualClaim() {
+    setClaiming(true); setCheckMsg("Fetching attestation from Circle…");
+    try {
+      const eth = (window as any).ethereum;
+      if (!eth) throw new Error("MetaMask not found");
+      const src = CHAINS[p.from];
+      if (!src) throw new Error("Unknown source chain");
+
+      // 1. Fetch attestation from Circle Iris testnet
+      const irisUrl = `https://iris-api-sandbox.circle.com/v1/messages/${src.domain}?transactionHash=${p.burnTxHash}`;
+      const irisRes = await fetch(irisUrl).then(r => r.json());
+      const msg = irisRes?.messages?.[0];
+      if (!msg) throw new Error("Attestation not found yet — try again in a minute");
+      if (msg.status !== "complete") throw new Error(`Attestation status: ${msg.status} — not ready yet`);
+
+      setCheckMsg("Switching to destination chain…");
+      const dst = CHAINS[p.to];
+      // 2. Switch MetaMask to destination chain
+      try {
+        await eth.request({ method: "wallet_switchEthereumChain", params: [{ chainId: dst.chainId }] });
+      } catch (e: any) {
+        if (e.code === 4902) {
+          const gs = dst.gas; const sym = gs === "USDC" ? "USDC" : gs;
+          await eth.request({ method: "wallet_addEthereumChain", params: [{ chainId: dst.chainId, chainName: dst.label, rpcUrls: [dst.rpc],
+            nativeCurrency: gs === "USDC" ? { name:"USDC",symbol:"USDC",decimals:6 } : { name:sym,symbol:sym,decimals:18 } }] });
+        } else throw e;
+      }
+
+      setCheckMsg("Submitting claim tx — confirm in MetaMask…");
+      // 3. Call receiveMessage on destination MessageTransmitter
+      const data = encodeReceiveMessage(msg.message, msg.attestation);
+      const accs = await eth.request({ method: "eth_accounts" });
+      const txHash = await eth.request({ method: "eth_sendTransaction", params: [{ from: accs[0], to: MSG_TRANSMITTER, data, gas: "0x493E0" }] });
+      setCheckMsg(`Claim tx sent! Waiting for confirmation…`);
+      // 4. Wait for receipt
+      for (let i = 0; i < 60; i++) {
+        await new Promise(r => setTimeout(r, 2000));
+        const receipt = await eth.request({ method: "eth_getTransactionReceipt", params: [txHash] });
+        if (receipt) {
+          if (receipt.status === "0x0") throw new Error("Claim tx reverted — already claimed or invalid");
+          setCheckMsg("✅ USDC claimed successfully!");
+          setTimeout(onArrived, 1500);
+          setClaiming(false); return;
+        }
+      }
+      throw new Error("Claim tx not confirmed after 2 min");
+    } catch (e: any) {
+      setCheckMsg(`❌ ${e.message}`);
+    }
+    setClaiming(false);
+  }
 
   async function checkNow() {
     setChecking(true); setCheckMsg("Checking…");
@@ -136,9 +207,15 @@ function PendingBridgeRow({ p, onDismiss, onArrived }: { p: any; onDismiss: () =
       <div className="flex items-center justify-between">
         <span className="font-mono font-medium text-ink">{p.amount} USDC · {CHAINS[p.from]?.label ?? p.from} → {CHAINS[p.to]?.label ?? p.to}</span>
         <div className="flex items-center gap-2 ml-2">
+          {isStuck && (
+            <button onClick={manualClaim} disabled={claiming}
+              className="text-[11px] px-2 py-0.5 rounded-md bg-amber/10 text-amber hover:bg-amber/20 border border-amber/25 disabled:opacity-50 transition-colors font-semibold">
+              {claiming ? "Claiming…" : "⚡ Claim"}
+            </button>
+          )}
           <button onClick={checkNow} disabled={checking}
             className="text-[11px] px-2 py-0.5 rounded-md bg-accent/10 text-accent hover:bg-accent/20 border border-accent/20 disabled:opacity-50 transition-colors">
-            {checking ? "…" : "Check now"}
+            {checking ? "…" : "Check"}
           </button>
           <button onClick={onDismiss} className="text-muted/40 hover:text-muted text-xs">✕</button>
         </div>
