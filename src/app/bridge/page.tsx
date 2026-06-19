@@ -97,6 +97,18 @@ async function fetchChainUsdcBalance(chainKey: string, addr: string): Promise<st
 function PendingBridgeRow({ p, onDismiss, onArrived }: { p: any; onDismiss: () => void; onArrived: () => void }) {
   const [checking, setChecking] = useState(false);
   const [checkMsg, setCheckMsg] = useState("");
+  const [elapsed, setElapsed] = useState(Math.floor((Date.now() - p.ts) / 1000));
+
+  useEffect(() => {
+    const t = setInterval(() => setElapsed(Math.floor((Date.now() - p.ts) / 1000)), 1000);
+    return () => clearInterval(t);
+  }, [p.ts]);
+
+  const ETA_S = 5 * 60; // 5 min typical
+  const remaining = ETA_S - elapsed;
+  const pct = Math.min(elapsed / ETA_S * 100, 99);
+  const fmtTime = (s: number) => s <= 0 ? "any moment" : `~${Math.floor(s/60)}m ${s%60}s`;
+  const elapsedLabel = elapsed < 60 ? `${elapsed}s` : `${Math.floor(elapsed/60)}m ${elapsed%60}s`;
 
   async function checkNow() {
     setChecking(true); setCheckMsg("Checking…");
@@ -120,17 +132,26 @@ function PendingBridgeRow({ p, onDismiss, onArrived }: { p: any; onDismiss: () =
   }
 
   return (
-    <div className="flex flex-col gap-1 text-[11.5px] text-muted bg-bg/60 rounded-lg px-3 py-2">
+    <div className="flex flex-col gap-2 text-[11.5px] text-muted bg-bg/60 rounded-lg px-3 py-2.5">
       <div className="flex items-center justify-between">
-        <span className="font-mono">{p.amount} USDC · {CHAINS[p.from]?.label ?? p.from} → {CHAINS[p.to]?.label ?? p.to}</span>
+        <span className="font-mono font-medium text-ink">{p.amount} USDC · {CHAINS[p.from]?.label ?? p.from} → {CHAINS[p.to]?.label ?? p.to}</span>
         <div className="flex items-center gap-2 ml-2">
-          <span className="text-muted/60">{new Date(p.ts).toLocaleTimeString()}</span>
           <button onClick={checkNow} disabled={checking}
             className="text-[11px] px-2 py-0.5 rounded-md bg-accent/10 text-accent hover:bg-accent/20 border border-accent/20 disabled:opacity-50 transition-colors">
             {checking ? "…" : "Check now"}
           </button>
           <button onClick={onDismiss} className="text-muted/40 hover:text-muted text-xs">✕</button>
         </div>
+      </div>
+      {/* Progress bar + time */}
+      <div className="h-1 bg-white/6 rounded-full overflow-hidden">
+        <div className="h-full bg-amber rounded-full transition-all duration-1000" style={{ width: `${pct}%` }} />
+      </div>
+      <div className="flex items-center justify-between text-[11px]">
+        <span className="text-muted/70">Elapsed: {elapsedLabel}</span>
+        <span className={remaining > 0 ? "text-amber" : "text-green"}>
+          {remaining > 0 ? `Est. ${fmtTime(remaining)} remaining` : "Should arrive any moment"}
+        </span>
       </div>
       {checkMsg && <div className={`text-[11px] ${checkMsg.startsWith("✅") ? "text-green" : "text-muted"}`}>{checkMsg}</div>}
     </div>
