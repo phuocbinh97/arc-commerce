@@ -216,9 +216,9 @@ export default function Bridge() {
             const burnTx = burnStep.txHash || burnStep.batchId || "";
             const explorerLink = burnTx ? `${src.label} explorer: ${burnTx}` : "";
             throw new Error(
-              `⚠️ USDC was burned on ${src.label} but not yet minted on ${dst.label}.\n\n` +
-              `Your funds are safe — Circle holds a valid attestation.\n` +
-              `To recover: bridge again with the same amount, Circle will reuse the existing attestation.\n` +
+              `⚠️ USDC was burned on ${src.label} but mint on ${dst.label} is pending.\n\n` +
+              `Your funds are safe — Circle will auto-relay the attestation (usually within 5 min).\n` +
+              `Do NOT bridge again — wait for the USDC to arrive on ${dst.label}.\n` +
               (explorerLink ? `\nBurn TX: ${explorerLink}` : "")
             );
           }
