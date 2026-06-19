@@ -94,6 +94,49 @@ async function fetchChainUsdcBalance(chainKey: string, addr: string): Promise<st
   } catch { return "—"; }
 }
 
+function PendingBridgeRow({ p, onDismiss, onArrived }: { p: any; onDismiss: () => void; onArrived: () => void }) {
+  const [checking, setChecking] = useState(false);
+  const [checkMsg, setCheckMsg] = useState("");
+
+  async function checkNow() {
+    setChecking(true); setCheckMsg("Checking…");
+    try {
+      const dst = CHAINS[p.to];
+      if (!dst) { setCheckMsg("Unknown chain."); setChecking(false); return; }
+      const addr = (p.recipient || p.from || "").toLowerCase().replace("0x","").padStart(64,"0");
+      const res = await fetch(dst.rpc, {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ jsonrpc:"2.0",id:1,method:"eth_call",params:[{to:dst.usdc,data:"0x70a08231"+addr},"latest"] }),
+      }).then(r=>r.json());
+      const bal = Number(BigInt(res.result && res.result!=="0x" ? res.result : "0x0")) / 1e6;
+      if (bal >= parseFloat(p.amount) * 0.9) {
+        setCheckMsg(`✅ ${bal.toFixed(2)} USDC arrived!`);
+        setTimeout(onArrived, 1500);
+      } else {
+        setCheckMsg(`${bal.toFixed(2)} USDC on ${dst.label} — not arrived yet`);
+      }
+    } catch { setCheckMsg("Check failed — try again"); }
+    setChecking(false);
+  }
+
+  return (
+    <div className="flex flex-col gap-1 text-[11.5px] text-muted bg-bg/60 rounded-lg px-3 py-2">
+      <div className="flex items-center justify-between">
+        <span className="font-mono">{p.amount} USDC · {CHAINS[p.from]?.label ?? p.from} → {CHAINS[p.to]?.label ?? p.to}</span>
+        <div className="flex items-center gap-2 ml-2">
+          <span className="text-muted/60">{new Date(p.ts).toLocaleTimeString()}</span>
+          <button onClick={checkNow} disabled={checking}
+            className="text-[11px] px-2 py-0.5 rounded-md bg-accent/10 text-accent hover:bg-accent/20 border border-accent/20 disabled:opacity-50 transition-colors">
+            {checking ? "…" : "Check now"}
+          </button>
+          <button onClick={onDismiss} className="text-muted/40 hover:text-muted text-xs">✕</button>
+        </div>
+      </div>
+      {checkMsg && <div className={`text-[11px] ${checkMsg.startsWith("✅") ? "text-green" : "text-muted"}`}>{checkMsg}</div>}
+    </div>
+  );
+}
+
 export default function Bridge() {
   const { account, isConnected, connect } = useWallet();
   const [fromChain, setFromChain] = useState("Arc_Testnet");
@@ -400,16 +443,19 @@ export default function Bridge() {
               </button>
             </div>
             {pendingBridges.map((p, i) => (
-              <div key={i} className="flex items-center justify-between text-[11.5px] text-muted bg-bg/60 rounded-lg px-3 py-2">
-                <span className="font-mono">{p.amount} USDC · {CHAINS[p.from]?.label ?? p.from} → {CHAINS[p.to]?.label ?? p.to}</span>
-                <div className="flex items-center gap-2 ml-2">
-                  <span className="text-muted/60">{new Date(p.ts).toLocaleTimeString()}</span>
-                  <button onClick={() => { const f = pendingBridges.filter((_,j)=>j!==i); setPendingBridges(f); localStorage.setItem("arcPendingBridges", JSON.stringify(f)); }}
-                    className="text-muted/40 hover:text-muted text-xs">✕</button>
-                </div>
-              </div>
+              <PendingBridgeRow key={i} p={p} onDismiss={() => {
+                const f = pendingBridges.filter((_,j)=>j!==i);
+                setPendingBridges(f);
+                localStorage.setItem("arcPendingBridges", JSON.stringify(f));
+              }} onArrived={() => {
+                const f = pendingBridges.filter((_,j)=>j!==i);
+                setPendingBridges(f);
+                localStorage.setItem("arcPendingBridges", JSON.stringify(f));
+                saveBridgeEntry({ from: p.from, to: p.to, amount: p.amount, token: "USDC", ts: Date.now(), status: "completed" }, account!);
+                setHistory(getBridgeHistory(account!));
+              }} />
             ))}
-            <div className="text-[11px] text-muted/70">Your USDC is safe. Circle typically relays within 1–5 min. Start a new bridge to auto-check when it arrives.</div>
+            <div className="text-[11px] text-muted/70">Your USDC is safe. Circle typically relays within 1–5 min.</div>
           </div>
         )}
 
