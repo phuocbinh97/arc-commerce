@@ -206,7 +206,7 @@ export default function Bridge() {
         setStep(KIT_STEP_APPROVE); setStatus("Approve & confirm in MetaMask…");
         const bridgeResult = await (kit as any).bridge({
           from: { adapter, chain: fromChain },
-          to:   { chain: toChain },
+          to:   { adapter, chain: toChain },
           amount: amtNum.toFixed(2), token: "USDC",
         });
         console.log("[Bridge] App Kit result state:", bridgeResult?.state);
