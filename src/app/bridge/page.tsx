@@ -137,9 +137,8 @@ function PendingBridgeRow({ p, onDismiss, onArrived }: { p: any; onDismiss: () =
       const src = CHAINS[p.from];
       if (!src) throw new Error("Unknown source chain");
 
-      // 1. Fetch attestation from Circle Iris testnet
-      const irisUrl = `https://iris-api-sandbox.circle.com/v1/messages/${src.domain}?transactionHash=${p.burnTxHash}`;
-      const irisRes = await fetch(irisUrl).then(r => r.json());
+      // 1. Fetch attestation via server-side proxy (avoids CORS)
+      const irisRes = await fetch(`/api/cctp-attestation?domain=${src.domain}&txHash=${p.burnTxHash}`).then(r => r.json());
       const msg = irisRes?.messages?.[0];
       if (!msg) throw new Error("Attestation not found yet — try again in a minute");
       if (msg.status !== "complete") throw new Error(`Attestation status: ${msg.status} — not ready yet`);
