@@ -2,7 +2,7 @@
 
 > **On-chain checkout platform built on Arc Testnet.** Accept USDC payments, issue invoices, bridge cross-chain, and manage a chain-abstracted balance — all from one dashboard.
 
-**🌐 Live:** [nexmer.vercel.app](https://nexmer.vercel.app) · **Built by:** [@phuocbinh97](https://x.com/phuocbinh97)
+**🌐 Live:** [nexmer.xyz](https://nexmer.xyz) · **Built by:** [@phuocbinh97](https://x.com/phuocbinh97)
 
 ---
 
@@ -171,7 +171,7 @@ ANTHROPIC_API_KEY=your_key
 
 ## Quick Test
 
-1. Open [nexmer.vercel.app](https://nexmer.vercel.app)
+1. Open [nexmer.xyz](https://nexmer.xyz)
 2. Connect MetaMask → Arc Testnet (Chain ID: `5042002`)
 3. Get testnet USDC from [faucet.circle.com](https://faucet.circle.com)
 4. **Demo Shop** → add to cart → pay
