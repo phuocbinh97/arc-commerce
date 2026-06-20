@@ -94,7 +94,7 @@ export default function Treasury() {
 
       console.log("[Swap] kitKey prefix:", `KIT_KEY:${KIT_KEY}`.slice(0, 20) + "...");
       await kit.swap({
-        from: { adapter, chain: "Arc_Testnet", address: account as `0x${string}` },
+        from: { adapter, chain: "Arc_Testnet" },
         tokenIn: swapFrom as "USDC" | "EURC",
         tokenOut: swapTo as "USDC" | "EURC",
         amountIn: parseFloat(swapAmount).toFixed(2),
