@@ -129,14 +129,78 @@ export default function Dashboard() {
     revenueData.push(parseFloat(sum.toFixed(2)));
   }
 
+  const totalAcrossChains = Object.values(chainBals)
+    .filter(b => b !== "—" && b !== "…")
+    .reduce((s, b) => s + (parseFloat(b) || 0), 0);
+  const chainsWithBalance = UNIFIED_CHAINS.filter(c => {
+    const b = chainBals[c.key];
+    return b && b !== "—" && b !== "…" && parseFloat(b) > 0;
+  });
+
   if (!mounted) return null;
 
   return (
     <>
       <Topbar title="Overview" action={{ label: "+ New Invoice", href: "/invoices" }} />
       <div className="p-4 lg:p-7 flex-1">
-        <div className="flex items-center justify-between mb-4 lg:mb-5">
-          <h1 className="text-xl font-bold tracking-tight">Dashboard</h1>
+
+        {/* ── UNIFIED BALANCE HERO ── */}
+        <div className="mb-5 lg:mb-6 rounded-2xl overflow-hidden border border-accent/25 bg-gradient-to-br from-accent/10 via-surface to-surface">
+          {/* Top row: total + intro */}
+          <div className="px-5 pt-5 pb-4 flex flex-col sm:flex-row sm:items-start gap-4 border-b border-white/8">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="text-[11px] font-bold uppercase tracking-widest text-accent">Unified Balance</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green/10 border border-green/20 text-green font-semibold">● Live</span>
+              </div>
+              <div className="flex items-end gap-2.5">
+                <span className="font-mono text-[42px] font-black text-ink leading-none tracking-tight">
+                  {Object.keys(chainBals).length === 0 ? "—" : totalAcrossChains.toFixed(2)}
+                </span>
+                <span className="text-[15px] text-muted font-semibold mb-1.5">USDC</span>
+              </div>
+              <div className="text-[12px] text-muted mt-1.5">
+                Across {chainsWithBalance.length > 0 ? chainsWithBalance.length : UNIFIED_CHAINS.length} chains
+                {chainsWithBalance.length > 0 && ` · ${chainsWithBalance.map(c => c.label).join(", ")}`}
+              </div>
+            </div>
+
+            {/* Explainer */}
+            <div className="sm:max-w-[280px] bg-white/4 border border-white/8 rounded-xl px-4 py-3 flex flex-col gap-2">
+              <div className="text-[12px] font-bold text-ink">What is Unified Balance?</div>
+              <div className="text-[11.5px] text-muted leading-relaxed">
+                Your USDC balance pooled across all chains — powered by Circle's CCTP. Customers pay you from <em>any</em> chain, funds land in one place. Spend or withdraw to any chain instantly, no manual bridging.
+              </div>
+              <Link href="/unified-balance"
+                className="text-[11.5px] font-semibold text-accent hover:underline mt-0.5">
+                Deposit or spend →
+              </Link>
+            </div>
+          </div>
+
+          {/* Chain breakdown */}
+          <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 divide-x divide-white/8">
+            {UNIFIED_CHAINS.map(c => {
+              const bal = chainBals[c.key] ?? "…";
+              const hasBalance = bal !== "—" && bal !== "…" && parseFloat(bal) > 0;
+              return (
+                <div key={c.key} className="px-3 py-3 flex flex-col gap-0.5">
+                  <div className="text-[10.5px] text-muted flex items-center gap-1">
+                    {c.icon === "arc"
+                      ? <img src="/arc-logo.png" alt="Arc" width={12} height={12} className="rounded-sm" />
+                      : <span>{c.icon}</span>}
+                    <span>{c.label}</span>
+                  </div>
+                  <div className={`font-mono text-[13px] font-bold ${hasBalance ? "text-ink" : "text-muted/50"}`}>{bal}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Stats + range */}
+        <div className="flex items-center justify-between mb-3 lg:mb-4">
+          <h2 className="text-[13px] font-semibold text-muted uppercase tracking-wider">Payments</h2>
           <div className="flex gap-1">
             {[7, 30, 90].map(r => (
               <button key={r} onClick={() => setRange(r)}
@@ -147,34 +211,6 @@ export default function Dashboard() {
             ))}
           </div>
         </div>
-
-        {/* Unified Balance — USDC across all chains */}
-        {Object.keys(chainBals).length > 0 && (
-          <div className="mb-4 lg:mb-5 bg-surface border border-white/8 rounded-lg overflow-hidden">
-            <div className="px-4 py-3 border-b border-white/8 flex items-center justify-between">
-              <div className="text-[12.5px] font-semibold">USDC Balance · All Chains</div>
-              <span className="text-[11px] text-muted">Arc Testnet ecosystem</span>
-            </div>
-            <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 divide-x divide-white/8">
-              {UNIFIED_CHAINS.map(c => {
-                const bal = chainBals[c.key] ?? "…";
-                const hasBalance = bal !== "—" && bal !== "…" && parseFloat(bal) > 0;
-                return (
-                  <div key={c.key} className="px-3 py-3 flex flex-col gap-0.5">
-                    <div className="text-[11px] text-muted flex items-center gap-1">
-                      {c.icon === "arc"
-                        ? <img src="/arc-logo.png" alt="Arc" width={14} height={14} className="rounded-sm" />
-                        : <span>{c.icon}</span>}
-                      <span>{c.label}</span>
-                    </div>
-                    <div className={`font-mono text-[13px] font-bold ${hasBalance ? "text-ink" : "text-muted"}`}>{bal}</div>
-                    {hasBalance && <div className="text-[10px] text-muted">USDC</div>}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 lg:gap-3.5 mb-4 lg:mb-6">
