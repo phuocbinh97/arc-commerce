@@ -171,10 +171,10 @@ export default function Dashboard() {
         {/* ── UNIFIED BALANCE HERO ── */}
         <div className="mb-5 lg:mb-6 rounded-2xl overflow-hidden border border-accent/30 bg-gradient-to-br from-accent/10 via-surface to-surface">
 
-          {/* Row 1: Pool Balance + CTA */}
-          <div className="px-5 pt-5 pb-5 flex flex-col lg:flex-row lg:items-center gap-5 border-b border-white/8">
+          {/* Row 1: Pool Balance + Explainer */}
+          <div className="px-5 pt-5 pb-5 flex flex-col lg:flex-row lg:items-start gap-5 border-b border-white/8">
 
-            {/* Left: balance */}
+            {/* Left: balance + CTAs */}
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-[11px] font-bold uppercase tracking-widest text-accent">Unified Pool Balance</span>
@@ -185,37 +185,37 @@ export default function Dashboard() {
                   {poolBal === null ? "—" : poolBal}
                 </span>
                 <span className="text-[16px] text-muted font-semibold mb-2">USDC</span>
+                <button onClick={checkPoolBalance} disabled={poolLoading}
+                  className="mb-2 ml-1 text-[11px] font-semibold text-muted hover:text-ink transition-colors disabled:opacity-40">
+                  {poolLoading ? "…" : "↻"}
+                </button>
               </div>
-              <p className="text-[12px] text-muted">Spendable to any chain instantly · no bridging needed</p>
+              <p className="text-[12px] text-muted mb-4">Spendable to any chain instantly · no bridging needed</p>
+
+              {/* CTAs under balance */}
+              <div className="flex gap-2 flex-wrap">
+                <Link href="/unified-balance"
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-accent text-white text-[13px] font-bold hover:bg-accent/85 transition-colors">
+                  ⬇ Deposit
+                </Link>
+                <Link href="/unified-balance?tab=spend"
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white/6 border border-white/12 text-ink text-[13px] font-semibold hover:bg-white/10 transition-colors">
+                  ⬆ Spend
+                </Link>
+              </div>
+              {totalAcrossChains > 0 && poolBal !== null && (
+                <div className="mt-2 text-[11px] text-amber">
+                  ● {totalAcrossChains.toFixed(2)} USDC on-chain available to deposit
+                </div>
+              )}
             </div>
 
-            {/* Middle: what is this */}
-            <div className="lg:max-w-[230px] flex flex-col gap-1.5">
-              <div className="text-[11.5px] font-bold text-ink">What is Unified Balance?</div>
+            {/* Right: explainer */}
+            <div className="lg:max-w-[240px] bg-white/4 border border-white/8 rounded-xl px-4 py-3 flex flex-col gap-1.5">
+              <div className="text-[12px] font-bold text-ink">What is Unified Balance?</div>
               <div className="text-[11px] text-muted leading-relaxed">
                 One pool, all chains. Deposit USDC from anywhere — customers pay you from any chain, funds arrive here automatically via Circle's CCTP.
               </div>
-              <button onClick={checkPoolBalance} disabled={poolLoading}
-                className="mt-1 w-fit text-[11px] font-semibold text-muted hover:text-ink transition-colors disabled:opacity-40">
-                {poolLoading ? "Checking…" : poolBal === null ? "↻ Load balance" : "↻ Refresh"}
-              </button>
-            </div>
-
-            {/* Right: CTAs */}
-            <div className="flex flex-col gap-2 lg:min-w-[180px]">
-              <Link href="/unified-balance"
-                className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-accent text-white text-[13px] font-bold hover:bg-accent/85 transition-colors">
-                ⬇ Deposit to Pool
-              </Link>
-              <Link href="/unified-balance?tab=spend"
-                className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white/6 border border-white/12 text-ink text-[13px] font-semibold hover:bg-white/10 transition-colors">
-                ⬆ Spend from Pool
-              </Link>
-              {totalAcrossChains > 0 && poolBal !== null && (
-                <div className="text-[10.5px] text-amber text-center">
-                  {totalAcrossChains.toFixed(2)} USDC on-chain ready to deposit
-                </div>
-              )}
             </div>
           </div>
 
