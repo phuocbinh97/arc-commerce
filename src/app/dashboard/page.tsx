@@ -52,6 +52,8 @@ export default function Dashboard() {
   const [range, setRange] = useState(7);
   const [mounted, setMounted] = useState(false);
   const [chainBals, setChainBals] = useState<Record<string, string>>({});
+  const [poolBal, setPoolBal] = useState<string | null>(null);
+  const [poolLoading, setPoolLoading] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -129,6 +131,29 @@ export default function Dashboard() {
     revenueData.push(parseFloat(sum.toFixed(2)));
   }
 
+  async function checkPoolBalance() {
+    setPoolLoading(true);
+    try {
+      const eth = (window as any).ethereum;
+      if (!eth) throw new Error("No wallet");
+      const { createAdapterFromProvider } = await import("@circle-fin/adapter-viem-v2") as any;
+      const { AppKit } = await import("@circle-fin/app-kit") as any;
+      const adapter = await createAdapterFromProvider({ provider: eth });
+      const kit = new AppKit();
+      const fn = kit.unifiedBalance?.getBalance || kit.unifiedBalance?.balance;
+      if (fn) {
+        const res = await fn({ adapter, chain: "Arc_Testnet", token: "USDC" });
+        const val = res?.balance ?? res?.amount ?? res;
+        setPoolBal(typeof val === "number" ? val.toFixed(2) : String(val ?? "0.00"));
+      } else {
+        setPoolBal("N/A");
+      }
+    } catch (e: any) {
+      setPoolBal("—");
+    }
+    setPoolLoading(false);
+  }
+
   const totalAcrossChains = Object.values(chainBals)
     .filter(b => b !== "—" && b !== "…")
     .reduce((s, b) => s + (parseFloat(b) || 0), 0);
@@ -146,39 +171,50 @@ export default function Dashboard() {
 
         {/* ── UNIFIED BALANCE HERO ── */}
         <div className="mb-5 lg:mb-6 rounded-2xl overflow-hidden border border-accent/25 bg-gradient-to-br from-accent/10 via-surface to-surface">
-          {/* Top row: total + intro */}
+
+          {/* Row 1: Pool Balance (Circle-managed) + Explainer */}
           <div className="px-5 pt-5 pb-4 flex flex-col sm:flex-row sm:items-start gap-4 border-b border-white/8">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1.5">
-                <span className="text-[11px] font-bold uppercase tracking-widest text-accent">Unified Balance</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green/10 border border-green/20 text-green font-semibold">● Live</span>
+                <span className="text-[11px] font-bold uppercase tracking-widest text-accent">Unified Pool Balance</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green/10 border border-green/20 text-green font-semibold">● Circle CCTP</span>
               </div>
-              <div className="flex items-end gap-2.5">
+              <div className="flex items-end gap-2.5 mb-1.5">
                 <span className="font-mono text-[42px] font-black text-ink leading-none tracking-tight">
-                  {Object.keys(chainBals).length === 0 ? "—" : totalAcrossChains.toFixed(2)}
+                  {poolBal === null ? "—" : poolBal}
                 </span>
                 <span className="text-[15px] text-muted font-semibold mb-1.5">USDC</span>
               </div>
-              <div className="text-[12px] text-muted mt-1.5">
-                Across {chainsWithBalance.length > 0 ? chainsWithBalance.length : UNIFIED_CHAINS.length} chains
-                {chainsWithBalance.length > 0 && ` · ${chainsWithBalance.map(c => c.label).join(", ")}`}
-              </div>
+              <p className="text-[11.5px] text-muted mb-3">Spendable to any chain instantly — no bridging needed</p>
+              <button onClick={checkPoolBalance} disabled={poolLoading}
+                className="px-3.5 py-1.5 rounded-lg bg-accent text-white text-[12px] font-semibold hover:bg-accent/85 transition-colors disabled:opacity-50">
+                {poolLoading ? "Checking…" : poolBal === null ? "Check Pool Balance" : "↻ Refresh"}
+              </button>
             </div>
 
             {/* Explainer */}
             <div className="sm:max-w-[280px] bg-white/4 border border-white/8 rounded-xl px-4 py-3 flex flex-col gap-2">
               <div className="text-[12px] font-bold text-ink">What is Unified Balance?</div>
               <div className="text-[11.5px] text-muted leading-relaxed">
-                Your USDC balance pooled across all chains — powered by Circle's CCTP. Customers pay you from <em>any</em> chain, funds land in one place. Spend or withdraw to any chain instantly, no manual bridging.
+                A single USDC pool managed by Circle's CCTP — bridged together from all chains. Customers pay you from <em>any</em> chain, funds land here. Spend or withdraw anywhere instantly.
               </div>
-              <Link href="/unified-balance"
-                className="text-[11.5px] font-semibold text-accent hover:underline mt-0.5">
+              <Link href="/unified-balance" className="text-[11.5px] font-semibold text-accent hover:underline mt-0.5">
                 Deposit or spend →
               </Link>
             </div>
           </div>
 
-          {/* Chain breakdown */}
+          {/* Row 2: On-chain balances (available to deposit) */}
+          <div className="px-5 py-3 border-b border-white/8 flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">
+              On-chain USDC · available to deposit
+            </span>
+            <span className="text-[11px] text-muted font-mono">
+              {Object.keys(chainBals).length > 0
+                ? `${totalAcrossChains.toFixed(2)} USDC total`
+                : "Connect wallet to load"}
+            </span>
+          </div>
           <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 divide-x divide-white/8">
             {UNIFIED_CHAINS.map(c => {
               const bal = chainBals[c.key] ?? "…";
@@ -191,7 +227,7 @@ export default function Dashboard() {
                       : <span>{c.icon}</span>}
                     <span>{c.label}</span>
                   </div>
-                  <div className={`font-mono text-[13px] font-bold ${hasBalance ? "text-ink" : "text-muted/50"}`}>{bal}</div>
+                  <div className={`font-mono text-[13px] font-bold ${hasBalance ? "text-green" : "text-muted/40"}`}>{bal}</div>
                 </div>
               );
             })}
