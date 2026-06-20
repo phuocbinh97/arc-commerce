@@ -128,7 +128,7 @@ export default function UnifiedBalance() {
       const { AppKit } = await import("@circle-fin/app-kit") as any;
       const kit = new AppKit();
       const est = await kit.unifiedBalance.estimateSpend({
-        from:   { adapter },
+        from:   { adapter, allocations: [{ amount: spendAmtNum.toFixed(2), chain: "Arc_Testnet" }] },
         to:     { chain: spendDst, recipientAddress: spendTo, useForwarder: true },
         token:  "USDC",
         amount: spendAmtNum.toFixed(2),
@@ -150,7 +150,7 @@ export default function UnifiedBalance() {
       const kit = new AppKit();
       setStatus("Confirm spend in MetaMask…");
       const result = await kit.unifiedBalance.spend({
-        from:   { adapter },
+        from:   { adapter, allocations: [{ amount: spendAmtNum.toFixed(2), chain: "Arc_Testnet" }] },
         to:     { chain: spendDst, recipientAddress: spendTo, useForwarder: true },
         token:  "USDC",
         amount: spendAmtNum.toFixed(2),
