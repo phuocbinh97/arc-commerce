@@ -44,6 +44,11 @@ export default function UnifiedBalance() {
   const depAmtNum  = parseFloat(depAmt)  || 0;
   const spendAmtNum = parseFloat(spendAmt) || 0;
 
+  useEffect(() => {
+    if (account) fetchPoolBalance();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [account]);
+
   async function fetchPoolBalance() {
     if (!account) return;
     setBalLoading(true);
@@ -124,7 +129,7 @@ export default function UnifiedBalance() {
       const kit = new AppKit();
       const est = await kit.unifiedBalance.estimateSpend({
         from:   { adapter },
-        to:     { adapter, chain: spendDst, recipientAddress: spendTo },
+        to:     { chain: spendDst, recipientAddress: spendTo, useForwarder: true },
         token:  "USDC",
         amount: spendAmtNum.toFixed(2),
       });
@@ -146,7 +151,7 @@ export default function UnifiedBalance() {
       setStatus("Confirm spend in MetaMask…");
       const result = await kit.unifiedBalance.spend({
         from:   { adapter },
-        to:     { adapter, chain: spendDst, recipientAddress: spendTo },
+        to:     { chain: spendDst, recipientAddress: spendTo, useForwarder: true },
         token:  "USDC",
         amount: spendAmtNum.toFixed(2),
       });
@@ -280,12 +285,24 @@ export default function UnifiedBalance() {
                 {estimate && !estimate.error && (
                   <div className="bg-green/6 border border-green/20 rounded-xl px-4 py-3 flex flex-col gap-1.5 text-[12px]">
                     <div className="font-semibold text-green text-[12.5px]">✓ Route available</div>
-                    {Array.isArray(estimate.fees) && estimate.fees.map((f: any, i: number) => (
-                      <div key={i} className="flex justify-between text-muted">
-                        <span>{f.type || "Fee"}</span>
-                        <span className="font-mono">{f.amount || "—"} {f.token || "USDC"}</span>
-                      </div>
-                    ))}
+                    {Array.isArray(estimate.fees) && estimate.fees.length > 0 ? (
+                      <>
+                        {estimate.fees.map((f: any, i: number) => (
+                          <div key={i} className="flex justify-between text-muted">
+                            <span>{f.type || "Fee"}</span>
+                            <span className="font-mono text-amber">{f.amount || "—"} {f.token || "USDC"}</span>
+                          </div>
+                        ))}
+                        <div className="flex justify-between font-semibold text-ink border-t border-white/8 pt-1.5 mt-0.5">
+                          <span>Total debited from pool</span>
+                          <span className="font-mono">
+                            {(parseFloat(spendAmt || "0") + estimate.fees.reduce((s: number, f: any) => s + parseFloat(f.amount || "0"), 0)).toFixed(2)} USDC
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-muted">No fees for this route</div>
+                    )}
                   </div>
                 )}
                 {estimate?.error && (
