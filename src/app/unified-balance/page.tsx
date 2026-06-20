@@ -52,14 +52,12 @@ export default function UnifiedBalance() {
       const { AppKit } = await import("@circle-fin/app-kit") as any;
       const kit = new AppKit();
       // try getBalance first, fallback to getUnifiedBalance
-      const fn = kit.unifiedBalance?.getBalance || kit.unifiedBalance?.balance || kit.getUnifiedBalance;
-      if (fn) {
-        const res = await fn({ adapter, chain: "Arc_Testnet", token: "USDC" });
-        const val = res?.balance ?? res?.amount ?? res;
-        setPoolBal(typeof val === "number" ? val.toFixed(2) : String(val ?? "?"));
-      } else {
-        setPoolBal("N/A");
-      }
+      const accs: string[] = await (window as any).ethereum.request({ method: "eth_accounts" });
+      const res = await kit.unifiedBalance.getBalances({
+        token: "USDC",
+        sources: { address: accs[0], chains: ["Arc_Testnet","Ethereum_Sepolia","Base_Sepolia","Arbitrum_Sepolia","Optimism_Sepolia"] },
+      });
+      setPoolBal(parseFloat(res?.totalConfirmedBalance ?? "0").toFixed(2));
     } catch (e: any) {
       setPoolBal(`Error: ${e?.message?.slice(0, 60)}`);
     }
