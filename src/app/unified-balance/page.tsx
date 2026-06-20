@@ -123,10 +123,9 @@ export default function UnifiedBalance() {
       const { AppKit } = await import("@circle-fin/app-kit") as any;
       const kit = new AppKit();
       const est = await kit.estimateSpend({
-        from:     { adapter },
-        to:       { chain: spendDst, recipientAddress: spendTo.trim(), useForwarder: true },
-        token:    "USDC",
-        amountIn: spendAmtNum.toFixed(2),
+        from:  { adapter, allocations: [{ amount: spendAmtNum.toFixed(2), chain: "Arc_Testnet" }] },
+        to:    { adapter, chain: spendDst },
+        token: "USDC",
       });
       setEstimate(est);
     } catch (e: any) {
@@ -145,10 +144,9 @@ export default function UnifiedBalance() {
       const kit = new AppKit();
       setStatus("Confirm spend in MetaMask…");
       const result = await kit.unifiedBalance.spend({
-        from:     { adapter },
-        to:       { chain: spendDst, recipientAddress: spendTo.trim(), useForwarder: true },
-        token:    "USDC",
-        amountIn: spendAmtNum.toFixed(2),
+        from:  { adapter, allocations: [{ amount: spendAmtNum.toFixed(2), chain: "Arc_Testnet" }] },
+        to:    { adapter, chain: spendDst },
+        token: "USDC",
       });
       if (!result || result.state === "error") throw new Error(result?.error?.message || "Spend failed");
       setTxHash(result.txHash || "");
