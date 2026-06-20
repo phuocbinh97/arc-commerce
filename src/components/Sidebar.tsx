@@ -12,6 +12,7 @@ const NAV = [
   { href: "/analytics",        icon: "◉", label: "Analytics",        section: "Analytics" },
   { href: "/bridge",           icon: "⇄", label: "Bridge",           section: "Tools" },
   { href: "/send",             icon: "↗", label: "Send",             section: "Tools" },
+  { href: "/recurring",        icon: "↻", label: "Recurring",        section: "Tools" },
   { href: "/treasury",         icon: "◈", label: "Treasury",         section: "Tools" },
   { href: "/unified-balance",  icon: "⬡", label: "Unified Balance",  section: "Tools" },
   { href: "/settings",         icon: "⊙", label: "Settings",         section: "Other" },
