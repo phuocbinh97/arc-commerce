@@ -97,17 +97,20 @@ export default function Dashboard() {
 
     load();
 
-    // Unified Balance: fetch USDC on all chains if wallet available
+    // Unified Balance: fetch on-chain USDC + pool balance if wallet available
     const eth = (window as any).ethereum;
     if (eth) {
       eth.request({ method: "eth_accounts" }).then((accs: string[]) => {
         if (!accs[0]) return;
+        // on-chain per-chain balances
         Promise.all(UNIFIED_CHAINS.map(c => fetchUsdcOn(c, accs[0]).then(bal => ({ key: c.key, bal }))))
           .then(results => {
             const bals: Record<string, string> = {};
             results.forEach(r => { bals[r.key] = r.bal; });
             setChainBals(bals);
           });
+        // pool balance — auto load on page open
+        checkPoolBalance();
       }).catch(() => {});
     }
   }, []);
