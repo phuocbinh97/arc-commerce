@@ -37,10 +37,34 @@ export default function UnifiedBalance() {
   const [txHash,    setTxHash]    = useState("");
   const [estimate,  setEstimate]  = useState<any>(null);
   const [estimating, setEstimating] = useState(false);
+  const [poolBal,   setPoolBal]   = useState<string | null>(null);
+  const [balLoading, setBalLoading] = useState(false);
 
   const srcChain = DEPOSIT_CHAINS.find(c => c.key === depChain)!;
   const depAmtNum  = parseFloat(depAmt)  || 0;
   const spendAmtNum = parseFloat(spendAmt) || 0;
+
+  async function fetchPoolBalance() {
+    if (!account) return;
+    setBalLoading(true);
+    try {
+      const { adapter } = await getAdapter();
+      const { AppKit } = await import("@circle-fin/app-kit") as any;
+      const kit = new AppKit();
+      // try getBalance first, fallback to getUnifiedBalance
+      const fn = kit.unifiedBalance?.getBalance || kit.unifiedBalance?.balance || kit.getUnifiedBalance;
+      if (fn) {
+        const res = await fn({ adapter, chain: "Arc_Testnet", token: "USDC" });
+        const val = res?.balance ?? res?.amount ?? res;
+        setPoolBal(typeof val === "number" ? val.toFixed(2) : String(val ?? "?"));
+      } else {
+        setPoolBal("N/A");
+      }
+    } catch (e: any) {
+      setPoolBal(`Error: ${e?.message?.slice(0, 60)}`);
+    }
+    setBalLoading(false);
+  }
 
   async function getAdapter() {
     const eth = (window as any).ethereum;
@@ -85,6 +109,7 @@ export default function UnifiedBalance() {
       setTxHash(result.txHash || "");
       setStatus(`✅ ${depAmt} USDC deposited to Unified Balance!`);
       setSucceeded(true);
+      fetchPoolBalance();
     } catch (e: any) {
       const msg = e?.message || "Deposit failed";
       setStatus(msg.includes("cancel") || msg.includes("rejected") ? "Cancelled." : `❌ ${msg}`);
@@ -150,6 +175,23 @@ export default function UnifiedBalance() {
             Deposit USDC from any chain into a unified pool. Spend it instantly on any supported chain — no manual bridging needed.
           </div>
         </div>
+
+        {/* Pool Balance Card */}
+        {isConnected && (
+          <div className="w-full bg-surface border border-white/8 rounded-xl px-4 py-3 flex items-center justify-between">
+            <div>
+              <div className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-1">Unified Pool Balance</div>
+              <div className="font-mono text-2xl font-bold text-ink">
+                {poolBal === null ? "—" : poolBal.startsWith("Error") ? <span className="text-[13px] text-red">{poolBal}</span> : poolBal}
+              </div>
+              <div className="text-[11px] text-muted mt-0.5">USDC · spendable across all chains</div>
+            </div>
+            <button onClick={fetchPoolBalance} disabled={balLoading}
+              className="px-3 py-1.5 rounded-lg bg-surface2 border border-white/8 text-[12px] text-muted hover:text-ink transition-colors disabled:opacity-50">
+              {balLoading ? "…" : "↻ Check"}
+            </button>
+          </div>
+        )}
 
         {/* Tab */}
         <div className="w-full flex gap-1 p-1 bg-surface border border-white/8 rounded-xl">
