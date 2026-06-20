@@ -256,6 +256,8 @@ export default function Bridge() {
   const [pendingBridges, setPendingBridges] = useState<any[]>([]);
   const [relaying, setRelaying] = useState(false);
   const [relayElapsed, setRelayElapsed] = useState(0);
+  const [bridgeEst, setBridgeEst] = useState<any>(null);
+  const [estimating, setEstimating] = useState(false);
 
   // Fetch USDC balances on all chains + auto-suggest richest as FROM
   useEffect(() => {
@@ -294,7 +296,30 @@ export default function Bridge() {
   const pagedHistory = history.slice((page-1)*HISTORY_PER_PAGE, page*HISTORY_PER_PAGE);
 
   function swapChains() {
-    setFromChain(toChain); setToChain(fromChain); setFeeInfo(null); setStatus(""); setStep(0); setSucceeded(false);
+    setFromChain(toChain); setToChain(fromChain); setFeeInfo(null); setStatus(""); setStep(0); setSucceeded(false); setBridgeEst(null);
+  }
+
+  async function estimateBridge() {
+    if (!account || amtNum <= 0 || fromChain === toChain || isKitMode) return;
+    setEstimating(true); setBridgeEst(null);
+    try {
+      const eth = (window as any).ethereum;
+      const adapterModule = await import("@circle-fin/adapter-viem-v2");
+      const { AppKit }    = await import("@circle-fin/app-kit") as any;
+      const createAdapterFromProvider = (adapterModule as any).createAdapterFromProvider;
+      const kit     = new AppKit();
+      const adapter = await createAdapterFromProvider({ provider: eth });
+      const est = await kit.estimateBridge({
+        from:   { adapter, chain: fromChain },
+        to:     { adapter, chain: toChain },
+        amount: amtNum.toFixed(2),
+        token:  "USDC",
+      });
+      setBridgeEst(est);
+    } catch (e: any) {
+      setBridgeEst({ error: e?.message });
+    }
+    setEstimating(false);
   }
 
   async function doBridge() {
@@ -680,6 +705,38 @@ export default function Bridge() {
                       : `Fee: ${feeInfo ? feeInfo.forwarding : `~${dst.gwFee}`} + ${(amtNum*0.00005).toFixed(5)} USDC`
                     }
                   </span>
+                </div>
+              )}
+
+              {/* Estimate panel — Kit mode only */}
+              {isKitMode && amtNum > 0 && (
+                <div className="flex flex-col gap-2">
+                  {bridgeEst && !bridgeEst.error && (
+                    <div className="bg-green/6 border border-green/20 rounded-xl px-4 py-3 text-[12px] flex flex-col gap-1">
+                      <div className="font-semibold text-green">✓ Route available</div>
+                      {bridgeEst.fees?.map((f: any, i: number) => (
+                        <div key={i} className="flex justify-between text-muted">
+                          <span>{f.type || "Fee"}</span>
+                          <span className="font-mono">{f.amount || "—"} {f.token || "USDC"}</span>
+                        </div>
+                      ))}
+                      {bridgeEst.transferredAmount && (
+                        <div className="flex justify-between text-ink font-semibold mt-0.5 pt-1 border-t border-white/8">
+                          <span>You receive</span>
+                          <span className="font-mono text-green">{bridgeEst.transferredAmount} USDC</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {bridgeEst?.error && (
+                    <div className="bg-red/8 border border-red/20 rounded-xl px-3 py-2 text-[12px] text-red">❌ {bridgeEst.error}</div>
+                  )}
+                  {!bridgeEst && (
+                    <button onClick={estimateBridge} disabled={estimating}
+                      className="w-full py-2 text-[12.5px] font-semibold text-accent bg-accent/8 border border-accent/20 rounded-xl hover:bg-accent/15 transition-colors disabled:opacity-50">
+                      {estimating ? "Estimating fees…" : "Estimate fees before bridging"}
+                    </button>
+                  )}
                 </div>
               )}
 
