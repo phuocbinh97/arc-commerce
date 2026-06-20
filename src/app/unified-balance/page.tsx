@@ -80,7 +80,6 @@ export default function UnifiedBalance() {
         from:   { adapter, chain: srcChain.key },
         amount: depAmtNum.toFixed(2),
         token:  "USDC",
-        config: { kitKey: `KIT_KEY:${KIT_KEY}` },
       });
       if (!result || result.state === "error") throw new Error(result?.error?.message || "Deposit failed");
       setTxHash(result.txHash || "");
@@ -105,7 +104,6 @@ export default function UnifiedBalance() {
         to:     { chain: spendDst, address: spendTo },
         amount: spendAmtNum.toFixed(2),
         token:  "USDC",
-        config: { kitKey: `KIT_KEY:${KIT_KEY}` },
       });
       setEstimate(est);
     } catch (e: any) {
@@ -128,7 +126,6 @@ export default function UnifiedBalance() {
         to:     { chain: spendDst, address: spendTo.trim() },
         amount: spendAmtNum.toFixed(2),
         token:  "USDC",
-        config: { kitKey: `KIT_KEY:${KIT_KEY}` },
       });
       if (!result || result.state === "error") throw new Error(result?.error?.message || "Spend failed");
       setTxHash(result.txHash || "");
