@@ -11,6 +11,7 @@
     "@circle-fin/adapter-viem-v2": "latest",
     "@circle-fin/app-kit": "latest",
     "@upstash/redis": "^1.38.0",
+    "@vercel/kv": "^3.0.0",
     "@walletconnect/ethereum-provider": "^2.23.9",
     "chart.js": "^4.4.0",
     "lucide-react": "^0.468.0",

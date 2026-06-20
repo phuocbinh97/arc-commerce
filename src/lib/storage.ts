@@ -1,4 +1,42 @@
 // localStorage helpers — type-safe wrappers
+// KV sync: on wallet connect call syncFromServer(wallet), all saves auto-sync to KV
+
+const LS_KEYS = [
+  "arcCheckoutHistory","arcCommerceInvoices","arcCommerceSettings",
+  "arcBridgeHistory","arcRecurringPayments","arcRecurringInvoices","arcMerchantSession",
+];
+
+/** Load all data from KV into localStorage. Call after wallet connects. */
+export async function syncFromServer(wallet: string): Promise<void> {
+  if (!wallet) return;
+  try {
+    const res = await fetch(`/api/user-data?wallet=${wallet.toLowerCase()}`);
+    if (!res.ok) return;
+    const data: Record<string, unknown> = await res.json();
+    for (const key of LS_KEYS) {
+      if (data[key] !== undefined) {
+        localStorage.setItem(key, JSON.stringify(data[key]));
+      }
+    }
+  } catch { /* offline — keep localStorage */ }
+}
+
+/** Sync one key to KV. Called automatically by each save* function. */
+async function syncKey(wallet: string, key: string, value: unknown) {
+  if (!wallet) return;
+  try {
+    fetch("/api/user-data", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ wallet: wallet.toLowerCase(), [key]: value }),
+    });
+  } catch { /* ignore — localStorage is already saved */ }
+}
+
+function getWallet(): string {
+  try { return JSON.parse(localStorage.getItem("arcMerchantSession") || "{}").wallet || ""; }
+  catch { return ""; }
+}
 
 export interface PaymentHistory {
   txHash: string;
@@ -39,7 +77,9 @@ export function savePayment(entry: PaymentHistory) {
   if (!isBrowser()) return;
   const hist = getPaymentHistory();
   hist.unshift(entry);
-  localStorage.setItem("arcCheckoutHistory", JSON.stringify(hist.slice(0, 50)));
+  const val = hist.slice(0, 50);
+  localStorage.setItem("arcCheckoutHistory", JSON.stringify(val));
+  syncKey(getWallet(), "arcCheckoutHistory", val);
 }
 
 export function getInvoices(): Invoice[] {
@@ -49,6 +89,7 @@ export function getInvoices(): Invoice[] {
 export function saveInvoices(invs: Invoice[]) {
   if (!isBrowser()) return;
   localStorage.setItem("arcCommerceInvoices", JSON.stringify(invs));
+  syncKey(getWallet(), "arcCommerceInvoices", invs);
 }
 
 export function getSettings(): MerchantSettings {
@@ -59,9 +100,11 @@ export function getSettings(): MerchantSettings {
 }
 export function saveSettings(s: MerchantSettings) {
   if (!isBrowser()) return;
-  localStorage.setItem("arcCommerceSettings", JSON.stringify({ ...s, savedAt: Date.now() }));
+  const val = { ...s, savedAt: Date.now() };
+  localStorage.setItem("arcCommerceSettings", JSON.stringify(val));
   if (s.hubContract) localStorage.setItem("arcCheckoutHub", s.hubContract);
   if (s.merchantWallet) localStorage.setItem("arcCheckoutMerchant", s.merchantWallet);
+  syncKey(getWallet(), "arcCommerceSettings", val);
 }
 
 export interface SwapEntry {
@@ -102,7 +145,9 @@ export function saveBridgeEntry(entry: any, addr?: string) {
   const key = bridgeKey(addr || currentAddr());
   const hist = getBridgeHistory(addr);
   hist.unshift(entry);
-  localStorage.setItem(key, JSON.stringify(hist.slice(0, 20)));
+  const val = hist.slice(0, 20);
+  localStorage.setItem(key, JSON.stringify(val));
+  syncKey(getWallet(), "arcBridgeHistory", val);
 }
 
 export interface RecurringPayment {
@@ -139,6 +184,7 @@ export function getRecurringPayments(): RecurringPayment[] {
 export function saveRecurringPayments(list: RecurringPayment[]) {
   if (!isBrowser()) return;
   localStorage.setItem("arcRecurringPayments", JSON.stringify(list));
+  syncKey(getWallet(), "arcRecurringPayments", list);
 }
 export function getRecurringInvoices(): RecurringInvoice[] {
   if (!isBrowser()) return [];
@@ -148,5 +194,7 @@ export function saveRecurringInvoice(inv: RecurringInvoice) {
   if (!isBrowser()) return;
   const list = getRecurringInvoices();
   list.unshift(inv);
-  localStorage.setItem("arcRecurringInvoices", JSON.stringify(list.slice(0, 200)));
+  const val = list.slice(0, 200);
+  localStorage.setItem("arcRecurringInvoices", JSON.stringify(val));
+  syncKey(getWallet(), "arcRecurringInvoices", val);
 }

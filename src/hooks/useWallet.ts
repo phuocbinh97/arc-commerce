@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { ARC_CHAIN_ID_HEX, ARC_RPC, ARC_EXPLORER } from "@/lib/arc";
+import { syncFromServer } from "@/lib/storage";
 
 // Fetch merchant from Redis and cache in localStorage so all pages load instantly
 async function loadMerchantSession(address: string) {
@@ -61,12 +62,12 @@ export function useWallet() {
     // Don't auto-connect if user explicitly disconnected
     const manuallyDisconnected = localStorage.getItem("arcWalletDisconnected") === "1";
     if (!manuallyDisconnected) {
-      eth.request({ method: "eth_accounts" }).then((accs: string[]) => {
+      eth.request({ method: "eth_accounts" }).then(async (accs: string[]) => {
         if (accs[0]) {
           const saved = localStorage.getItem("arcWalletName");
           if (!saved) { const n = detectWalletName(eth); localStorage.setItem("arcWalletName", n); setWalletName(n); }
           setAccount(accs[0]); setIsConnected(true);
-          // Restore merchant session if not already cached
+          await syncFromServer(accs[0]);
           if (!localStorage.getItem("arcMerchantSession")) {
             loadMerchantSession(accs[0]);
           }
@@ -97,6 +98,7 @@ export function useWallet() {
     const detectedName = name || detectWalletName(provider);
     localStorage.setItem("arcWalletName", detectedName);
     setAccount(addr); setChainId(cid); setIsConnected(true); setWalletName(detectedName);
+    await syncFromServer(addr);
     await loadMerchantSession(addr);
     window.location.reload();
   }, []);
@@ -112,6 +114,7 @@ export function useWallet() {
       clearWalletData();
     }
     setAccount(accs[0]); setChainId(cid); setIsConnected(true);
+    await syncFromServer(accs[0]);
     await loadMerchantSession(accs[0]);
     if (wasDisconnected) { window.location.reload(); }
     return accs[0] as string;
