@@ -11,7 +11,7 @@ const GATEWAY_MINTER = "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B";
 const HISTORY_PER_PAGE = 10;
 
 const CHAINS: Record<string, { label: string; icon: string; domain: number; chainId: string; rpc: string; usdc: string; gas: "USDC"|"ETH"|"AVAX"|"MATIC"; gwFee: string }> = {
-  Arc_Testnet:          { label: "Arc Testnet",      icon: "⚡", domain: 26, chainId: "0x4CEF52", rpc: "https://rpc.testnet.arc.network",                   usdc: "0x3600000000000000000000000000000000000000", gas: "USDC",  gwFee: "—"     },
+  Arc_Testnet:          { label: "Arc Testnet",      icon: "arc", domain: 26, chainId: "0x4CEF52", rpc: "https://rpc.testnet.arc.network",                   usdc: "0x3600000000000000000000000000000000000000", gas: "USDC",  gwFee: "—"     },
   Ethereum_Sepolia:     { label: "Ethereum Sepolia",  icon: "Ξ",  domain: 0,  chainId: "0xaa36a7", rpc: "https://rpc.sepolia.org",                           usdc: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", gas: "ETH",   gwFee: "$1.00" },
   Base_Sepolia:         { label: "Base Sepolia",      icon: "🔵", domain: 6,  chainId: "0x14a34",  rpc: "https://sepolia.base.org",                          usdc: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", gas: "ETH",   gwFee: "$0.01" },
   Arbitrum_Sepolia:     { label: "Arbitrum Sepolia",  icon: "🔷", domain: 3,  chainId: "0x66eee",  rpc: "https://sepolia-rollup.arbitrum.io/rpc",            usdc: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d", gas: "ETH",   gwFee: "$0.01" },
@@ -65,6 +65,11 @@ async function waitTx(eth: any, hash: string) {
     const r = await eth.request({ method: "eth_getTransactionReceipt", params: [hash] });
     if (r) { if (r.status === "0x0") throw new Error("Transaction reverted."); return r; }
   }
+}
+
+function ChainIcon({ icon, size = 20 }: { icon: string; size?: number }) {
+  if (icon === "arc") return <img src="/arc-logo.png" alt="Arc" width={size} height={size} className="rounded-sm" style={{ imageRendering: "crisp-edges" }} />;
+  return <span style={{ fontSize: size * 0.85 }}>{icon}</span>;
 }
 
 function Accordion({ title, children, defaultOpen = false }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
@@ -610,7 +615,8 @@ export default function Bridge() {
                   {CHAIN_IDS.filter(id => id !== toChain).map(id => {
                     const bal = chainBals[id];
                     const balStr = bal && bal !== "—" ? ` · ${bal} USDC` : "";
-                    return <option key={id} value={id}>{CHAINS[id].icon}  {CHAINS[id].label}{balStr}</option>;
+                    const ico = CHAINS[id].icon === "arc" ? "⚡" : CHAINS[id].icon;
+                    return <option key={id} value={id}>{ico}  {CHAINS[id].label}{balStr}</option>;
                   })}
                 </select>
                 <div className="flex items-center gap-3">
@@ -640,7 +646,7 @@ export default function Bridge() {
                 <select value={toChain} onChange={e => { setToChain(e.target.value); setFeeInfo(null); setStatus(""); setStep(0); setSucceeded(false); }}
                   className="w-full bg-surface2 border border-white/6 rounded-lg px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
                   {CHAIN_IDS.filter(id => id !== fromChain).map(id => (
-                    <option key={id} value={id}>{CHAINS[id].icon}  {CHAINS[id].label}</option>
+                    <option key={id} value={id}>{CHAINS[id].icon === "arc" ? "⚡" : CHAINS[id].icon}  {CHAINS[id].label}</option>
                   ))}
                 </select>
                 <div className="flex items-center gap-3">
@@ -697,7 +703,7 @@ export default function Bridge() {
               ) : (
                 <button onClick={doBridge} disabled={step > 0 || relaying || !amount || amtNum <= 0 || fromChain === toChain}
                   className="w-full py-3 bg-accent text-white rounded-xl text-[13.5px] font-bold disabled:opacity-40 hover:bg-accent/90 transition-colors tracking-wide">
-                  {relaying ? "Relaying in progress…" : step > 0 ? "Processing…" : amtNum > 0 ? `Bridge ${amount} USDC  ${src.icon} → ${dst.icon}` : "Enter amount to bridge"}
+                  {relaying ? "Relaying in progress…" : step > 0 ? "Processing…" : amtNum > 0 ? `Bridge ${amount} USDC — ${src.label} → ${dst.label}` : "Enter amount to bridge"}
                 </button>
               )}
             </div>
@@ -770,7 +776,7 @@ export default function Bridge() {
                   const c = CHAINS[id];
                   return (
                     <div key={id} className="flex items-center gap-2 p-2.5 bg-bg border border-white/8 rounded-xl">
-                      <span className="text-lg shrink-0">{c.icon}</span>
+                      <span className="text-lg shrink-0 flex items-center"><ChainIcon icon={c.icon} size={22} /></span>
                       <div>
                         <div className="text-[12px] font-semibold">{c.label}</div>
                         <div className="text-[10.5px] text-muted">Gas: {c.gas}{c.gwFee !== "—" ? ` · fwd ${c.gwFee}` : ""}</div>
@@ -810,10 +816,10 @@ export default function Bridge() {
                     <tr key={i} className="border-b border-white/6 last:border-0 hover:bg-surface2 transition-colors">
                       <td className="px-6 py-3.5">
                         <div className="flex items-center gap-2 text-[13px] font-medium">
-                          <span>{CHAINS[h.from]?.icon ?? "?"}</span>
+                          <ChainIcon icon={CHAINS[h.from]?.icon ?? "?"} size={16} />
                           <span className="text-muted text-[11px]">{h.from?.replace(/_/g," ")}</span>
                           <span className="text-muted">→</span>
-                          <span>{CHAINS[h.to]?.icon ?? "?"}</span>
+                          <ChainIcon icon={CHAINS[h.to]?.icon ?? "?"} size={16} />
                           <span className="text-muted text-[11px]">{h.to?.replace(/_/g," ")}</span>
                         </div>
                       </td>

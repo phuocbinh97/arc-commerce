@@ -24,7 +24,7 @@ function StatCard({ label, value, unit, sub }: { label: string; value: string; u
 }
 
 const UNIFIED_CHAINS = [
-  { key: "Arc_Testnet",          label: "Arc",      icon: "⚡", rpc: "https://rpc.testnet.arc.network",                   usdc: "0x3600000000000000000000000000000000000000" },
+  { key: "Arc_Testnet",          label: "Arc",      icon: "arc", rpc: "https://rpc.testnet.arc.network",                   usdc: "0x3600000000000000000000000000000000000000" },
   { key: "Ethereum_Sepolia",     label: "Sepolia",  icon: "Ξ",  rpc: "https://rpc.sepolia.org",                           usdc: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238" },
   { key: "Base_Sepolia",         label: "Base",     icon: "🔵", rpc: "https://sepolia.base.org",                          usdc: "0x036CbD53842c5426634e7929541eC2318f3dCF7e" },
   { key: "Arbitrum_Sepolia",     label: "Arbitrum", icon: "🔷", rpc: "https://sepolia-rollup.arbitrum.io/rpc",            usdc: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d" },
@@ -162,7 +162,10 @@ export default function Dashboard() {
                 return (
                   <div key={c.key} className="px-3 py-3 flex flex-col gap-0.5">
                     <div className="text-[11px] text-muted flex items-center gap-1">
-                      <span>{c.icon}</span><span>{c.label}</span>
+                      {c.icon === "arc"
+                        ? <img src="/arc-logo.png" alt="Arc" width={14} height={14} className="rounded-sm" />
+                        : <span>{c.icon}</span>}
+                      <span>{c.label}</span>
                     </div>
                     <div className={`font-mono text-[13px] font-bold ${hasBalance ? "text-ink" : "text-muted"}`}>{bal}</div>
                     {hasBalance && <div className="text-[10px] text-muted">USDC</div>}
