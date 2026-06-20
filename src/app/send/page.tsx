@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Topbar from "@/components/Topbar";
 import { useWallet } from "@/hooks/useWallet";
-import { KIT_KEY, shortAddr } from "@/lib/arc";
+import { shortAddr } from "@/lib/arc";
 
 const CHAINS_SEND = [
   { key: "Arc_Testnet",      label: "Arc Testnet",      chainId: "0x4CEF52", rpc: "https://rpc.testnet.arc.network",            usdc: "0x3600000000000000000000000000000000000000", gas: "USDC" },
@@ -48,26 +48,42 @@ export default function Send() {
         } else throw e;
       }
 
-      setStatus("Connecting to Circle App Kit…");
-      const appKitModule  = await import("@circle-fin/app-kit");
-      const adapterModule = await import("@circle-fin/adapter-viem-v2");
-      const AppKit = (appKitModule as any).AppKit;
-      const createAdapterFromProvider = (adapterModule as any).createAdapterFromProvider;
-      const kit     = new AppKit();
-      const adapter = await createAdapterFromProvider({ provider: eth });
-
       setStatus("Confirm send in MetaMask…");
-      const result = await kit.send({
-        from:   { adapter, chain: src.key },
-        to:     to.trim(),
-        amount: amtNum.toFixed(2),
-        token,
-        config: { kitKey: `KIT_KEY:${KIT_KEY}` },
+
+      // ERC-20 transfer directly — works on all chains including Arc
+      const tokenAddr = token === "USDC" ? src.usdc : (
+        chain === "Arc_Testnet" ? "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a" :
+        chain === "Ethereum_Sepolia" ? "0x08210F9170F89Ab7658F0B5E3fF39b0E03C2Af7" :
+        chain === "Base_Sepolia"     ? "0x7683022d84F726a96c4A6611cd31DBf5409c0Ac" :
+        chain === "Arbitrum_Sepolia" ? "0x8Fb1E3605B536a0F6b8B5B97e40b82c2e43d6EC" :
+        "0x4a11590e5326138B514E08a9B52202D42077Ca65" // OP Sepolia EURC
+      );
+      const recipient = to.trim() as `0x${string}`;
+      const amtRaw = BigInt(Math.round(amtNum * 1e6)); // 6 decimals
+      // transfer(address,uint256)
+      const data = "0xa9059cbb" +
+        recipient.toLowerCase().replace("0x","").padStart(64,"0") +
+        amtRaw.toString(16).padStart(64,"0");
+
+      const hash: string = await eth.request({
+        method: "eth_sendTransaction",
+        params: [{ from: account, to: tokenAddr, data, gas: "0x186a0" }],
       });
 
-      if (!result || result.state === "error") throw new Error(result?.error?.message || "Send failed");
+      setStatus("Waiting for confirmation…");
+      // poll receipt
+      let receipt = null;
+      const rpc = src.rpc;
+      for (let i = 0; i < 30; i++) {
+        await new Promise(r => setTimeout(r, 1000));
+        const res = await fetch(rpc, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_getTransactionReceipt", params: [hash] }),
+        }).then(r => r.json());
+        if (res.result) { receipt = res.result; break; }
+      }
+      if (!receipt || receipt.status === "0x0") throw new Error("Transaction failed");
 
-      const hash = result.txHash || "";
       setTxHash(hash);
       setStatus(`✅ ${amount} ${token} sent to ${shortAddr(to)}!`);
       setSucceeded(true);
