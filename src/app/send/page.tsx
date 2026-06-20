@@ -65,9 +65,16 @@ export default function Send() {
         recipient.toLowerCase().replace("0x","").padStart(64,"0") +
         amtRaw.toString(16).padStart(64,"0");
 
+      // Fetch live gas price from the source chain RPC (+20% buffer)
+      const gpRes = await fetch(src.rpc, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_gasPrice", params: [] }),
+      }).then(r => r.json());
+      const gasPrice = "0x" + Math.ceil(parseInt(gpRes.result, 16) * 1.2).toString(16);
+
       const hash: string = await eth.request({
         method: "eth_sendTransaction",
-        params: [{ from: account, to: tokenAddr, data, gas: "0x186a0" }],
+        params: [{ from: account, to: tokenAddr, data, gas: "0x186a0", gasPrice }],
       });
 
       setStatus("Waiting for confirmation…");
