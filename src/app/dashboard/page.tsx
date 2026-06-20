@@ -140,16 +140,49 @@ export default function Dashboard() {
       const { AppKit } = await import("@circle-fin/app-kit") as any;
       const adapter = await createAdapterFromProvider({ provider: eth });
       const kit = new AppKit();
-      const fn = kit.unifiedBalance?.getBalance || kit.unifiedBalance?.balance;
-      if (fn) {
-        const res = await fn({ adapter, chain: "Arc_Testnet", token: "USDC" });
-        const val = res?.balance ?? res?.amount ?? res;
-        setPoolBal(typeof val === "number" ? val.toFixed(2) : String(val ?? "0.00"));
-      } else {
-        setPoolBal("N/A");
+      // Log available methods to find the correct one
+      console.log("[UnifiedBalance] kit keys:", Object.keys(kit));
+      console.log("[UnifiedBalance] kit.unifiedBalance:", kit.unifiedBalance);
+      if (kit.unifiedBalance) {
+        console.log("[UnifiedBalance] kit.unifiedBalance keys:", Object.keys(kit.unifiedBalance));
+      }
+      // Try all known method names
+      const ub = kit.unifiedBalance as any;
+      const tryMethods = ["getBalance","balance","getBalances","fetchBalance","query"];
+      let found = false;
+      for (const m of tryMethods) {
+        if (typeof ub?.[m] === "function") {
+          console.log("[UnifiedBalance] found method:", m);
+          try {
+            const res = await ub[m]({ adapter, chain: "Arc_Testnet", token: "USDC" });
+            console.log("[UnifiedBalance] result:", res);
+            const val = res?.balance ?? res?.amount ?? res?.usdc ?? res;
+            setPoolBal(typeof val === "number" ? val.toFixed(2) : String(val ?? "?"));
+            found = true; break;
+          } catch (err) {
+            console.warn("[UnifiedBalance] method", m, "failed:", err);
+          }
+        }
+      }
+      if (!found) {
+        // No balance API in this SDK version — show on-chain Arc balance as fallback
+        const eth2 = (window as any).ethereum;
+        const accs: string[] = await eth2.request({ method: "eth_accounts" });
+        if (accs[0]) {
+          const data = "0x70a08231" + accs[0].toLowerCase().replace("0x","").padStart(64,"0");
+          const res = await fetch("https://rpc.testnet.arc.network", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ jsonrpc:"2.0", id:1, method:"eth_call", params:[{ to:"0x3600000000000000000000000000000000000000", data },"latest"] }),
+          }).then(r => r.json());
+          const raw = res.result && res.result !== "0x" ? res.result : "0x0";
+          setPoolBal((Number(BigInt(raw)) / 1e6).toFixed(2) + " (Arc on-chain)");
+        } else {
+          setPoolBal("SDK has no balance API");
+        }
       }
     } catch (e: any) {
-      setPoolBal("—");
+      console.error("[UnifiedBalance] error:", e);
+      setPoolBal(`Error: ${e?.message?.slice(0,40)}`);
     }
     setPoolLoading(false);
   }
