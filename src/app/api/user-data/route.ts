@@ -1,6 +1,16 @@
 import { kv } from "@vercel/kv";
 import { NextRequest, NextResponse } from "next/server";
 
+const CORS = {
+  "Access-Control-Allow-Origin": "https://arcpay-desk.vercel.app",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS });
+}
+
 const DATA_KEYS = [
   "arcCheckoutHistory",
   "arcCommerceInvoices",
@@ -16,7 +26,7 @@ export async function GET(req: NextRequest) {
   if (!wallet) return NextResponse.json({ error: "wallet required" }, { status: 400 });
 
   const data = await kv.get<Record<string, unknown>>(`user:${wallet}`);
-  return NextResponse.json(data || {});
+  return NextResponse.json(data || {}, { headers: CORS });
 }
 
 export async function POST(req: NextRequest) {
@@ -34,5 +44,5 @@ export async function POST(req: NextRequest) {
   }
 
   await kv.set(key, updated);
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true }, { headers: CORS });
 }
