@@ -5,17 +5,15 @@ import { useEffect, useState } from "react";
 import { useSidebar } from "@/components/SidebarContext";
 
 const NAV = [
-  { href: "/dashboard",  icon: "▦", label: "Overview",    section: "Main" },
-  { href: "/invoices",   icon: "◧", label: "Invoices",    section: "Main" },
-  { href: "/checkout",   icon: "⊕", label: "Checkout",    section: "Main" },
-  { href: "/shop",       icon: "⊟", label: "Demo Shop",   section: "Main" },
-  { href: "/treasury",         icon: "◈", label: "Treasury",         section: "Finance" },
-  { href: "/analytics",        icon: "◉", label: "Analytics",        section: "Finance" },
-  { href: "/recurring",        icon: "↻", label: "Recurring",        section: "Finance" },
-  { href: "/bridge",           icon: "⇄", label: "Bridge",           section: "Finance" },
-  { href: "/send",             icon: "↗", label: "Send",             section: "Finance" },
-  { href: "/unified-balance",  icon: "⬡", label: "Unified Balance",  section: "Finance" },
-  { href: "/customers",        icon: "◎", label: "Customers",        section: "Other" },
+  { href: "/dashboard",        icon: "▦", label: "Overview",         section: "Merchant" },
+  { href: "/checkout",         icon: "⊕", label: "Accept Payment",   section: "Merchant" },
+  { href: "/invoices",         icon: "◧", label: "Invoices",         section: "Merchant" },
+  { href: "/customers",        icon: "◎", label: "Customers",        section: "Merchant" },
+  { href: "/analytics",        icon: "◉", label: "Analytics",        section: "Analytics" },
+  { href: "/bridge",           icon: "⇄", label: "Bridge",           section: "Tools" },
+  { href: "/send",             icon: "↗", label: "Send",             section: "Tools" },
+  { href: "/treasury",         icon: "◈", label: "Treasury",         section: "Tools" },
+  { href: "/unified-balance",  icon: "⬡", label: "Unified Balance",  section: "Tools" },
   { href: "/settings",         icon: "⊙", label: "Settings",         section: "Other" },
 ];
 
