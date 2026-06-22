@@ -138,7 +138,7 @@ function PayModal({ rec, onClose, onPaid }: {
       setStatus("Confirm in MetaMask (sign + burn)…");
       const result: any = await kit.unifiedBalance.spend({
         from:   { adapter, allocations: [{ amount: amt, chain: "Arc_Testnet" }] },
-        to:     { chain: "Arc_Testnet", recipientAddress: rec.recipientWallet, useForwarder: true },
+        to:     { adapter, chain: "Arc_Testnet", recipientAddress: rec.recipientWallet },
         token:  "USDC",
         amount: amt,
       });
