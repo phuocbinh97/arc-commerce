@@ -10,7 +10,7 @@ import {
 import {
   fetchGasPrice, waitForReceipt, parseUsdcErc20, shortAddr,
   ARC_EXPLORER, timeAgo, MULTICALL3FROM, encodeBatchTransfers,
-  USDC_ADDRESS, KIT_KEY,
+  USDC_ADDRESS,
 } from "@/lib/arc";
 
 const CATEGORIES = [
@@ -105,12 +105,16 @@ function PayModal({ rec, onClose, onPaid }: {
         const eth = (window as any).ethereum;
         if (!eth || !account) return;
         const { AppKit } = await import("@circle-fin/app-kit");
-        const { createAdapterFromProvider } = await import("@circle-fin/adapter-viem-v2");
         const kit = new AppKit();
-        const adapter = await createAdapterFromProvider({ provider: eth });
-        const res: any = await kit.unifiedBalance.getBalance({ adapter, token: "USDC" });
-        const bal = res?.balance ?? res?.total ?? res?.amount ?? null;
-        setPoolBalance(bal ? Number(bal).toFixed(2) : "0.00");
+        const accs: string[] = await eth.request({ method: "eth_accounts" });
+        const res: any = await kit.unifiedBalance.getBalances({
+          token: "USDC",
+          sources: { address: accs[0], chains: ["Arc_Testnet","Ethereum_Sepolia","Base_Sepolia","Arbitrum_Sepolia"] },
+        });
+        const total = Array.isArray(res)
+          ? res.reduce((s: number, b: any) => s + Number(b?.balance ?? 0), 0)
+          : Number(res?.total ?? res?.balance ?? 0);
+        setPoolBalance(total.toFixed(2));
       } catch {
         setPoolBalance(null);
       }
@@ -140,7 +144,6 @@ function PayModal({ rec, onClose, onPaid }: {
         to:     { chain: "Arc_Testnet", recipientAddress: rec.recipientWallet, useForwarder: true },
         token:  "USDC",
         amount: amt,
-        config: { kitKey: `KIT_KEY:${KIT_KEY}` },
       });
       const txHash: string = result?.burnTxHash || result?.txHash || result?.hash || "ub_" + Date.now();
       setStatus("✅ Paid via Unified Balance!");
