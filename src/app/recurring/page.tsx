@@ -111,10 +111,7 @@ function PayModal({ rec, onClose, onPaid }: {
           token: "USDC",
           sources: { address: accs[0], chains: ["Arc_Testnet","Ethereum_Sepolia","Base_Sepolia","Arbitrum_Sepolia"] },
         });
-        const total = Array.isArray(res)
-          ? res.reduce((s: number, b: any) => s + Number(b?.balance ?? 0), 0)
-          : Number(res?.total ?? res?.balance ?? 0);
-        setPoolBalance(total.toFixed(2));
+        setPoolBalance(parseFloat(res?.totalConfirmedBalance ?? "0").toFixed(2));
       } catch {
         setPoolBalance(null);
       }
