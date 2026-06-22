@@ -18,6 +18,7 @@ export default function Topbar({ title, action }: TopbarProps) {
   const { toggle } = useSidebar();
   const [showWalletMenu, setShowWalletMenu] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
+  const [showManualAdd, setShowManualAdd] = useState(false);
   const [isDark, setIsDark] = useState(true);
 
   useEffect(() => {
@@ -102,7 +103,10 @@ export default function Topbar({ title, action }: TopbarProps) {
             <span className="sm:hidden">Connect</span>
           </button>
         ) : !isArcNetwork ? (
-          <button onClick={switchToArc}
+          <button onClick={async () => {
+            try { await switchToArc(); }
+            catch { setShowManualAdd(true); }
+          }}
             className="flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 bg-amber/10 border border-amber/30 rounded-full text-[11.5px] lg:text-[12.5px] font-medium text-amber hover:bg-amber/20 transition-colors whitespace-nowrap">
             <span className="hidden sm:inline">⚠ Switch to Arc</span>
             <span className="sm:hidden">⚠ Arc</span>
@@ -133,6 +137,45 @@ export default function Topbar({ title, action }: TopbarProps) {
           </div>
         )}
       </div>
+
+      {/* Manual add Arc Testnet modal — shown when wallet rejects wallet_addEthereumChain */}
+      {showManualAdd && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" onClick={() => setShowManualAdd(false)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative w-full max-w-[420px] bg-[#161b22] border border-white/10 rounded-2xl overflow-hidden shadow-2xl"
+            onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-white/8 flex items-center justify-between">
+              <div>
+                <div className="font-bold text-[15px] text-white">Add Arc Testnet Manually</div>
+                <div className="text-[12px] text-[#7d8590] mt-0.5">Your wallet blocked auto-add — copy these settings</div>
+              </div>
+              <button onClick={() => setShowManualAdd(false)}
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-[#7d8590] hover:text-white hover:bg-[#1c2330] transition-colors">✕</button>
+            </div>
+            <div className="p-5 flex flex-col gap-2.5">
+              {[
+                { label: "Network Name",      value: "Arc Testnet" },
+                { label: "RPC URL",           value: "https://rpc.testnet.arc.network" },
+                { label: "Chain ID",          value: "5042002" },
+                { label: "Currency Symbol",   value: "USDC" },
+                { label: "Block Explorer",    value: "https://testnet.arcscan.app" },
+              ].map(({ label, value }) => (
+                <div key={label} className="flex items-center justify-between gap-3 px-3 py-2.5 bg-[#0d1117] rounded-xl border border-white/8">
+                  <span className="text-[11.5px] text-[#7d8590] shrink-0">{label}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-mono text-[12px] text-[#e6edf3] truncate">{value}</span>
+                    <button onClick={() => navigator.clipboard.writeText(value)}
+                      className="text-[10px] text-[#7d8590] hover:text-[#e6edf3] shrink-0 transition-colors">Copy</button>
+                  </div>
+                </div>
+              ))}
+              <p className="text-[11.5px] text-[#7d8590] text-center mt-1">
+                In Rainbow: Settings → Networks → Add custom network → paste above
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
