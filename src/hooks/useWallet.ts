@@ -123,16 +123,34 @@ export function useWallet() {
   const switchToArc = useCallback(async () => {
     const eth = (window as any).ethereum;
     if (!eth) return;
+    const addParams = [{
+      chainId: ARC_CHAIN_ID_HEX,
+      chainName: "Arc Testnet",
+      nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
+      rpcUrls: [ARC_RPC],
+      blockExplorerUrls: [ARC_EXPLORER],
+      iconUrls: ["https://nexmer.xyz/arc-icon.png"],
+    }];
     try {
       await eth.request({ method: "wallet_switchEthereumChain", params: [{ chainId: ARC_CHAIN_ID_HEX }] });
-    } catch (e: any) {
-      if (e.code === 4902) {
-        await eth.request({ method: "wallet_addEthereumChain", params: [{
-          chainId: ARC_CHAIN_ID_HEX, chainName: "Arc Testnet",
-          nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
-          rpcUrls: [ARC_RPC], blockExplorerUrls: [ARC_EXPLORER],
-        }]});
-      } else throw e;
+    } catch (switchErr: any) {
+      // 4902 = chain not added; other wallets (Rainbow, Rabby) may use different codes
+      // Always attempt wallet_addEthereumChain — it's idempotent (switches if already added)
+      try {
+        await eth.request({ method: "wallet_addEthereumChain", params: addParams });
+      } catch (addErr: any) {
+        // wallet_addEthereumChain succeeded but resolved as rejection on some wallets — ignore
+        // only re-throw if it looks like a real user rejection
+        const msg: string = addErr?.message || "";
+        if (addErr?.code === 4001 || msg.toLowerCase().includes("reject") || msg.toLowerCase().includes("denied")) {
+          throw addErr;
+        }
+        // Otherwise silently continue — wallet may have added it despite the error
+      }
+      // After add attempt, switch explicitly in case wallet didn't auto-switch
+      try {
+        await eth.request({ method: "wallet_switchEthereumChain", params: [{ chainId: ARC_CHAIN_ID_HEX }] });
+      } catch { /* already on Arc or switch fired by wallet — ignore */ }
     }
     const cid = await eth.request({ method: "eth_chainId" });
     setChainId(cid);
