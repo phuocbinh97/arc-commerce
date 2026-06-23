@@ -268,8 +268,7 @@ export default function Treasury() {
               <select value={swapFrom} onChange={e => {
                 const tok = e.target.value as SwapToken;
                 setSwapFrom(tok);
-                // cirBTC can only be swapped FROM (not TO) — auto-fix swapTo
-                if (tok === swapTo) setSwapTo(SWAP_TOKENS.find(t => t !== tok && t !== "cirBTC")!);
+                if (tok === swapTo) setSwapTo(SWAP_TOKENS.find(t => t !== tok)!);
                 setSwapStatus("");
               }} className="w-full bg-surface2 border border-white/6 rounded-lg px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
                 {SWAP_TOKENS.map(t => <option key={t} value={t}>{TOKEN_META[t].label}</option>)}
@@ -284,8 +283,7 @@ export default function Treasury() {
 
             {/* Swap direction button */}
             <div className="flex justify-center -my-1">
-              {/* cirBTC can only go FROM — disable flip when it would create →cirBTC */}
-              <button onClick={flipSwap} disabled={swapTo === "cirBTC"} title={swapTo === "cirBTC" ? "cirBTC → only (no route the other way)" : "Swap direction"}
+              <button onClick={flipSwap} title="Swap direction"
                 className="w-8 h-8 rounded-full bg-surface2 border border-white/8 grid place-items-center text-muted hover:text-white hover:border-accent hover:bg-accent/10 transition-all text-sm font-bold select-none disabled:opacity-30 disabled:cursor-not-allowed">
                 ⇅
               </button>
@@ -297,11 +295,10 @@ export default function Treasury() {
               <select value={swapTo} onChange={e => {
                 const tok = e.target.value as SwapToken;
                 setSwapTo(tok);
-                if (tok === swapFrom) setSwapFrom(SWAP_TOKENS.find(t => t !== tok && t !== "cirBTC")!);
+                if (tok === swapFrom) setSwapFrom(SWAP_TOKENS.find(t => t !== tok)!);
                 setSwapStatus("");
               }} className="w-full bg-surface2 border border-white/6 rounded-lg px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
-                {/* cirBTC cannot be a swap destination — no route available */}
-                {SWAP_TOKENS.filter(t => t !== swapFrom && t !== "cirBTC").map(t => <option key={t} value={t}>{TOKEN_META[t].label}</option>)}
+                {SWAP_TOKENS.filter(t => t !== swapFrom).map(t => <option key={t} value={t}>{TOKEN_META[t].label}</option>)}
               </select>
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-3">
