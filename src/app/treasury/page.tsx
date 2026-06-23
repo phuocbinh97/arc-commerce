@@ -275,9 +275,15 @@ export default function Treasury() {
                 {SWAP_TOKENS.filter(t => t !== swapFrom).map(t => <option key={t} value={t}>{TOKEN_META[t].label}</option>)}
               </select>
               <div className="flex items-center gap-3">
-                <span className={`flex-1 text-[28px] font-bold ${amtNum > 0 ? "text-green" : "text-muted"}`}>
-                  {amtNum > 0 ? `~${amtNum.toFixed(4)}` : "0.00"}
-                </span>
+                {amtNum > 0 && (swapFrom === "cirBTC" || swapTo === "cirBTC") ? (
+                  <span className="flex-1 text-[15px] font-semibold text-muted italic">
+                    Market rate · confirm in wallet
+                  </span>
+                ) : (
+                  <span className={`flex-1 text-[28px] font-bold ${amtNum > 0 ? "text-green" : "text-muted"}`}>
+                    {amtNum > 0 ? `~${amtNum.toFixed(2)}` : "0.00"}
+                  </span>
+                )}
                 <span className="text-[13px] text-muted font-medium shrink-0">{swapTo as string}</span>
               </div>
             </div>
