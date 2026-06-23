@@ -156,12 +156,18 @@ function CheckoutContent() {
 
   useEffect(() => {
     if (!account) return;
-    const eth = (window as any).ethereum;
-    if (!eth) return;
+    // Use Arc RPC directly — avoids wrong-wallet/wrong-network issues
+    const ARC_RPC = process.env.NEXT_PUBLIC_ARC_RPC || "https://rpc.testnet.arc.network";
     const fetchBal = async (tokenAddr: string) => {
       const data = "0x70a08231" + account.toLowerCase().replace("0x", "").padStart(64, "0");
-      const raw = await eth.request({ method: "eth_call", params: [{ to: tokenAddr, data }, "latest"] });
-      return (Number(BigInt(raw)) / 1_000_000).toFixed(2);
+      const res = await fetch(ARC_RPC, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [{ to: tokenAddr, data }, "latest"] }),
+      });
+      const json = await res.json();
+      if (!json.result || json.result === "0x") return "0.00";
+      return (Number(BigInt(json.result)) / 1_000_000).toFixed(2);
     };
     fetchBal("0x3600000000000000000000000000000000000000").then(setUsdcBalance).catch(() => setUsdcBalance("0.00"));
     fetchBal(EURC_ADDRESS).then(setEurcBalance).catch(() => setEurcBalance("0.00"));
@@ -175,8 +181,8 @@ function CheckoutContent() {
     eth.request({ method: "eth_gasPrice" }).then((hex: string) => {
       const gasPrice  = BigInt(hex);
       const totalGas  = 600_000n; // approve (~100k) + memo-wrapped payToMerchant (~500k)
-      const feeUnits  = gasPrice * totalGas;             // in USDC micro-units (6 dec)
-      const feeUsdc   = Number(feeUnits) / 1e6;
+      const feeUnits  = gasPrice * totalGas;             // in 1e-18 units (Arc native gas)
+      const feeUsdc   = Number(feeUnits) / 1e18;         // Arc gas is 18-decimal internally
       const totalUsdc = parseFloat(amount) + feeUsdc;
       setFeeEst({
         gas:   feeUsdc  < 0.0001 ? "<0.0001" : feeUsdc.toFixed(4),
