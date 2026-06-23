@@ -146,7 +146,7 @@ export default function Treasury() {
         from: { adapter, chain: "Arc_Testnet" },
         tokenIn: swapFrom,
         tokenOut: swapTo,
-        amountIn: parseFloat(swapAmount).toFixed(swapFrom === "cirBTC" ? 6 : 2),
+        amountIn: parseFloat(swapAmount).toFixed(TOKEN_META[swapFrom].decimals === 8 ? 8 : 2),
         config: { kitKey: `KIT_KEY:${KIT_KEY}`, allowanceStrategy: "approve" },
       });
 
