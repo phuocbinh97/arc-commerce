@@ -54,6 +54,15 @@ export default function Treasury() {
   const [swapStatus, setSwapStatus] = useState("");
   const [swapping, setSwapping] = useState(false);
   const [swapHist, setSwapHist] = useState<ReturnType<typeof getSwapHistory>>([]);
+  const [btcPrice, setBtcPrice] = useState<number | null>(null);
+
+  // Fetch BTC price once on mount for cirBTC estimate
+  useEffect(() => {
+    fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd")
+      .then(r => r.json())
+      .then(d => setBtcPrice(d?.bitcoin?.usd ?? null))
+      .catch(() => {});
+  }, []);
 
   const refreshBalances = useCallback(async () => {
     if (!account) return;
@@ -90,6 +99,23 @@ export default function Treasury() {
     setSwapFrom(swapTo);
     setSwapTo(swapFrom);
     setSwapStatus("");
+  }
+
+  function estimatedOutput(): string | null {
+    if (amtNum <= 0) return null;
+    const EUR_RATE = 0.92; // rough USDC/EURC rate
+    if (swapFrom === "cirBTC" && swapTo !== "cirBTC" && btcPrice) {
+      const usd = amtNum * btcPrice;
+      return swapTo === "EURC" ? (usd * EUR_RATE).toFixed(2) : usd.toFixed(2);
+    }
+    if (swapTo === "cirBTC" && swapFrom !== "cirBTC" && btcPrice) {
+      const usd = swapFrom === "EURC" ? amtNum / EUR_RATE : amtNum;
+      return (usd / btcPrice).toFixed(6);
+    }
+    // USDC ↔ EURC
+    if (swapFrom === "USDC" && swapTo === "EURC") return (amtNum * EUR_RATE).toFixed(2);
+    if (swapFrom === "EURC" && swapTo === "USDC") return (amtNum / EUR_RATE).toFixed(2);
+    return amtNum.toFixed(2);
   }
 
   const doSwap = useCallback(async () => {
@@ -275,15 +301,14 @@ export default function Treasury() {
                 {SWAP_TOKENS.filter(t => t !== swapFrom).map(t => <option key={t} value={t}>{TOKEN_META[t].label}</option>)}
               </select>
               <div className="flex items-center gap-3">
-                {amtNum > 0 && (swapFrom === "cirBTC" || swapTo === "cirBTC") ? (
-                  <span className="flex-1 text-[15px] font-semibold text-muted italic">
-                    Market rate · confirm in wallet
-                  </span>
-                ) : (
-                  <span className={`flex-1 text-[28px] font-bold ${amtNum > 0 ? "text-green" : "text-muted"}`}>
-                    {amtNum > 0 ? `~${amtNum.toFixed(2)}` : "0.00"}
-                  </span>
-                )}
+                <span className={`flex-1 text-[28px] font-bold ${amtNum > 0 ? "text-green" : "text-muted"}`}>
+                  {(() => {
+                    const est = estimatedOutput();
+                    if (!est) return "0.00";
+                    if ((swapFrom === "cirBTC" || swapTo === "cirBTC") && !btcPrice) return "…";
+                    return `~${est}`;
+                  })()}
+                </span>
                 <span className="text-[13px] text-muted font-medium shrink-0">{swapTo as string}</span>
               </div>
             </div>
