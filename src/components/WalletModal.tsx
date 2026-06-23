@@ -16,8 +16,11 @@ function getInjectedProvider(flag?: string): any {
   const eth = (window as any).ethereum;
   if (!eth) return null;
   if (!flag) return eth;
-  // Multiple extensions: check providers array
   const list: any[] = eth.providers || [eth];
+  if (flag === "isMetaMask") {
+    // Rainbow, Rabby, Brave all set isMetaMask=true for compat — exclude them
+    return list.find((p: any) => p.isMetaMask && !p.isRainbow && !p.isRabby && !p.isBraveWallet && !p.isCoinbaseWallet) || null;
+  }
   return list.find((p: any) => p[flag]) || null;
 }
 
@@ -61,7 +64,8 @@ export default function WalletModal({ onConnect, onClose }: Props) {
       icon: "https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg",
       check: () => !!getInjectedProvider("isMetaMask"),
       connect: async () => {
-        const p = getInjectedProvider("isMetaMask") || getInjectedProvider();
+        const p = getInjectedProvider("isMetaMask");
+        if (!p) throw new Error("MetaMask not found. Make sure MetaMask is installed and enabled.");
         return { provider: p, account: await connectInjected(p) };
       },
     },
