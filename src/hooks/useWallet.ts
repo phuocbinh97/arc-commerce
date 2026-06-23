@@ -74,55 +74,86 @@ export function useWallet() {
 
   useEffect(() => {
     const rawEth = (window as any).ethereum;
-    if (!rawEth) return;
     const manuallyDisconnected = localStorage.getItem("arcWalletDisconnected") === "1";
-    const savedName    = localStorage.getItem("arcWalletName") || "";
     const expectedAddr = (localStorage.getItem("arcExpectedAddress") || "").toLowerCase();
+    const savedName    = localStorage.getItem("arcWalletName") || "";
 
-    // Try to find the provider whose eth_accounts returns the expected address.
-    // This handles the case where multiple wallets are installed and one overrides window.ethereum.
-    async function findProvider(): Promise<{ provider: any; addr: string } | null> {
-      const candidates: any[] = rawEth.providers || [rawEth];
-      // Prefer the provider matching saved wallet name
-      const preferred = getProviderByName(savedName);
-      const ordered = preferred && preferred !== rawEth
-        ? [preferred, ...candidates.filter((p: any) => p !== preferred)]
-        : candidates;
-      for (const p of ordered) {
-        try {
-          const accs: string[] = await p.request({ method: "eth_accounts" });
-          if (!accs[0]) continue;
-          // If we have an expected address, only accept a matching provider
-          if (expectedAddr && accs[0].toLowerCase() !== expectedAddr) continue;
-          return { provider: p, addr: accs[0] };
-        } catch { /* skip */ }
-      }
-      return null;
+    if (manuallyDisconnected) {
+      rawEth?.request({ method: "eth_chainId" }).then(setChainId).catch(() => {});
+      return;
+    }
+    if (!expectedAddr) return; // never connected before
+
+    // Collect all providers: EIP-6963 + legacy window.ethereum.providers[]
+    async function findProviderByAddress(): Promise<{ provider: any; addr: string } | null> {
+      return new Promise(resolve => {
+        const found: { provider: any; addr: string } | null = null;
+        const candidates: any[] = [];
+        const seen = new Set<any>();
+
+        function addCandidate(p: any) {
+          if (!p || seen.has(p)) return;
+          seen.add(p);
+          candidates.push(p);
+        }
+
+        // Legacy providers
+        if (rawEth) {
+          const list: any[] = rawEth.providers || [rawEth];
+          list.forEach(addCandidate);
+        }
+
+        let resolved = false;
+        async function checkAll() {
+          for (const p of candidates) {
+            try {
+              const accs: string[] = await p.request({ method: "eth_accounts" });
+              if (accs[0]?.toLowerCase() === expectedAddr) {
+                resolved = true;
+                resolve({ provider: p, addr: accs[0] });
+                return;
+              }
+            } catch { /* skip */ }
+          }
+        }
+
+        // Collect EIP-6963 providers then check
+        const eip6963Providers: any[] = [];
+        function onAnnounce(e: Event) {
+          const p = (e as CustomEvent).detail?.provider;
+          if (p) { addCandidate(p); eip6963Providers.push(p); }
+        }
+        window.addEventListener("eip6963:announceProvider", onAnnounce);
+        window.dispatchEvent(new Event("eip6963:requestProvider"));
+
+        // Wait 300ms for wallets to announce, then check all
+        setTimeout(async () => {
+          window.removeEventListener("eip6963:announceProvider", onAnnounce);
+          if (!resolved) {
+            await checkAll();
+            if (!resolved) resolve(found);
+          }
+        }, 300);
+      });
     }
 
-    if (!manuallyDisconnected) {
-      findProvider().then(async (found) => {
-        if (!found) return;
-        const { provider, addr } = found;
-        const name = savedName || detectWalletName(provider);
-        if (!savedName) { localStorage.setItem("arcWalletName", name); setWalletName(name); }
-        setAccount(addr); setIsConnected(true);
-        provider.request({ method: "eth_chainId" }).then(setChainId).catch(() => {});
-        await syncFromServer(addr);
-        if (!localStorage.getItem("arcMerchantSession")) loadMerchantSession(addr);
-
-        provider.on?.("accountsChanged", (accs: string[]) => {
-          clearWalletData();
-          localStorage.removeItem("arcExpectedAddress");
-          if (accs[0]) { localStorage.removeItem("arcWalletDisconnected"); setAccount(accs[0]); setIsConnected(true); window.location.reload(); }
-          else { localStorage.setItem("arcWalletDisconnected", "1"); setAccount(""); setIsConnected(false); window.location.reload(); }
-        });
-        provider.on?.("chainChanged", setChainId);
-      }).catch(() => {});
-    } else {
-      // Still listen for chainId even when disconnected
-      rawEth.request({ method: "eth_chainId" }).then(setChainId).catch(() => {});
-    }
+    findProviderByAddress().then(async (found) => {
+      if (!found) return; // address not found in any provider — stay disconnected
+      const { provider, addr } = found;
+      const name = savedName || detectWalletName(provider);
+      if (!savedName) { localStorage.setItem("arcWalletName", name); setWalletName(name); }
+      setAccount(addr); setIsConnected(true);
+      provider.request({ method: "eth_chainId" }).then(setChainId).catch(() => {});
+      await syncFromServer(addr);
+      if (!localStorage.getItem("arcMerchantSession")) loadMerchantSession(addr);
+      provider.on?.("accountsChanged", (accs: string[]) => {
+        clearWalletData();
+        localStorage.removeItem("arcExpectedAddress");
+        if (accs[0]) { localStorage.removeItem("arcWalletDisconnected"); setAccount(accs[0]); setIsConnected(true); }
+        else { localStorage.setItem("arcWalletDisconnected", "1"); setAccount(""); setIsConnected(false); }
+      });
+      provider.on?.("chainChanged", setChainId);
+    }).catch(() => {});
   }, []);
 
   // connectWithProvider: called by WalletModal after user picks a wallet
