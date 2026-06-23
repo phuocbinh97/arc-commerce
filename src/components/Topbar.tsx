@@ -17,6 +17,7 @@ export default function Topbar({ title, action }: TopbarProps) {
   const { session, login, logout, loading } = useMerchantAuth();
   const { toggle } = useSidebar();
   const [showWalletMenu, setShowWalletMenu] = useState(false);
+  const [showNetworkMenu, setShowNetworkMenu] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showManualAdd, setShowManualAdd] = useState(false);
   const [isDark, setIsDark] = useState(true);
@@ -103,14 +104,36 @@ export default function Topbar({ title, action }: TopbarProps) {
             <span className="sm:hidden">Connect</span>
           </button>
         ) : !isArcNetwork ? (
-          <button onClick={async () => {
-            try { await switchToArc(); }
-            catch { setShowManualAdd(true); }
-          }}
-            className="flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 bg-amber/10 border border-amber/30 rounded-full text-[11.5px] lg:text-[12.5px] font-medium text-amber hover:bg-amber/20 transition-colors whitespace-nowrap">
-            <span className="hidden sm:inline">⚠ Switch to Arc</span>
-            <span className="sm:hidden">⚠ Arc</span>
-          </button>
+          <div className="relative">
+            <button onClick={() => setShowNetworkMenu(v => !v)}
+              className="flex items-center gap-1.5 px-2.5 lg:px-3 py-1.5 bg-amber/10 border border-amber/30 rounded-full text-[11.5px] lg:text-[12.5px] font-medium text-amber hover:bg-amber/20 transition-colors whitespace-nowrap">
+              <span className="hidden sm:inline">⚠ Switch to Arc</span>
+              <span className="sm:hidden">⚠ Arc</span>
+              <span className="text-[10px]">▾</span>
+            </button>
+            {showNetworkMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowNetworkMenu(false)} />
+                <div className="absolute right-0 top-full mt-1.5 z-50 bg-surface border border-white/14 rounded-lg shadow-xl w-48 py-1 overflow-hidden">
+                  <div className="px-3 py-2 border-b border-white/8">
+                    <div className="text-[11px] text-muted">Wrong network</div>
+                    <div className="text-[12px] text-amber font-medium">Arc Testnet required</div>
+                  </div>
+                  <button onClick={async () => {
+                    setShowNetworkMenu(false);
+                    try { await switchToArc(); }
+                    catch { setShowManualAdd(true); }
+                  }} className="w-full text-left px-3 py-2 text-[13px] text-ink hover:bg-surface2 transition-colors">
+                    ⚡ Try switch to Arc
+                  </button>
+                  <button onClick={() => { setShowNetworkMenu(false); disconnect(); logout(); window.location.reload(); }}
+                    className="w-full text-left px-3 py-2 text-[13px] text-red hover:bg-red/8 transition-colors">
+                    Disconnect wallet
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         ) : (
           <div className="relative">
             <button onClick={() => setShowWalletMenu(v => !v)}
