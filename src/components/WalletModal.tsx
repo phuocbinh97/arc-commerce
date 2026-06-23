@@ -12,16 +12,30 @@ interface WalletOption {
   connect: () => Promise<any>;
 }
 
+function getAllProviders(): any[] {
+  const eth = (window as any).ethereum;
+  if (!eth) return [];
+  return eth.providers || [eth];
+}
+
 function getInjectedProvider(flag?: string): any {
   const eth = (window as any).ethereum;
   if (!eth) return null;
   if (!flag) return eth;
-  const list: any[] = eth.providers || [eth];
+  const list = getAllProviders();
   if (flag === "isMetaMask") {
-    // Rainbow, Rabby, Brave all set isMetaMask=true for compat — exclude them
-    return list.find((p: any) => p.isMetaMask && !p.isRainbow && !p.isRabby && !p.isBraveWallet && !p.isCoinbaseWallet) || null;
+    // Prefer real MetaMask (not Rainbow/Rabby/Brave shims)
+    return list.find((p: any) => p.isMetaMask && !p.isRainbow && !p.isRabby && !p.isBraveWallet && !p.isCoinbaseWallet)
+        || list.find((p: any) => p.isMetaMask) // fallback: any isMetaMask if real not found
+        || null;
   }
   return list.find((p: any) => p[flag]) || null;
+}
+
+function isMetaMaskInstalled(): boolean {
+  // True if window.ethereum has isMetaMask (real or shim), OR providers[] has a real MetaMask
+  const list = getAllProviders();
+  return list.some((p: any) => p.isMetaMask);
 }
 
 async function connectInjected(provider: any): Promise<string> {
@@ -62,7 +76,7 @@ export default function WalletModal({ onConnect, onClose }: Props) {
       id: "metamask",
       name: "MetaMask",
       icon: "https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg",
-      check: () => !!getInjectedProvider("isMetaMask"),
+      check: () => isMetaMaskInstalled(),
       connect: async () => {
         const p = getInjectedProvider("isMetaMask") || getInjectedProvider();
         if (!p) throw new Error("MetaMask not found.");
