@@ -211,10 +211,15 @@ export function useWallet() {
   }, [account]);
 
   const disconnect = useCallback(() => {
+    // Revoke wallet permissions so next connect always prompts the user
+    const eth = getProviderByName(walletName) || (window as any).ethereum;
+    if (eth) {
+      eth.request({ method: "wallet_revokePermissions", params: [{ eth_accounts: {} }] }).catch(() => {});
+    }
     clearWalletData();
     localStorage.setItem("arcWalletDisconnected", "1");
     setAccount(""); setIsConnected(false);
-  }, []);
+  }, [walletName]);
 
   return { account, chainId, isConnected, isArcNetwork, walletName, connect, connectWithProvider, switchToArc, getUsdcBalance, disconnect };
 }
