@@ -137,21 +137,17 @@ export default function Dashboard() {
   async function checkPoolBalance() {
     setPoolLoading(true);
     try {
-      const eth = (window as any).ethereum;
-      if (!eth) throw new Error("No wallet");
-      const { createAdapterFromProvider } = await import("@circle-fin/adapter-viem-v2") as any;
+      const expectedAddr = localStorage.getItem("arcExpectedAddress") || "";
+      if (!expectedAddr) { setPoolBal("—"); setPoolLoading(false); return; }
       const { AppKit } = await import("@circle-fin/app-kit") as any;
-      const adapter = await createAdapterFromProvider({ provider: eth });
       const kit = new AppKit();
-      const accs: string[] = await (window as any).ethereum.request({ method: "eth_accounts" });
       const res = await kit.unifiedBalance.getBalances({
         token: "USDC",
-        sources: { address: accs[0], chains: ["Arc_Testnet","Ethereum_Sepolia","Base_Sepolia","Arbitrum_Sepolia","Optimism_Sepolia"] },
+        sources: { address: expectedAddr, chains: ["Arc_Testnet","Ethereum_Sepolia","Base_Sepolia","Arbitrum_Sepolia","Optimism_Sepolia"] },
       });
-      const val = parseFloat(res?.totalConfirmedBalance ?? "0");
-      setPoolBal(val.toFixed(2));
-    } catch (e: any) {
-      setPoolBal(`Error: ${e?.message?.slice(0,50)}`);
+      setPoolBal(parseFloat(res?.totalConfirmedBalance ?? "0").toFixed(2));
+    } catch {
+      setPoolBal("—");
     }
     setPoolLoading(false);
   }
