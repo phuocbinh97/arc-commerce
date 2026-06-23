@@ -256,5 +256,10 @@ export function useWallet() {
     setAccount(""); setIsConnected(false);
   }, [walletName]);
 
-  return { account, chainId, isConnected, isArcNetwork, walletName, connect, connectWithProvider, switchToArc, getUsdcBalance, disconnect };
+  // Returns the active wallet provider — use this instead of window.ethereum in all pages
+  const getProvider = useCallback(() => {
+    return providerRef.current || getProviderByName(walletName) || (window as any).ethereum || null;
+  }, [walletName]);
+
+  return { account, chainId, isConnected, isArcNetwork, walletName, connect, connectWithProvider, switchToArc, getUsdcBalance, disconnect, getProvider };
 }

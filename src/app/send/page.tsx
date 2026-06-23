@@ -14,7 +14,7 @@ const CHAINS_SEND = [
 ];
 
 export default function Send() {
-  const { account, isConnected, connect } = useWallet();
+  const { account, isConnected, connect, getProvider } = useWallet();
   const [chain,     setChain]     = useState("Arc_Testnet");
   const [token,     setToken]     = useState<"USDC" | "EURC">("USDC");
   const [to,        setTo]        = useState("");
@@ -32,8 +32,8 @@ export default function Send() {
     setSending(true); setStatus(""); setSucceeded(false); setTxHash("");
 
     try {
-      const eth = (window as any).ethereum;
-      if (!eth) throw new Error("MetaMask not found");
+      const eth = getProvider();
+      if (!eth) throw new Error("No wallet connected");
 
       setStatus(`Switching to ${src.label}…`);
       try {

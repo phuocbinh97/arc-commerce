@@ -118,7 +118,7 @@ function CheckoutContent() {
   const merchantWalletParam = params.get("merchantWallet") || "";
   const redirect  = params.get("redirect")     || "";
 
-  const { account, isConnected, isArcNetwork, connect, switchToArc } = useWallet();
+  const { account, isConnected, isArcNetwork, connect, switchToArc, getProvider } = useWallet();
   const { step, txHash, error, pay, reset } = useCheckout();
 
   const [usdcBalance, setUsdcBalance] = useState("—");
@@ -176,7 +176,7 @@ function CheckoutContent() {
   // Pre-flight: estimate gas fee in USDC (Arc uses USDC as gas token)
   useEffect(() => {
     if (!isConnected || !isArcNetwork) { setFeeEst(null); return; }
-    const eth = (window as any).ethereum;
+    const eth = getProvider();
     if (!eth) return;
     eth.request({ method: "eth_gasPrice" }).then((hex: string) => {
       const gasPrice  = BigInt(hex);
@@ -239,7 +239,7 @@ function CheckoutContent() {
   async function handlePay() {
     if (!isConnected) { await connect(); return; }
     if (!isArcNetwork) { await switchToArc(); return; }
-    await pay({ amount, orderId, memo, payerName: payerName.trim() || undefined, merchantOverride, payToken: payToken as "USDC" | "EURC" }).catch(() => {});
+    await pay({ amount, orderId, memo, payerName: payerName.trim() || undefined, merchantOverride, payToken: payToken as "USDC" | "EURC", provider: getProvider() }).catch(() => {});
   }
 
   const payLabel = (step === "idle" || step === "error")

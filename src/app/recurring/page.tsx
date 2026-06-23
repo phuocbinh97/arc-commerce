@@ -92,7 +92,7 @@ function PayModal({ rec, onClose, onPaid }: {
   onClose: () => void;
   onPaid: (rec: RecurringPayment, txHash: string) => void;
 }) {
-  const { account, isConnected, isArcNetwork, connect, switchToArc } = useWallet();
+  const { account, isConnected, isArcNetwork, connect, switchToArc, getProvider } = useWallet();
   const [method, setMethod] = useState<"unified" | "onchain">("unified");
   const [status, setStatus] = useState("");
   const [busy, setBusy]     = useState(false);
@@ -102,14 +102,12 @@ function PayModal({ rec, onClose, onPaid }: {
   useEffect(() => {
     (async () => {
       try {
-        const eth = (window as any).ethereum;
-        if (!eth || !account) return;
+        if (!account) return;
         const { AppKit } = await import("@circle-fin/app-kit");
         const kit = new AppKit();
-        const accs: string[] = await eth.request({ method: "eth_accounts" });
         const res: any = await kit.unifiedBalance.getBalances({
           token: "USDC",
-          sources: { address: accs[0], chains: ["Arc_Testnet","Ethereum_Sepolia","Base_Sepolia","Arbitrum_Sepolia"] },
+          sources: { address: account, chains: ["Arc_Testnet","Ethereum_Sepolia","Base_Sepolia","Arbitrum_Sepolia"] },
         });
         setPoolBalance(parseFloat(res?.totalConfirmedBalance ?? "0").toFixed(2));
       } catch {
@@ -125,7 +123,7 @@ function PayModal({ rec, onClose, onPaid }: {
 
   async function payUnified() {
     await ensureReady();
-    const eth = (window as any).ethereum;
+    const eth = getProvider();
     if (!eth) return;
     setBusy(true);
     setStatus("Loading Circle SDK…");
@@ -155,7 +153,7 @@ function PayModal({ rec, onClose, onPaid }: {
 
   async function payOnChain() {
     await ensureReady();
-    const eth = (window as any).ethereum;
+    const eth = getProvider();
     if (!eth) return;
     setBusy(true);
     setStatus("Sending USDC on-chain…");
@@ -295,7 +293,7 @@ function PayModal({ rec, onClose, onPaid }: {
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 export default function Recurring() {
-  const { account, isConnected, isArcNetwork, connect, switchToArc } = useWallet();
+  const { account, isConnected, isArcNetwork, connect, switchToArc, getProvider } = useWallet();
   const [payments, setPayments]     = useState<RecurringPayment[]>([]);
   const [invoices, setInvoices]     = useState<RecurringInvoice[]>([]);
   const [showForm, setShowForm]     = useState(false);
@@ -376,7 +374,7 @@ export default function Recurring() {
   const payAllDue = useCallback(async () => {
     if (!isConnected) { await connect(); return; }
     if (!isArcNetwork) { await switchToArc(); return; }
-    const eth = (window as any).ethereum;
+    const eth = getProvider();
     if (!eth) return;
     const due = payments.filter(p => p.status === "active" && p.nextDueDate <= Date.now() + 86400000);
     if (due.length === 0) return;

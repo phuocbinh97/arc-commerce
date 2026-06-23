@@ -24,7 +24,7 @@ const SPEND_CHAINS = [
 type Tab = "deposit" | "spend";
 
 export default function UnifiedBalance() {
-  const { account, isConnected, connect } = useWallet();
+  const { account, isConnected, connect, getProvider } = useWallet();
   const [tab,       setTab]       = useState<Tab>("deposit");
   const [depChain,  setDepChain]  = useState("Arc_Testnet");
   const [depAmt,    setDepAmt]    = useState("");
@@ -67,15 +67,15 @@ export default function UnifiedBalance() {
   }
 
   async function getAdapter() {
-    const eth = (window as any).ethereum;
-    if (!eth) throw new Error("MetaMask not found");
+    const eth = getProvider();
+    if (!eth) throw new Error("No wallet connected");
     const adapterModule = await import("@circle-fin/adapter-viem-v2");
     const createAdapterFromProvider = (adapterModule as any).createAdapterFromProvider;
     return { eth, adapter: await createAdapterFromProvider({ provider: eth }) };
   }
 
   async function switchChain(chainId: string, label: string, rpc: string, gas: string) {
-    const eth = (window as any).ethereum;
+    const eth = getProvider();
     try {
       await eth.request({ method: "wallet_switchEthereumChain", params: [{ chainId }] });
     } catch (e: any) {

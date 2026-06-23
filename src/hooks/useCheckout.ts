@@ -22,7 +22,7 @@ export function useCheckout() {
   const [error, setError] = useState("");
 
   const pay = useCallback(async ({
-    amount, orderId, memo, payerName, merchantOverride, payToken = "USDC",
+    amount, orderId, memo, payerName, merchantOverride, payToken = "USDC", provider,
   }: {
     amount: string;
     orderId: string;
@@ -30,8 +30,9 @@ export function useCheckout() {
     payerName?: string;
     merchantOverride?: { wallet: string; merchantId: string };
     payToken?: "USDC" | "EURC";
+    provider?: any;
   }) => {
-    const eth = (window as any).ethereum;
+    const eth = provider || (window as any).ethereum;
     if (!eth) throw new Error("No wallet found.");
 
     const settings = getSettings();

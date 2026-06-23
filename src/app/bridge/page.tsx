@@ -116,7 +116,7 @@ function encodeReceiveMessage(message: string, attestation: string): string {
   return "0x" + sel + offset1 + offset2 + enc(message) + enc(attestation);
 }
 
-function PendingBridgeRow({ p, onDismiss, onArrived }: { p: any; onDismiss: () => void; onArrived: () => void }) {
+function PendingBridgeRow({ p, onDismiss, onArrived, getProvider }: { p: any; onDismiss: () => void; onArrived: () => void; getProvider: () => any }) {
   const [checking, setChecking] = useState(false);
   const [checkMsg, setCheckMsg] = useState("");
   const [claiming, setClaiming] = useState(false);
@@ -137,8 +137,8 @@ function PendingBridgeRow({ p, onDismiss, onArrived }: { p: any; onDismiss: () =
   async function manualClaim() {
     setClaiming(true); setCheckMsg("Fetching attestation from Circle…");
     try {
-      const eth = (window as any).ethereum;
-      if (!eth) throw new Error("MetaMask not found");
+      const eth = getProvider();
+      if (!eth) throw new Error("No wallet connected");
       const src = CHAINS[p.from];
       if (!src) throw new Error("Unknown source chain");
 
@@ -240,7 +240,7 @@ function PendingBridgeRow({ p, onDismiss, onArrived }: { p: any; onDismiss: () =
 }
 
 export default function Bridge() {
-  const { account, isConnected, connect } = useWallet();
+  const { account, isConnected, connect, getProvider } = useWallet();
   const [fromChain, setFromChain] = useState("Arc_Testnet");
   const [toChain,   setToChain]   = useState("Base_Sepolia");
   const [amount,    setAmount]    = useState("");
@@ -303,7 +303,7 @@ export default function Bridge() {
     if (!account || amtNum <= 0 || fromChain === toChain || isKitMode) return;
     setEstimating(true); setBridgeEst(null);
     try {
-      const eth = (window as any).ethereum;
+      const eth = getProvider();
       const adapterModule = await import("@circle-fin/adapter-viem-v2");
       const { AppKit }    = await import("@circle-fin/app-kit") as any;
       const createAdapterFromProvider = (adapterModule as any).createAdapterFromProvider;
@@ -324,7 +324,7 @@ export default function Bridge() {
 
   async function doBridge() {
     if (!account || amtNum <= 0 || fromChain === toChain) return;
-    const eth = (window as any).ethereum;
+    const eth = getProvider();
     if (!eth) return;
     setTxId(""); setStatus(""); setSucceeded(false);
 
@@ -580,7 +580,7 @@ export default function Bridge() {
                 localStorage.setItem("arcPendingBridges", JSON.stringify(f));
                 saveBridgeEntry({ from: p.from, to: p.to, amount: p.amount, token: "USDC", ts: Date.now(), status: "completed" }, account!);
                 setHistory(getBridgeHistory(account!));
-              }} />
+              }} getProvider={getProvider} />
             ))}
             <div className="text-[11px] text-muted/70">Your USDC is safe. Circle typically relays within 1–5 min.</div>
           </div>

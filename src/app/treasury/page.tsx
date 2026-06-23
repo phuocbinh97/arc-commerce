@@ -36,7 +36,7 @@ async function fetchTokenBalance(token: "USDC" | "EURC", addr: string, tag: "lat
 }
 
 export default function Treasury() {
-  const { account, isConnected, connect, getUsdcBalance, walletName } = useWallet();
+  const { account, isConnected, connect, getUsdcBalance, walletName, getProvider } = useWallet();
   const [usdcBalance, setUsdcBalance]         = useState("—");
   const [usdcPending, setUsdcPending]         = useState("—");
   const [eurcBalance, setEurcBalance]         = useState("—");
@@ -76,11 +76,11 @@ export default function Treasury() {
       const { AppKit } = await import("@circle-fin/app-kit");
       const { createAdapterFromProvider } = await import("@circle-fin/adapter-viem-v2");
       const kit = new AppKit();
-      const eth = (window as any).ethereum;
+      const eth = getProvider();
+      if (!eth) throw new Error("No wallet connected");
 
-      setSwapStatus("Creating adapter from MetaMask…");
-      const adapter = await (createAdapterFromProvider as any)({ provider: eth });
       setSwapStatus(`Confirm swap in ${walletName}…`);
+      const adapter = await (createAdapterFromProvider as any)({ provider: eth });
 
       const arcRpc = async (method: string, params: unknown[]) => {
         const res = await fetch("https://rpc.testnet.arc.network", {
