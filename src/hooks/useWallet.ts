@@ -134,9 +134,14 @@ export function useWallet() {
     localStorage.setItem("arcWalletName", detectedName);
     localStorage.setItem("arcExpectedAddress", addr.toLowerCase());
     setAccount(addr); setChainId(cid); setIsConnected(true); setWalletName(detectedName);
+    // Listen on the chosen provider so events fire correctly
+    provider.on?.("accountsChanged", (accs: string[]) => {
+      if (accs[0]) { setAccount(accs[0]); }
+      else { clearWalletData(); localStorage.setItem("arcWalletDisconnected", "1"); setAccount(""); setIsConnected(false); }
+    });
+    provider.on?.("chainChanged", setChainId);
     await syncFromServer(addr);
     await loadMerchantSession(addr);
-    window.location.reload();
   }, []);
 
   const connect = useCallback(async () => {
