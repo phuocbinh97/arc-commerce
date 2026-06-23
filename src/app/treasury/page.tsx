@@ -19,28 +19,37 @@ function Accordion({ title, children, defaultOpen = false }: { title: string; ch
   );
 }
 
-const EURC_ADDRESS = "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a";
+const EURC_ADDRESS   = "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a";
+const CIRBTC_ADDRESS = "0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF";
 const ARC_RPC = "https://rpc.testnet.arc.network";
 
-async function fetchTokenBalance(token: "USDC" | "EURC", addr: string, tag: "latest" | "pending" = "latest"): Promise<string> {
-  const contractAddr = token === "USDC"
-    ? "0x3600000000000000000000000000000000000000"
-    : EURC_ADDRESS;
+type SwapToken = "USDC" | "EURC" | "cirBTC";
+
+const TOKEN_META: Record<SwapToken, { label: string; icon: string; address: string; decimals: number }> = {
+  USDC:   { label: "$ USDC",   icon: "💵", address: "0x3600000000000000000000000000000000000000", decimals: 6 },
+  EURC:   { label: "€ EURC",   icon: "💶", address: EURC_ADDRESS,   decimals: 6 },
+  cirBTC: { label: "₿ cirBTC", icon: "🟠", address: CIRBTC_ADDRESS, decimals: 8 },
+};
+
+async function fetchTokenBalance(token: SwapToken, addr: string, tag: "latest" | "pending" = "latest"): Promise<string> {
+  const { address, decimals } = TOKEN_META[token];
   const data = "0x70a08231" + addr.toLowerCase().replace("0x", "").padStart(64, "0");
   const res = await fetch(ARC_RPC, {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [{ to: contractAddr, data }, tag] }),
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [{ to: address, data }, tag] }),
   }).then(r => r.json());
   const raw = res.result && res.result !== "0x" ? res.result : "0x0";
-  return (Number(BigInt(raw)) / 1e6).toFixed(2);
+  return (Number(BigInt(raw)) / 10 ** decimals).toFixed(decimals === 8 ? 6 : 2);
 }
 
 export default function Treasury() {
   const { account, isConnected, connect, getUsdcBalance, walletName, getProvider } = useWallet();
-  const [usdcBalance, setUsdcBalance]         = useState("—");
-  const [usdcPending, setUsdcPending]         = useState("—");
-  const [eurcBalance, setEurcBalance]         = useState("—");
-  const [swapFrom, setSwapFrom] = useState("USDC");
+  const [usdcBalance, setUsdcBalance]   = useState("—");
+  const [usdcPending, setUsdcPending]   = useState("—");
+  const [eurcBalance, setEurcBalance]   = useState("—");
+  const [cirBtcBalance, setCirBtcBalance] = useState("—");
+  const [swapFrom, setSwapFrom] = useState<SwapToken>("USDC");
+  const [swapTo,   setSwapTo]   = useState<SwapToken>("EURC");
   const [swapAmount, setSwapAmount] = useState("");
   const [swapStatus, setSwapStatus] = useState("");
   const [swapping, setSwapping] = useState(false);
@@ -48,14 +57,16 @@ export default function Treasury() {
 
   const refreshBalances = useCallback(async () => {
     if (!account) return;
-    const [usdc, usdcPend, eurc] = await Promise.all([
-      fetchTokenBalance("USDC", account, "latest"),
-      fetchTokenBalance("USDC", account, "pending"),
-      fetchTokenBalance("EURC", account, "latest"),
+    const [usdc, usdcPend, eurc, cirbtc] = await Promise.all([
+      fetchTokenBalance("USDC",   account, "latest"),
+      fetchTokenBalance("USDC",   account, "pending"),
+      fetchTokenBalance("EURC",   account, "latest"),
+      fetchTokenBalance("cirBTC", account, "latest"),
     ]);
     setUsdcBalance(usdc);
     setUsdcPending(usdcPend);
     setEurcBalance(eurc);
+    setCirBtcBalance(cirbtc);
   }, [account]);
 
   // Load balance + history when account is ready
@@ -66,8 +77,20 @@ export default function Treasury() {
     }
   }, [account, refreshBalances]);
 
-  const swapTo = swapFrom === "USDC" ? "EURC" : "USDC";
+  const SWAP_TOKENS: SwapToken[] = ["USDC", "EURC", "cirBTC"];
   const amtNum = parseFloat(swapAmount) || 0;
+
+  function getBalance(tok: SwapToken) {
+    if (tok === "USDC") return usdcBalance;
+    if (tok === "EURC") return eurcBalance;
+    return cirBtcBalance;
+  }
+
+  function flipSwap() {
+    setSwapFrom(swapTo);
+    setSwapTo(swapFrom);
+    setSwapStatus("");
+  }
 
   const doSwap = useCallback(async () => {
     if (!account || !swapAmount) return;
@@ -95,9 +118,9 @@ export default function Treasury() {
       console.log("[Swap] kitKey prefix:", `KIT_KEY:${KIT_KEY}`.slice(0, 20) + "...");
       await kit.swap({
         from: { adapter, chain: "Arc_Testnet" },
-        tokenIn: swapFrom as "USDC" | "EURC",
-        tokenOut: swapTo as "USDC" | "EURC",
-        amountIn: parseFloat(swapAmount).toFixed(2),
+        tokenIn: swapFrom,
+        tokenOut: swapTo,
+        amountIn: parseFloat(swapAmount).toFixed(swapFrom === "cirBTC" ? 6 : 2),
         config: { kitKey: `KIT_KEY:${KIT_KEY}`, allowanceStrategy: "approve" },
       });
 
@@ -109,7 +132,7 @@ export default function Treasury() {
         return;
       }
 
-      saveSwapEntry({ tokenIn: swapFrom, tokenOut: swapTo, amountIn: swapAmount, ts: Date.now(), status: "completed" }, account);
+      saveSwapEntry({ tokenIn: swapFrom as string, tokenOut: swapTo as string, amountIn: swapAmount, ts: Date.now(), status: "completed" }, account);
       const updated = getSwapHistory(account);
       setSwapHist(updated);
       setSwapStatus(`✅ Swap complete! ${swapAmount} ${swapFrom} → ${swapTo}`);
@@ -118,7 +141,7 @@ export default function Treasury() {
       if (e?.code === 4001 || e?.message?.toLowerCase().includes("rejected") || e?.message?.toLowerCase().includes("cancel")) {
         setSwapStatus("Swap cancelled.");
       } else {
-        saveSwapEntry({ tokenIn: swapFrom, tokenOut: swapTo, amountIn: swapAmount, ts: Date.now(), status: "failed" }, account);
+        saveSwapEntry({ tokenIn: swapFrom as string, tokenOut: swapTo as string, amountIn: swapAmount, ts: Date.now(), status: "failed" }, account);
         const updated = getSwapHistory(account);
         setSwapHist(updated);
         setSwapStatus(`❌ ${e.message || "Swap failed"}`);
@@ -165,6 +188,15 @@ export default function Treasury() {
               <div className="font-mono text-2xl font-bold text-ink">{eurcBalance}</div>
               <div className="text-[11px] text-muted mt-0.5">EURC · Euro stablecoin</div>
             </div>
+            {/* cirBTC */}
+            <div className="bg-surface border border-white/8 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="w-2 h-2 rounded-full bg-amber shrink-0" />
+                <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">cirBTC</span>
+              </div>
+              <div className="font-mono text-2xl font-bold text-ink">{cirBtcBalance}</div>
+              <div className="text-[11px] text-muted mt-0.5">cirBTC · Circle wrapped BTC</div>
+            </div>
           </div>
         )}
 
@@ -204,13 +236,16 @@ export default function Treasury() {
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">From</span>
                 <span className="text-[11px] text-muted">
-                  Balance: <span className="text-ink font-mono">{swapFrom === "USDC" ? usdcBalance : eurcBalance} {swapFrom}</span>
+                  Balance: <span className="text-ink font-mono">{getBalance(swapFrom)} {swapFrom}</span>
                 </span>
               </div>
-              <select value={swapFrom} onChange={e => { setSwapFrom(e.target.value); setSwapStatus(""); }}
-                className="w-full bg-surface2 border border-white/6 rounded-lg px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
-                <option value="USDC">$ USDC</option>
-                <option value="EURC">€ EURC</option>
+              <select value={swapFrom} onChange={e => {
+                const tok = e.target.value as SwapToken;
+                setSwapFrom(tok);
+                if (tok === swapTo) setSwapTo(SWAP_TOKENS.find(t => t !== tok)!);
+                setSwapStatus("");
+              }} className="w-full bg-surface2 border border-white/6 rounded-lg px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
+                {SWAP_TOKENS.map(t => <option key={t} value={t}>{TOKEN_META[t].label}</option>)}
               </select>
               <div className="flex items-center gap-3">
                 <input type="number" value={swapAmount} onChange={e => { setSwapAmount(e.target.value); setSwapStatus(""); }}
@@ -222,7 +257,7 @@ export default function Treasury() {
 
             {/* Swap direction button */}
             <div className="flex justify-center -my-1">
-              <button onClick={() => { setSwapFrom(swapTo); setSwapStatus(""); }} title="Swap direction"
+              <button onClick={flipSwap} title="Swap direction"
                 className="w-8 h-8 rounded-full bg-surface2 border border-white/8 grid place-items-center text-muted hover:text-white hover:border-accent hover:bg-accent/10 transition-all text-sm font-bold select-none">
                 ⇅
               </button>
@@ -231,14 +266,19 @@ export default function Treasury() {
             {/* TO block */}
             <div className="bg-bg rounded-xl p-4 flex flex-col gap-3">
               <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">To</span>
-              <div className="w-full bg-surface2 border border-white/6 rounded-lg px-3 py-2.5 text-[13px] text-muted">
-                {swapTo === "USDC" ? "$ USDC" : "€ EURC"}
-              </div>
+              <select value={swapTo} onChange={e => {
+                const tok = e.target.value as SwapToken;
+                setSwapTo(tok);
+                if (tok === swapFrom) setSwapFrom(SWAP_TOKENS.find(t => t !== tok)!);
+                setSwapStatus("");
+              }} className="w-full bg-surface2 border border-white/6 rounded-lg px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
+                {SWAP_TOKENS.filter(t => t !== swapFrom).map(t => <option key={t} value={t}>{TOKEN_META[t].label}</option>)}
+              </select>
               <div className="flex items-center gap-3">
                 <span className={`flex-1 text-[28px] font-bold ${amtNum > 0 ? "text-green" : "text-muted"}`}>
                   {amtNum > 0 ? `~${amtNum.toFixed(4)}` : "0.00"}
                 </span>
-                <span className="text-[13px] text-muted font-medium shrink-0">{swapTo}</span>
+                <span className="text-[13px] text-muted font-medium shrink-0">{swapTo as string}</span>
               </div>
             </div>
 
