@@ -170,7 +170,10 @@ export default function Topbar({ title, action }: TopbarProps) {
                 </div>
               ))}
               <p className="text-[11.5px] text-[#7d8590] text-center mt-1">
-                In Rainbow: Settings → Networks → Add custom network → paste above
+                In your wallet: Settings → Networks → Add custom network → paste above
+              </p>
+              <p className="text-[11.5px] text-[#f85149]/80 text-center">
+                Note: Ronin Wallet only supports Ronin chain and cannot connect to Arc Testnet.
               </p>
             </div>
           </div>
