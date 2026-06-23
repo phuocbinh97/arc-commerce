@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { ARC_CHAIN_ID_HEX, ARC_RPC, ARC_EXPLORER } from "@/lib/arc";
 import { syncFromServer } from "@/lib/storage";
 
@@ -58,6 +58,8 @@ export function useWallet() {
     if (typeof window !== "undefined") return localStorage.getItem("arcWalletName") || "Wallet";
     return "Wallet";
   });
+  // Active provider ref — always points to the currently connected wallet's provider
+  const providerRef = useRef<any>(null);
 
   // Clear all wallet-specific data — called on disconnect or wallet switch
   function clearWalletData() {
@@ -140,6 +142,7 @@ export function useWallet() {
     findProviderByAddress().then(async (found) => {
       if (!found) return; // address not found in any provider — stay disconnected
       const { provider, addr } = found;
+      providerRef.current = provider;
       const name = savedName || detectWalletName(provider);
       if (!savedName) { localStorage.setItem("arcWalletName", name); setWalletName(name); }
       setAccount(addr); setIsConnected(true);
@@ -164,6 +167,7 @@ export function useWallet() {
     const detectedName = name || detectWalletName(provider);
     localStorage.setItem("arcWalletName", detectedName);
     localStorage.setItem("arcExpectedAddress", addr.toLowerCase());
+    providerRef.current = provider;
     setAccount(addr); setChainId(cid); setIsConnected(true); setWalletName(detectedName);
     // Listen on the chosen provider so events fire correctly
     provider.on?.("accountsChanged", (accs: string[]) => {
@@ -193,7 +197,7 @@ export function useWallet() {
   }, []);
 
   const switchToArc = useCallback(async () => {
-    const eth = getProviderByName(walletName) || (window as any).ethereum;
+    const eth = providerRef.current || getProviderByName(walletName) || (window as any).ethereum;
     if (!eth) return;
     const addParams = [{
       chainId: ARC_CHAIN_ID_HEX,
@@ -229,7 +233,7 @@ export function useWallet() {
   }, []);
 
   const getUsdcBalance = useCallback(async (addr?: string): Promise<string> => {
-    const eth = getProviderByName(walletName) || (window as any).ethereum;
+    const eth = providerRef.current || getProviderByName(walletName) || (window as any).ethereum;
     const target = addr || account;
     if (!eth || !target) return "0.00";
     try {
@@ -243,7 +247,7 @@ export function useWallet() {
 
   const disconnect = useCallback(() => {
     // Revoke wallet permissions so next connect always prompts the user
-    const eth = getProviderByName(walletName) || (window as any).ethereum;
+    const eth = providerRef.current || getProviderByName(walletName) || (window as any).ethereum;
     if (eth) {
       eth.request({ method: "wallet_revokePermissions", params: [{ eth_accounts: {} }] }).catch(() => {});
     }
