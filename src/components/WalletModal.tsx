@@ -40,14 +40,15 @@ function isMetaMaskInstalled(): boolean {
 
 async function connectInjected(provider: any): Promise<string> {
   // wallet_requestPermissions forces the wallet to show account picker
-  // even if the site was previously connected — gives user a chance to switch accounts
   try {
     await provider.request({ method: "wallet_requestPermissions", params: [{ eth_accounts: {} }] });
   } catch (e: any) {
-    // If wallet doesn't support it or user cancels, fall through to eth_requestAccounts
     if (e?.code === 4001) throw e; // user rejected — propagate
+    // wallet doesn't support requestPermissions — fall through
   }
-  const accs = await provider.request({ method: "eth_accounts" });
+  // eth_requestAccounts triggers connect popup if not yet connected
+  const accs = await provider.request({ method: "eth_requestAccounts" });
+  if (!accs?.[0]) throw new Error("No account returned from wallet.");
   return accs[0];
 }
 
