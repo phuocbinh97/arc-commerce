@@ -311,7 +311,7 @@ export default function Treasury() {
                 </div>
                 {amtNum > 0 && (swapFrom === "cirBTC" || swapTo === "cirBTC") && (
                   <p className="text-[11px] text-amber">
-                    ⚠ cirBTC testnet dùng giá oracle nội bộ của Circle — xác nhận số thật trong ví trước khi swap.
+                    ⚠ cirBTC testnet uses Circle's internal price oracle — confirm the actual amount in your wallet before swapping.
                   </p>
                 )}
               </div>
