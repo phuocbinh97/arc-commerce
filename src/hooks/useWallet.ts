@@ -66,44 +66,63 @@ export function useWallet() {
     localStorage.removeItem("arcCheckoutHistory");
     localStorage.removeItem("arcCommerceInvoices");
     localStorage.removeItem("arcWalletName");
+    localStorage.removeItem("arcExpectedAddress");
     // Swap/bridge history kept under per-wallet keys — not cleared on disconnect
   }
 
   const isArcNetwork = chainId.toLowerCase() === ARC_CHAIN_ID_HEX;
 
   useEffect(() => {
-    const savedName = localStorage.getItem("arcWalletName") || "";
-    // Use the specific provider the user last connected with, not necessarily window.ethereum
-    const eth = getProviderByName(savedName) || (window as any).ethereum;
-    if (!eth) return;
-    // Don't auto-connect if user explicitly disconnected
+    const rawEth = (window as any).ethereum;
+    if (!rawEth) return;
     const manuallyDisconnected = localStorage.getItem("arcWalletDisconnected") === "1";
-    if (!manuallyDisconnected) {
-      eth.request({ method: "eth_accounts" }).then(async (accs: string[]) => {
-        if (accs[0]) {
-          if (!savedName) { const n = detectWalletName(eth); localStorage.setItem("arcWalletName", n); setWalletName(n); }
-          setAccount(accs[0]); setIsConnected(true);
-          await syncFromServer(accs[0]);
-          if (!localStorage.getItem("arcMerchantSession")) {
-            loadMerchantSession(accs[0]);
-          }
-        }
-      }).catch(() => {});
-    }
-    eth.request({ method: "eth_chainId" }).then(setChainId).catch(() => {});
-    eth.on?.("accountsChanged", (accs: string[]) => {
-      clearWalletData();
-      if (accs[0]) {
-        localStorage.removeItem("arcWalletDisconnected");
-        setAccount(accs[0]); setIsConnected(true);
-        window.location.reload();
-      } else {
-        localStorage.setItem("arcWalletDisconnected", "1");
-        setAccount(""); setIsConnected(false);
-        window.location.reload();
+    const savedName    = localStorage.getItem("arcWalletName") || "";
+    const expectedAddr = (localStorage.getItem("arcExpectedAddress") || "").toLowerCase();
+
+    // Try to find the provider whose eth_accounts returns the expected address.
+    // This handles the case where multiple wallets are installed and one overrides window.ethereum.
+    async function findProvider(): Promise<{ provider: any; addr: string } | null> {
+      const candidates: any[] = rawEth.providers || [rawEth];
+      // Prefer the provider matching saved wallet name
+      const preferred = getProviderByName(savedName);
+      const ordered = preferred && preferred !== rawEth
+        ? [preferred, ...candidates.filter((p: any) => p !== preferred)]
+        : candidates;
+      for (const p of ordered) {
+        try {
+          const accs: string[] = await p.request({ method: "eth_accounts" });
+          if (!accs[0]) continue;
+          // If we have an expected address, only accept a matching provider
+          if (expectedAddr && accs[0].toLowerCase() !== expectedAddr) continue;
+          return { provider: p, addr: accs[0] };
+        } catch { /* skip */ }
       }
-    });
-    eth.on?.("chainChanged", setChainId);
+      return null;
+    }
+
+    if (!manuallyDisconnected) {
+      findProvider().then(async (found) => {
+        if (!found) return;
+        const { provider, addr } = found;
+        const name = savedName || detectWalletName(provider);
+        if (!savedName) { localStorage.setItem("arcWalletName", name); setWalletName(name); }
+        setAccount(addr); setIsConnected(true);
+        provider.request({ method: "eth_chainId" }).then(setChainId).catch(() => {});
+        await syncFromServer(addr);
+        if (!localStorage.getItem("arcMerchantSession")) loadMerchantSession(addr);
+
+        provider.on?.("accountsChanged", (accs: string[]) => {
+          clearWalletData();
+          localStorage.removeItem("arcExpectedAddress");
+          if (accs[0]) { localStorage.removeItem("arcWalletDisconnected"); setAccount(accs[0]); setIsConnected(true); window.location.reload(); }
+          else { localStorage.setItem("arcWalletDisconnected", "1"); setAccount(""); setIsConnected(false); window.location.reload(); }
+        });
+        provider.on?.("chainChanged", setChainId);
+      }).catch(() => {});
+    } else {
+      // Still listen for chainId even when disconnected
+      rawEth.request({ method: "eth_chainId" }).then(setChainId).catch(() => {});
+    }
   }, []);
 
   // connectWithProvider: called by WalletModal after user picks a wallet
@@ -113,6 +132,7 @@ export function useWallet() {
     const cid = await provider.request({ method: "eth_chainId" }).catch(() => "0x0");
     const detectedName = name || detectWalletName(provider);
     localStorage.setItem("arcWalletName", detectedName);
+    localStorage.setItem("arcExpectedAddress", addr.toLowerCase());
     setAccount(addr); setChainId(cid); setIsConnected(true); setWalletName(detectedName);
     await syncFromServer(addr);
     await loadMerchantSession(addr);
