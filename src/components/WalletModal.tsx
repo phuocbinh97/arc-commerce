@@ -64,8 +64,8 @@ export default function WalletModal({ onConnect, onClose }: Props) {
       icon: "https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg",
       check: () => !!getInjectedProvider("isMetaMask"),
       connect: async () => {
-        const p = getInjectedProvider("isMetaMask");
-        if (!p) throw new Error("MetaMask not found. Make sure MetaMask is installed and enabled.");
+        const p = getInjectedProvider("isMetaMask") || getInjectedProvider();
+        if (!p) throw new Error("MetaMask not found.");
         return { provider: p, account: await connectInjected(p) };
       },
     },
