@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import Topbar from "@/components/Topbar";
 import { useWallet } from "@/hooks/useWallet";
 import { KIT_KEY, formatUsdc, shortAddr } from "@/lib/arc";
@@ -23,9 +25,10 @@ const SPEND_CHAINS = [
 
 type Tab = "deposit" | "spend";
 
-export default function UnifiedBalance() {
+function UnifiedBalanceInner() {
   const { account, isConnected, connect, getProvider } = useWallet();
-  const [tab,       setTab]       = useState<Tab>("deposit");
+  const searchParams = useSearchParams();
+  const [tab, setTab] = useState<Tab>(() => searchParams.get("tab") === "spend" ? "spend" : "deposit");
   const [depChain,  setDepChain]  = useState("Arc_Testnet");
   const [depAmt,    setDepAmt]    = useState("");
   const [spendTo,   setSpendTo]   = useState("");
@@ -354,4 +357,8 @@ export default function UnifiedBalance() {
       </div>
     </>
   );
+}
+
+export default function UnifiedBalance() {
+  return <Suspense><UnifiedBalanceInner /></Suspense>;
 }
