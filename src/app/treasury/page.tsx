@@ -300,16 +300,20 @@ export default function Treasury() {
               }} className="w-full bg-surface2 border border-white/6 rounded-lg px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
                 {SWAP_TOKENS.filter(t => t !== swapFrom).map(t => <option key={t} value={t}>{TOKEN_META[t].label}</option>)}
               </select>
-              <div className="flex items-center gap-3">
-                <span className={`flex-1 text-[28px] font-bold ${amtNum > 0 ? "text-green" : "text-muted"}`}>
-                  {(() => {
-                    const est = estimatedOutput();
-                    if (!est) return "0.00";
-                    if ((swapFrom === "cirBTC" || swapTo === "cirBTC") && !btcPrice) return "…";
-                    return `~${est}`;
-                  })()}
-                </span>
-                <span className="text-[13px] text-muted font-medium shrink-0">{swapTo as string}</span>
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-3">
+                  <span className={`flex-1 text-[28px] font-bold ${amtNum > 0 ? "text-green" : "text-muted"}`}>
+                    {(swapFrom === "cirBTC" || swapTo === "cirBTC")
+                      ? (amtNum > 0 ? "~?" : "0.00")
+                      : (amtNum > 0 ? `~${estimatedOutput()}` : "0.00")}
+                  </span>
+                  <span className="text-[13px] text-muted font-medium shrink-0">{swapTo as string}</span>
+                </div>
+                {amtNum > 0 && (swapFrom === "cirBTC" || swapTo === "cirBTC") && (
+                  <p className="text-[11px] text-amber">
+                    ⚠ cirBTC testnet dùng giá oracle nội bộ của Circle — xác nhận số thật trong ví trước khi swap.
+                  </p>
+                )}
               </div>
             </div>
 
