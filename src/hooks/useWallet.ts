@@ -35,6 +35,21 @@ function detectWalletName(provider: any): string {
   return "Wallet";
 }
 
+// Find the right injected provider by wallet name, using providers[] if available
+function getProviderByName(name: string): any {
+  const eth = (window as any).ethereum;
+  if (!eth) return null;
+  const list: any[] = eth.providers || [eth];
+  switch (name) {
+    case "MetaMask":      return list.find((p: any) => p.isMetaMask && !p.isRainbow && !p.isRabby) || eth;
+    case "Rainbow":       return list.find((p: any) => p.isRainbow) || eth;
+    case "Rabby":         return list.find((p: any) => p.isRabby) || eth;
+    case "Coinbase Wallet": return list.find((p: any) => p.isCoinbaseWallet) || eth;
+    case "Brave Wallet":  return list.find((p: any) => p.isBraveWallet) || eth;
+    default:              return eth;
+  }
+}
+
 export function useWallet() {
   const [account, setAccount] = useState("");
   const [chainId, setChainId] = useState("");
@@ -57,15 +72,16 @@ export function useWallet() {
   const isArcNetwork = chainId.toLowerCase() === ARC_CHAIN_ID_HEX;
 
   useEffect(() => {
-    const eth = (window as any).ethereum;
+    const savedName = localStorage.getItem("arcWalletName") || "";
+    // Use the specific provider the user last connected with, not necessarily window.ethereum
+    const eth = getProviderByName(savedName) || (window as any).ethereum;
     if (!eth) return;
     // Don't auto-connect if user explicitly disconnected
     const manuallyDisconnected = localStorage.getItem("arcWalletDisconnected") === "1";
     if (!manuallyDisconnected) {
       eth.request({ method: "eth_accounts" }).then(async (accs: string[]) => {
         if (accs[0]) {
-          const saved = localStorage.getItem("arcWalletName");
-          if (!saved) { const n = detectWalletName(eth); localStorage.setItem("arcWalletName", n); setWalletName(n); }
+          if (!savedName) { const n = detectWalletName(eth); localStorage.setItem("arcWalletName", n); setWalletName(n); }
           setAccount(accs[0]); setIsConnected(true);
           await syncFromServer(accs[0]);
           if (!localStorage.getItem("arcMerchantSession")) {
@@ -121,7 +137,7 @@ export function useWallet() {
   }, []);
 
   const switchToArc = useCallback(async () => {
-    const eth = (window as any).ethereum;
+    const eth = getProviderByName(walletName) || (window as any).ethereum;
     if (!eth) return;
     const addParams = [{
       chainId: ARC_CHAIN_ID_HEX,
@@ -157,7 +173,7 @@ export function useWallet() {
   }, []);
 
   const getUsdcBalance = useCallback(async (addr?: string): Promise<string> => {
-    const eth = (window as any).ethereum;
+    const eth = getProviderByName(walletName) || (window as any).ethereum;
     const target = addr || account;
     if (!eth || !target) return "0.00";
     try {
