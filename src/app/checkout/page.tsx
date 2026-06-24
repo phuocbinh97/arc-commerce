@@ -165,16 +165,17 @@ function CheckoutContent() {
       .finally(() => setLoadingMerchant(false));
   }, [merchantParam]);
 
-  // Detect customer's current chain
+  // Detect customer's current chain — read directly from window.ethereum, not cached provider
   useEffect(() => {
-    if (!isConnected) return;
-    const eth = getProvider();
+    const eth = (window as any).ethereum;
     if (!eth) return;
-    eth.request({ method: "eth_chainId" }).then((hex: string) => {
-      const id = parseChainId(hex);
-      const chain = getChainByChainId(id);
-      setCustomerChain(chain || null);
-    });
+    const detect = () => {
+      eth.request({ method: "eth_chainId" }).then((hex: string) => {
+        const id = parseChainId(hex);
+        setCustomerChain(getChainByChainId(id) || null);
+      }).catch(() => {});
+    };
+    detect();
     const handler = (hex: string) => {
       const id = parseChainId(hex);
       setCustomerChain(getChainByChainId(id) || null);
@@ -182,7 +183,7 @@ function CheckoutContent() {
     };
     eth.on?.("chainChanged", handler);
     return () => eth.removeListener?.("chainChanged", handler);
-  }, [isConnected, account]);
+  }, []);
 
   // Fetch USDC on customer's current chain
   useEffect(() => {
@@ -276,7 +277,8 @@ function CheckoutContent() {
   const activeBalance    = getBalance(payToken);
   const activeMeta       = TOKENS[payToken];
 
-  const isOnNonArcSupportedChain = isConnected && customerChain && customerChain.key !== ARC_CHAIN.key;
+  // Show multi-chain banner whenever wallet is on a non-Arc supported chain (even if useWallet thinks it's Arc)
+  const isOnNonArcSupportedChain = customerChain != null && customerChain.key !== ARC_CHAIN.key;
   const crossChainSufficient = crossChainBal !== "—" && parseFloat(crossChainBal) >= parseFloat(amount);
 
   async function handlePay() {
