@@ -356,15 +356,15 @@ function CheckoutContent() {
                   </div>
                   <button onClick={() => { disconnect(); }}
                     className="text-[11px] text-muted hover:text-red transition-colors font-medium">
-                    Đổi ví
+                    Change wallet
                   </button>
                 </>
               ) : (
                 <>
-                  <span className="text-muted text-[13px]">Chưa kết nối ví</span>
+                  <span className="text-muted text-[13px]">Wallet not connected</span>
                   <button onClick={() => setShowWalletModal(true)}
                     className="px-3 py-1.5 bg-accent text-white text-[12px] font-bold rounded-xl hover:bg-accent/90 transition-all">
-                    Kết nối ví
+                    Connect wallet
                   </button>
                 </>
               )}
@@ -377,13 +377,13 @@ function CheckoutContent() {
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full shrink-0" style={{ background: customerChain!.color }} />
                     <span className="text-[12.5px] font-semibold text-ink">
-                      Ví đang trên {customerChain!.label}
+                      Wallet on {customerChain!.label}
                     </span>
                   </div>
                   <span className="text-[11px] text-muted font-mono">{crossChainBal} USDC</span>
                 </div>
                 <p className="text-[11px] text-muted mb-2.5">
-                  Bạn có thể trả thẳng từ {customerChain!.shortLabel} — USDC sẽ tự bridge về Arc qua Circle CCTP (~25s).
+                  Pay directly from {customerChain!.shortLabel} — USDC will auto-bridge to Arc via Circle CCTP (~25s).
                 </p>
                 <div className="flex gap-2">
                   <button onClick={() => setBridgeMode(true)}
@@ -398,7 +398,7 @@ function CheckoutContent() {
                 </div>
                 {!crossChainSufficient && (
                   <p className="text-[11px] text-red mt-1.5">
-                    Không đủ USDC trên {customerChain!.shortLabel} để trả {amount} USDC.
+                    Insufficient USDC on {customerChain!.shortLabel} to pay {amount} USDC.
                   </p>
                 )}
               </div>
@@ -411,7 +411,7 @@ function CheckoutContent() {
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full" style={{ background: customerChain.color }} />
                     <span className="text-[12.5px] font-bold text-[#c084fc]">
-                      Bridge & Pay từ {customerChain.label}
+                      Bridge & Pay from {customerChain.label}
                     </span>
                   </div>
                   <button onClick={() => setBridgeMode(false)} className="text-[11px] text-muted hover:text-ink">✕ Đổi</button>
