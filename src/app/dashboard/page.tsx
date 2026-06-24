@@ -11,7 +11,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip,
 
 const UNIFIED_CHAINS = [
   { key: "Arc_Testnet",          label: "Arc",      color: "#0757f9", usdc: "0x3600000000000000000000000000000000000000", rpc: "https://rpc.testnet.arc.network" },
-  { key: "Ethereum_Sepolia",     label: "ETH Sep",  color: "#627eea", usdc: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", rpc: "https://rpc.sepolia.org" },
+  { key: "Ethereum_Sepolia",     label: "ETH Sep",  color: "#627eea", usdc: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", rpc: "https://ethereum-sepolia-rpc.publicnode.com" },
   { key: "Base_Sepolia",         label: "Base",     color: "#0052ff", usdc: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", rpc: "https://sepolia.base.org" },
   { key: "Arbitrum_Sepolia",     label: "Arbitrum", color: "#12aaff", usdc: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d", rpc: "https://sepolia-rollup.arbitrum.io/rpc" },
   { key: "Optimism_Sepolia",     label: "OP",       color: "#ff0420", usdc: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7", rpc: "https://sepolia.optimism.io" },
