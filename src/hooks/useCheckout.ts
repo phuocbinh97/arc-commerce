@@ -187,6 +187,7 @@ export function useCheckout() {
         to: { chain: "Arc_Testnet" },
         amount,
         token: "USDC",
+        config: { kitKey: `KIT_KEY:${KIT_KEY}` },
       });
 
       // Step 2: Wait for bridge finality (~20-30s)

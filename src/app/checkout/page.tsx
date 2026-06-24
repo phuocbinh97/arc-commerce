@@ -562,7 +562,7 @@ function CheckoutContent() {
                       Bridge & Pay from {customerChain.label}
                     </span>
                   </div>
-                  <button onClick={() => setBridgeMode(false)} className="text-[11px] text-muted hover:text-ink">✕ Đổi</button>
+                  <button onClick={() => setBridgeMode(false)} className="text-[11px] text-muted hover:text-ink">✕ Cancel</button>
                 </div>
                 <div className="flex items-center gap-2 mt-2 text-[11px] text-muted">
                   <span className="px-2 py-0.5 rounded-full bg-surface2 border border-white/8">{customerChain.shortLabel}</span>
