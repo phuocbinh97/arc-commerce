@@ -157,13 +157,13 @@ export default function Settings() {
       <Topbar title="Settings" action={{ label: "Save Changes", onClick: save }} />
       <div className="p-7 flex-1 max-w-[680px]">
         {msg && (
-          <div className={`mb-4 px-4 py-2.5 rounded-lg text-[13px] font-semibold ${saved ? "bg-green/10 text-green border border-green/20" : "bg-red/10 text-red border border-red/20"}`}>
+          <div className={`mb-4 px-4 py-2.5 rounded-2xl text-[13px] font-semibold ${saved ? "bg-green/10 text-green border border-green/20" : "bg-red/10 text-red border border-red/20"}`}>
             {msg}
           </div>
         )}
 
         {/* Business profile */}
-        <div className="bg-surface border border-white/8 rounded-lg mb-5">
+        <div className="bg-surface border border-white/8 rounded-2xl mb-5">
           <div className="px-5 py-4 border-b border-white/8">
             <div className="font-semibold text-sm">Business Profile</div>
             <div className="text-xs text-muted mt-0.5">Displayed on checkout pages and invoices</div>
@@ -175,22 +175,22 @@ export default function Settings() {
             <div className="mb-4">
               <label className="text-[12.5px] font-semibold text-muted mb-1.5 block">Business Name</label>
               <input value={form.businessName} onChange={e => setForm(f => ({ ...f, businessName: e.target.value }))} placeholder="My Shop"
-                className="w-full bg-surface2 border border-white/14 rounded-lg px-3 py-2 text-[13.5px] text-ink outline-none focus:border-accent" />
+                className="w-full bg-surface2 border border-white/14 rounded-2xl px-3 py-2 text-[13.5px] text-ink outline-none focus:border-accent" />
             </div>
             <div className="mb-4">
               <label className="text-[12.5px] font-semibold text-muted mb-1.5 block">Website URL <span className="normal-case font-normal">(optional)</span></label>
               <input value={form.siteUrl} onChange={e => setForm(f => ({ ...f, siteUrl: e.target.value }))}
                 placeholder="https://yourshop.com"
-                className="w-full bg-surface2 border border-white/14 rounded-lg px-3 py-2 text-[13.5px] text-ink outline-none focus:border-accent" />
+                className="w-full bg-surface2 border border-white/14 rounded-2xl px-3 py-2 text-[13.5px] text-ink outline-none focus:border-accent" />
               <div className="text-[11.5px] text-muted mt-1">Shown as a link on your checkout page.</div>
             </div>
             <div className="mb-4">
               <label className="text-[12.5px] font-semibold text-muted mb-1.5 block">Merchant ID</label>
               <div className="flex gap-2">
                 <input value={form.merchantId} readOnly placeholder="Not registered yet — click Register below"
-                  className="flex-1 bg-surface2 border border-white/14 rounded-lg px-3 py-2 text-[13px] text-ink font-mono outline-none opacity-70" />
+                  className="flex-1 bg-surface2 border border-white/14 rounded-2xl px-3 py-2 text-[13px] text-ink font-mono outline-none opacity-70" />
                 {form.merchantId && (
-                  <span className="px-2.5 py-1 bg-green/10 text-green border border-green/20 rounded-lg text-[12px] font-semibold self-center">✓ Active</span>
+                  <span className="px-2.5 py-1 bg-green/10 text-green border border-green/20 rounded-2xl text-[12px] font-semibold self-center">✓ Active</span>
                 )}
               </div>
               <div className="text-[11.5px] text-muted mt-1">Auto-generated when you register. Used in payment links and the embed widget.</div>
@@ -199,7 +199,7 @@ export default function Settings() {
         </div>
 
         {/* Wallet & Contract */}
-        <div className="bg-surface border border-white/8 rounded-lg mb-5">
+        <div className="bg-surface border border-white/8 rounded-2xl mb-5">
           <div className="px-5 py-4 border-b border-white/8">
             <div className="font-semibold text-sm">Wallet & Contract</div>
             <div className="text-xs text-muted mt-0.5">Payments go directly to your wallet</div>
@@ -208,14 +208,14 @@ export default function Settings() {
             <div className="mb-4">
               <label className="text-[12.5px] font-semibold text-muted mb-1.5 block">Merchant Wallet Address</label>
               <input value={form.merchantWallet} onChange={e => setForm(f => ({ ...f, merchantWallet: e.target.value }))}
-                placeholder="0x…" className="w-full bg-surface2 border border-white/14 rounded-lg px-3 py-2 text-[13px] text-ink font-mono outline-none focus:border-accent" />
+                placeholder="0x…" className="w-full bg-surface2 border border-white/14 rounded-2xl px-3 py-2 text-[13px] text-ink font-mono outline-none focus:border-accent" />
               <div className="text-[11.5px] text-muted mt-1">
                 {account ? "Auto-filled from connected wallet. USDC payments go directly here." : "Connect your wallet — address will auto-fill."}
               </div>
             </div>
             <div className="flex gap-2">
               <button onClick={register} disabled={registering}
-                className="px-3.5 py-1.5 bg-accent text-white rounded-lg text-[13px] font-semibold hover:bg-accent/90 disabled:opacity-50">
+                className="px-3.5 py-1.5 bg-accent text-white rounded-2xl text-[13px] font-semibold hover:bg-accent/90 disabled:opacity-50">
                 {registering ? "Registering…" : form.merchantId ? "Re-register" : "Register as Merchant"}
               </button>
             </div>
@@ -224,14 +224,14 @@ export default function Settings() {
 
         {/* Embed Widget — only shown when merchantId exists */}
         {form.merchantId && (
-          <div className="bg-surface border border-white/8 rounded-lg mb-5">
+          <div className="bg-surface border border-white/8 rounded-2xl mb-5">
             <div className="px-5 py-4 border-b border-white/8">
               <div className="font-semibold text-sm">Embed Widget</div>
               <div className="text-xs text-muted mt-0.5">Copy this snippet into your website to start accepting payments</div>
             </div>
             <div className="p-5">
               <div className="relative">
-                <pre className="bg-surface2 border border-white/8 rounded-lg p-4 text-[12px] text-ink font-mono overflow-x-auto whitespace-pre-wrap break-all">
+                <pre className="bg-surface2 border border-white/8 rounded-2xl p-4 text-[12px] text-ink font-mono overflow-x-auto whitespace-pre-wrap break-all">
                   {snippet}
                 </pre>
                 <button onClick={copySnippet}
@@ -242,7 +242,7 @@ export default function Settings() {
               <div className="mt-3 text-[12px] text-muted">
                 Replace <code className="text-ink bg-surface2 px-1 rounded">{"{{order.total}}"}</code> and <code className="text-ink bg-surface2 px-1 rounded">{"{{order.id}}"}</code> with real values from your system.
               </div>
-              <div className="mt-3 p-3 bg-accent/10 border border-accent/20 rounded-lg text-[12.5px] text-[#6ea8fe]">
+              <div className="mt-3 p-3 bg-accent/10 border border-accent/20 rounded-2xl text-[12.5px] text-[#6ea8fe]">
                 💡 Direct payment link:{" "}
                 <span className="font-mono break-all">
                   {`https://arcpay-desk.vercel.app/checkout?merchant=${form.merchantId}&amount=10.00&order=ORDER_ID`}
@@ -253,7 +253,7 @@ export default function Settings() {
         )}
 
         {/* Arc Network */}
-        <div className="bg-surface border border-white/8 rounded-lg mb-5">
+        <div className="bg-surface border border-white/8 rounded-2xl mb-5">
           <div className="px-5 py-4 border-b border-white/8">
             <div className="font-semibold text-sm">Arc Network</div>
             <div className="text-xs text-muted mt-0.5">Read-only network configuration</div>
@@ -269,7 +269,7 @@ export default function Settings() {
         </div>
 
         {/* Danger */}
-        <div className="bg-surface border border-red/20 rounded-lg">
+        <div className="bg-surface border border-red/20 rounded-2xl">
           <div className="px-5 py-4 border-b border-red/20">
             <div className="font-semibold text-sm text-red">Danger Zone</div>
           </div>
@@ -279,7 +279,7 @@ export default function Settings() {
               <div className="text-[12px] text-muted">Permanently delete all transactions from local storage.</div>
             </div>
             <button onClick={() => { if (confirm("Clear ALL history?")) localStorage.removeItem("arcCheckoutHistory"); }}
-              className="px-3.5 py-1.5 text-red border border-red/30 rounded-lg text-[13px] font-semibold hover:bg-red/10">
+              className="px-3.5 py-1.5 text-red border border-red/30 rounded-2xl text-[13px] font-semibold hover:bg-red/10">
               Clear History
             </button>
           </div>

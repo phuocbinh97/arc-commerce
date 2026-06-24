@@ -122,7 +122,7 @@ function InvoiceModal({ inv, settings, onClose, onMarkPaid, onVoid, onDelete }: 
         {/* Payment link bar */}
         {isPending && (
           <div className="px-5 pb-3">
-            <div className="flex items-center gap-2 bg-bg border border-white/8 rounded-lg px-3 py-2">
+            <div className="flex items-center gap-2 bg-bg border border-white/8 rounded-2xl px-3 py-2">
               <span className="flex-1 font-mono text-[10px] text-muted truncate">{url}</span>
               <button onClick={copy} className="text-muted hover:text-ink text-sm shrink-0 transition-colors">⎘</button>
             </div>
@@ -303,7 +303,7 @@ export default function Invoices() {
             <div className="flex items-center gap-1">
               {(["all","pending","paid","expired","void"] as const).map(f => (
                 <button key={f} onClick={() => setFilter(f)}
-                  className={`px-3 py-1 rounded-lg text-[12px] font-semibold capitalize transition-all
+                  className={`px-3 py-1 rounded-2xl text-[12px] font-semibold capitalize transition-all
                     ${filter === f ? "bg-surface2 text-ink border border-white/14" : "text-muted hover:text-ink"}`}>
                   {f}
                 </button>
@@ -403,19 +403,19 @@ export default function Invoices() {
                             <div className="flex items-center justify-end gap-1.5" onClick={e => e.stopPropagation()}>
                               {inv.status === "pending" && (
                                 <button onClick={e => copyLink(inv, e)}
-                                  className={`px-2.5 py-1.5 rounded-lg text-[11.5px] font-semibold border transition-colors
+                                  className={`px-2.5 py-1.5 rounded-2xl text-[11.5px] font-semibold border transition-colors
                                     ${copied === inv.id ? "bg-green/10 border-green/20 text-green" : "bg-surface2 border-white/8 text-muted hover:text-ink"}`}>
                                   {copied === inv.id ? "✓" : "Copy Link"}
                                 </button>
                               )}
                               {inv.status === "pending" && (
                                 <button onClick={() => markPaid(inv.id)}
-                                  className="px-2.5 py-1.5 rounded-lg text-[11.5px] font-semibold bg-green/8 border border-green/20 text-green hover:bg-green/15 transition-colors">
+                                  className="px-2.5 py-1.5 rounded-2xl text-[11.5px] font-semibold bg-green/8 border border-green/20 text-green hover:bg-green/15 transition-colors">
                                   Mark Paid
                                 </button>
                               )}
                               <button onClick={() => setSelected(inv)}
-                                className="px-2.5 py-1.5 rounded-lg text-[11.5px] font-semibold bg-surface2 border border-white/8 text-muted hover:text-ink transition-colors">
+                                className="px-2.5 py-1.5 rounded-2xl text-[11.5px] font-semibold bg-surface2 border border-white/8 text-muted hover:text-ink transition-colors">
                                 View
                               </button>
                             </div>

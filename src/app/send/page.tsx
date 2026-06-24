@@ -120,7 +120,7 @@ export default function Send() {
             <div className="flex flex-col gap-1.5">
               <label className="text-[11px] font-semibold text-muted uppercase tracking-wider">Network</label>
               <select value={chain} onChange={e => setChain(e.target.value)}
-                className="w-full bg-bg border border-white/6 rounded-lg px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
+                className="w-full bg-bg border border-white/6 rounded-2xl px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
                 {CHAINS_SEND.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
               </select>
             </div>
@@ -131,7 +131,7 @@ export default function Send() {
               <div className="flex gap-2">
                 {(["USDC", "EURC"] as const).map(t => (
                   <button key={t} onClick={() => setToken(t)}
-                    className={`flex-1 py-2.5 rounded-lg text-[13px] font-semibold border transition-all ${token === t ? "bg-accent/15 border-accent/40 text-accent" : "bg-bg border-white/8 text-muted hover:text-ink"}`}>
+                    className={`flex-1 py-2.5 rounded-2xl text-[13px] font-semibold border transition-all ${token === t ? "bg-accent/15 border-accent/40 text-accent" : "bg-bg border-white/8 text-muted hover:text-ink"}`}>
                     {t === "USDC" ? "$ USDC" : "€ EURC"}
                   </button>
                 ))}
@@ -143,7 +143,7 @@ export default function Send() {
               <label className="text-[11px] font-semibold text-muted uppercase tracking-wider">Recipient</label>
               <input value={to} onChange={e => setTo(e.target.value)}
                 placeholder="0x..."
-                className="w-full bg-bg border border-white/6 rounded-lg px-3 py-2.5 text-[13px] font-mono text-ink outline-none focus:border-accent transition-colors placeholder:text-muted" />
+                className="w-full bg-bg border border-white/6 rounded-2xl px-3 py-2.5 text-[13px] font-mono text-ink outline-none focus:border-accent transition-colors placeholder:text-muted" />
             </div>
 
             {/* Amount */}
@@ -159,7 +159,7 @@ export default function Send() {
 
             {/* Gas warning */}
             {src.gas !== "USDC" && (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber/8 border border-amber/20 text-amber text-[12px]">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-amber/8 border border-amber/20 text-amber text-[12px]">
                 ⚠ Need {src.gas} for gas on {src.label}
               </div>
             )}

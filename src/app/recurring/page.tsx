@@ -194,7 +194,7 @@ function PayModal({ rec, onClose, onPaid }: {
             <div className="text-[12px] text-[#7d8590] mt-0.5">{rec.name} · {rec.amount} USDC</div>
           </div>
           <button onClick={onClose} disabled={busy}
-            className="w-7 h-7 flex items-center justify-center rounded-lg text-[#7d8590] hover:text-white hover:bg-[#1c2330] transition-colors disabled:opacity-40">
+            className="w-7 h-7 flex items-center justify-center rounded-2xl text-[#7d8590] hover:text-white hover:bg-[#1c2330] transition-colors disabled:opacity-40">
             ✕
           </button>
         </div>
@@ -465,7 +465,7 @@ export default function Recurring() {
                   <div className="text-[12px] text-[#7d8590] mt-0.5">Schedule automatic USDC payments</div>
                 </div>
                 <button onClick={() => setShowForm(false)}
-                  className="w-7 h-7 flex items-center justify-center rounded-lg text-[#7d8590] hover:text-white hover:bg-[#1c2330] transition-colors">
+                  className="w-7 h-7 flex items-center justify-center rounded-2xl text-[#7d8590] hover:text-white hover:bg-[#1c2330] transition-colors">
                   ✕
                 </button>
               </div>
@@ -525,7 +525,7 @@ export default function Recurring() {
                     <div className="flex gap-1.5">
                       {DAYS_OF_WEEK.map((d, i) => (
                         <button key={d} type="button" onClick={() => setForm(f=>({...f,payWeekday:String(i+1)}))}
-                          className={`flex-1 h-9 rounded-lg text-[12px] font-semibold border transition-colors
+                          className={`flex-1 h-9 rounded-2xl text-[12px] font-semibold border transition-colors
                             ${form.payWeekday===String(i+1) ? "bg-[#0757f9] text-white border-[#0757f9]" : "bg-[#0d1117] border-white/14 text-[#7d8590] hover:text-[#e6edf3]"}`}>
                           {d.slice(0,2)}
                         </button>
@@ -550,14 +550,14 @@ export default function Recurring() {
                     <div className="flex flex-wrap gap-1.5">
                       {[1,5,10,15,20,25,28].map(d => (
                         <button key={d} type="button" onClick={() => setForm(f=>({...f,payDay:String(d)}))}
-                          className={`w-10 h-9 rounded-lg text-[13px] font-semibold border transition-colors
+                          className={`w-10 h-9 rounded-2xl text-[13px] font-semibold border transition-colors
                             ${form.payDay===String(d) ? "bg-[#0757f9] text-white border-[#0757f9]" : "bg-[#0d1117] border-white/14 text-[#7d8590] hover:text-[#e6edf3]"}`}>
                           {d}
                         </button>
                       ))}
                       <input type="number" min="1" max="28" value={form.payDay}
                         onChange={e => setForm(f=>({...f,payDay:e.target.value}))} placeholder="day"
-                        className="w-16 bg-[#0d1117] border border-white/14 rounded-lg px-2 py-1.5 text-[13px] text-[#e6edf3] outline-none focus:border-[#0757f9] text-center" />
+                        className="w-16 bg-[#0d1117] border border-white/14 rounded-2xl px-2 py-1.5 text-[13px] text-[#e6edf3] outline-none focus:border-[#0757f9] text-center" />
                     </div>
                     <div className="text-[11px] text-[#7d8590] mt-1.5">
                       Next due: <span className="text-[#e6edf3] font-medium">
@@ -599,7 +599,7 @@ export default function Recurring() {
         <div className="flex gap-1 mb-5 bg-[#1c2330] p-1 rounded-xl w-fit">
           {(["schedules","invoices"] as const).map(t => (
             <button key={t} onClick={() => setTab(t)}
-              className={`px-4 py-1.5 rounded-lg text-[13px] font-semibold transition-colors
+              className={`px-4 py-1.5 rounded-2xl text-[13px] font-semibold transition-colors
                 ${tab===t ? "bg-[#161b22] text-[#e6edf3] shadow" : "text-[#7d8590] hover:text-[#e6edf3]"}`}>
               {t === "schedules"
                 ? `Schedules (${visiblePayments.filter(p=>p.status!=="cancelled").length})`
@@ -623,7 +623,7 @@ export default function Recurring() {
                     )}
                     {dueNow.length > 1 && (
                       <button onClick={payAllDue} disabled={batchPaying}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#d29922] text-[#0d1117] rounded-lg text-[12.5px] font-bold disabled:opacity-50 hover:bg-[#d29922]/90 transition-colors">
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#d29922] text-[#0d1117] rounded-2xl text-[12.5px] font-bold disabled:opacity-50 hover:bg-[#d29922]/90 transition-colors">
                         <span>⚡</span>
                         <span>{batchPaying ? "Batching…" : `Pay All ${dueNow.length} · 1 tx (on-chain)`}</span>
                       </button>
@@ -783,12 +783,12 @@ function RecurringRow({ rec, onPay, onToggle }: {
       {/* Actions */}
       <div className="flex gap-1.5 shrink-0">
         {rec.status === "completed" ? (
-          <span className="px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-[#a371f7]/10 border border-[#a371f7]/30 text-[#a371f7]">✓ Done</span>
+          <span className="px-3 py-1.5 rounded-2xl text-[12px] font-semibold bg-[#a371f7]/10 border border-[#a371f7]/30 text-[#a371f7]">✓ Done</span>
         ) : (
           <>
             {rec.status === "active" && (
               <button onClick={onPay}
-                className={`px-3 py-1.5 rounded-lg text-[12.5px] font-semibold transition-colors
+                className={`px-3 py-1.5 rounded-2xl text-[12.5px] font-semibold transition-colors
                   ${due.urgent
                     ? "bg-[#0757f9] text-white hover:bg-[#0757f9]/90"
                     : "bg-[#1c2330] border border-white/14 text-[#e6edf3] hover:border-white/25"}`}>
@@ -797,13 +797,13 @@ function RecurringRow({ rec, onPay, onToggle }: {
             )}
             {rec.status === "active"
               ? <button onClick={() => onToggle(rec.id,"paused")} title="Pause"
-                  className="px-2.5 py-1.5 rounded-lg text-[12px] text-[#7d8590] border border-white/8 hover:text-[#e6edf3] hover:border-white/16 transition-colors">⏸</button>
+                  className="px-2.5 py-1.5 rounded-2xl text-[12px] text-[#7d8590] border border-white/8 hover:text-[#e6edf3] hover:border-white/16 transition-colors">⏸</button>
               : rec.status === "paused"
               ? <button onClick={() => onToggle(rec.id,"active")} title="Resume"
-                  className="px-2.5 py-1.5 rounded-lg text-[12px] text-[#3fb950] border border-[#3fb950]/20 hover:bg-[#3fb950]/10 transition-colors">▶</button>
+                  className="px-2.5 py-1.5 rounded-2xl text-[12px] text-[#3fb950] border border-[#3fb950]/20 hover:bg-[#3fb950]/10 transition-colors">▶</button>
               : null}
             <button onClick={() => onToggle(rec.id,"cancelled")} title="Cancel"
-              className="px-2.5 py-1.5 rounded-lg text-[12px] text-[#7d8590] border border-white/8 hover:text-[#f85149] hover:border-[#f85149]/20 transition-colors">✕</button>
+              className="px-2.5 py-1.5 rounded-2xl text-[12px] text-[#7d8590] border border-white/8 hover:text-[#f85149] hover:border-[#f85149]/20 transition-colors">✕</button>
           </>
         )}
       </div>

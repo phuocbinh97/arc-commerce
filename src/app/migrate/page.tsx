@@ -100,7 +100,7 @@ export default function MigratePage() {
                 Step 1 — Connect Wallet
               </div>
               {wallet ? (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#3fb950]/10 border border-[#3fb950]/20 text-[#3fb950] text-[13px] font-mono">
+                <div className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-[#3fb950]/10 border border-[#3fb950]/20 text-[#3fb950] text-[13px] font-mono">
                   ✓ {wallet.slice(0, 10)}…{wallet.slice(-6)}
                 </div>
               ) : (

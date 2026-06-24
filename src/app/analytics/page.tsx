@@ -114,7 +114,7 @@ export default function Analytics() {
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-3.5 mb-6">
           {[["Total Revenue",formatUsdc(total),"USDC"],["Transactions",String(filtered.length),"confirmed"],["Avg Order",formatUsdc(aov),"USDC/tx"],["Unique Wallets",String(wallets),"customers"]].map(([l,v,u])=>(
-            <div key={l} className="bg-surface border border-white/8 rounded-lg p-4">
+            <div key={l} className="bg-surface border border-white/8 rounded-2xl p-4">
               <div className="text-xs text-muted mb-2">{l}</div>
               <div className="text-2xl font-bold font-mono tracking-tight">{v}</div>
               <div className="text-xs text-muted mt-1">{u}</div>
@@ -123,13 +123,13 @@ export default function Analytics() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-          <div className="bg-surface border border-white/8 rounded-lg">
+          <div className="bg-surface border border-white/8 rounded-2xl">
             <div className="px-5 py-4 border-b border-white/8 font-semibold text-sm">Revenue Trend</div>
             <div className="p-5 h-[220px]">
               <Line data={{ labels, datasets:[{data:rev,borderColor:"#0757f9",backgroundColor:"rgba(7,87,249,0.15)",borderWidth:2,pointRadius:3,tension:0.4,fill:true}] }} options={CHART_OPTS} />
             </div>
           </div>
-          <div className="bg-surface border border-white/8 rounded-lg">
+          <div className="bg-surface border border-white/8 rounded-2xl">
             <div className="px-5 py-4 border-b border-white/8 font-semibold text-sm">Daily Volume</div>
             <div className="p-5 h-[220px]">
               <Bar data={{ labels, datasets:[{data:vol,backgroundColor:"rgba(163,113,247,0.5)",borderColor:"#a371f7",borderWidth:1,borderRadius:4}] }}
@@ -140,7 +140,7 @@ export default function Analytics() {
 
         {/* On-chain Memo Feed */}
         {memoFeed.length > 0 && (
-          <div className="mb-4 bg-surface border border-white/8 rounded-lg overflow-hidden">
+          <div className="mb-4 bg-surface border border-white/8 rounded-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-white/8 flex items-center justify-between">
               <div>
                 <div className="font-semibold text-sm">On-chain Memo Feed</div>
@@ -189,7 +189,7 @@ export default function Analytics() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="bg-surface border border-white/8 rounded-lg">
+          <div className="bg-surface border border-white/8 rounded-2xl">
             <div className="px-5 py-4 border-b border-white/8 font-semibold text-sm">Top Customers by Spend</div>
             <div className="p-4">
               {topCustomers.length===0 ? <div className="text-center py-8 text-muted text-sm">No data yet</div>
@@ -208,7 +208,7 @@ export default function Analytics() {
             </div>
           </div>
 
-          <div className="bg-surface border border-white/8 rounded-lg">
+          <div className="bg-surface border border-white/8 rounded-2xl">
             <div className="px-5 py-4 border-b border-white/8 font-semibold text-sm">Business Metrics</div>
             <div className="p-5">
               <div className="grid grid-cols-2 gap-4 mb-5">

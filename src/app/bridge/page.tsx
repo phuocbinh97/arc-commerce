@@ -207,7 +207,7 @@ function PendingBridgeRow({ p, onDismiss, onArrived, getProvider }: { p: any; on
   }
 
   return (
-    <div className="flex flex-col gap-2 text-[11.5px] text-muted bg-bg/60 rounded-lg px-3 py-2.5">
+    <div className="flex flex-col gap-2 text-[11.5px] text-muted bg-bg/60 rounded-2xl px-3 py-2.5">
       <div className="flex items-center justify-between">
         <span className="font-mono font-medium text-ink">{p.amount} USDC · {CHAINS[p.from]?.label ?? p.from} → {CHAINS[p.to]?.label ?? p.to}</span>
         <div className="flex items-center gap-2 ml-2">
@@ -636,7 +636,7 @@ export default function Bridge() {
                   </div>
                 </div>
                 <select value={fromChain} onChange={e => { setFromChain(e.target.value); setFeeInfo(null); setStatus(""); setStep(0); setSucceeded(false); }}
-                  className="w-full bg-surface2 border border-white/6 rounded-lg px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
+                  className="w-full bg-surface2 border border-white/6 rounded-2xl px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
                   {CHAIN_IDS.filter(id => id !== toChain).map(id => {
                     const bal = chainBals[id];
                     const balStr = bal && bal !== "—" ? ` · ${bal} USDC` : "";
@@ -669,7 +669,7 @@ export default function Bridge() {
                   )}
                 </div>
                 <select value={toChain} onChange={e => { setToChain(e.target.value); setFeeInfo(null); setStatus(""); setStep(0); setSucceeded(false); }}
-                  className="w-full bg-surface2 border border-white/6 rounded-lg px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
+                  className="w-full bg-surface2 border border-white/6 rounded-2xl px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
                   {CHAIN_IDS.filter(id => id !== fromChain).map(id => (
                     <option key={id} value={id}>{CHAINS[id].icon === "arc" ? "⚡" : CHAINS[id].icon}  {CHAINS[id].label}</option>
                   ))}
@@ -692,7 +692,7 @@ export default function Bridge() {
               {!isKitMode && (
                 <input value={recipient} onChange={e => setRecipient(e.target.value)}
                   placeholder="Recipient (optional, default: your wallet)"
-                  className="w-full bg-bg border border-white/6 rounded-lg px-3 py-2 text-[12px] text-ink font-mono outline-none focus:border-accent transition-colors placeholder:text-muted" />
+                  className="w-full bg-bg border border-white/6 rounded-2xl px-3 py-2 text-[12px] text-ink font-mono outline-none focus:border-accent transition-colors placeholder:text-muted" />
               )}
 
               {/* Fee row */}
@@ -801,7 +801,7 @@ export default function Bridge() {
                 })}
               </div>
               <div className="px-4 pb-4">
-                <div className="text-[10.5px] text-muted text-center bg-green/6 border border-green/15 rounded-lg py-1.5">
+                <div className="text-[10.5px] text-muted text-center bg-green/6 border border-green/15 rounded-2xl py-1.5">
                   {isKitMode ? "Circle App Kit · CCTP" : "No gas on destination · Circle pays"}
                 </div>
               </div>
@@ -910,13 +910,13 @@ export default function Bridge() {
               {totalPg > 1 && (
                 <div className="flex items-center justify-center gap-1.5 px-6 py-4 border-t border-white/8">
                   <button onClick={() => setPage(p => Math.max(1,p-1))} disabled={page===1}
-                    className="px-3 py-1.5 rounded-lg text-[12px] border border-white/14 text-muted hover:text-ink disabled:opacity-30 transition-colors">← Prev</button>
+                    className="px-3 py-1.5 rounded-2xl text-[12px] border border-white/14 text-muted hover:text-ink disabled:opacity-30 transition-colors">← Prev</button>
                   {Array.from({ length: totalPg }, (_,i) => i+1).map(p => (
                     <button key={p} onClick={() => setPage(p)}
-                      className={`w-8 h-8 rounded-lg text-[12px] font-semibold border transition-colors ${page===p ? "bg-accent border-accent text-white" : "border-white/14 text-muted hover:text-ink"}`}>{p}</button>
+                      className={`w-8 h-8 rounded-2xl text-[12px] font-semibold border transition-colors ${page===p ? "bg-accent border-accent text-white" : "border-white/14 text-muted hover:text-ink"}`}>{p}</button>
                   ))}
                   <button onClick={() => setPage(p => Math.min(totalPg,p+1))} disabled={page===totalPg}
-                    className="px-3 py-1.5 rounded-lg text-[12px] border border-white/14 text-muted hover:text-ink disabled:opacity-30 transition-colors">Next →</button>
+                    className="px-3 py-1.5 rounded-2xl text-[12px] border border-white/14 text-muted hover:text-ink disabled:opacity-30 transition-colors">Next →</button>
                 </div>
               )}
             </>

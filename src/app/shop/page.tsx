@@ -87,7 +87,7 @@ export default function Shop() {
           <div>
             <h1 className="font-serif text-3xl lg:text-5xl font-bold leading-tight tracking-tight mb-3 lg:mb-4">Handcrafted<br /><em className="text-[#c45c2a]">with care</em><br />from nature</h1>
             <p className="text-[#8a7968] text-base mb-3">Artisan goods from wood, rattan, and ceramic.</p>
-            <div className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg text-[13px] font-medium text-blue-700 mb-4 lg:mb-5">⚡ Pay with USDC on Arc Testnet</div>
+            <div className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-2xl text-[13px] font-medium text-blue-700 mb-4 lg:mb-5">⚡ Pay with USDC on Arc Testnet</div>
             <div className="flex flex-wrap gap-x-3 gap-y-1">
               <div className="text-[13px] text-[#8a7968]">⚡ Sub-second finality</div>
               <div className="text-[13px] text-[#8a7968]">💵 No ETH needed</div>
@@ -128,7 +128,7 @@ export default function Shop() {
                 <div className="flex items-center justify-between">
                   <div className="text-sm lg:text-lg font-bold">{p.price.toFixed(2)} <span className="text-[11px] lg:text-[12px] text-[#8a7968] font-normal">USDC</span></div>
                   <button onClick={()=>addToCart(p)}
-                    className="px-2.5 lg:px-3 py-1.5 bg-[#c45c2a] text-white rounded-lg text-[12px] lg:text-[13px] font-semibold hover:bg-[#a84d22]">
+                    className="px-2.5 lg:px-3 py-1.5 bg-[#c45c2a] text-white rounded-2xl text-[12px] lg:text-[13px] font-semibold hover:bg-[#a84d22]">
                     Add
                   </button>
                 </div>
@@ -150,7 +150,7 @@ export default function Shop() {
             <div className="text-center py-12 text-gray-400"><div className="text-4xl mb-2">🛒</div><p>Your cart is empty</p></div>
           ) : cart.map(item=>(
             <div key={item.uid} className="flex gap-3.5 py-3.5 border-b last:border-0">
-              <div className="w-14 h-14 rounded-lg bg-[#f0ebe4] flex items-center justify-center text-2xl shrink-0">{item.emoji}</div>
+              <div className="w-14 h-14 rounded-2xl bg-[#f0ebe4] flex items-center justify-center text-2xl shrink-0">{item.emoji}</div>
               <div className="flex-1">
                 <div className="font-semibold text-sm">{item.name}</div>
                 <div className="text-[#c45c2a] font-semibold text-sm mt-0.5">{item.price.toFixed(2)} USDC</div>
@@ -166,7 +166,7 @@ export default function Shop() {
           </div>
           <div className="text-[12px] text-blue-600 mb-3">⚡ Checkout via Arc USDC — on-chain payment</div>
           <button onClick={checkout} disabled={cart.length===0}
-            className="w-full py-3 bg-[#1c1410] text-white rounded-lg font-bold text-sm disabled:opacity-40 hover:opacity-85 transition-opacity">
+            className="w-full py-3 bg-[#1c1410] text-white rounded-2xl font-bold text-sm disabled:opacity-40 hover:opacity-85 transition-opacity">
             Pay with USDC →
           </button>
         </div>

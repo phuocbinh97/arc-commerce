@@ -5,25 +5,71 @@
 
 :root {
   color-scheme: dark;
-  --color-bg:       #0d1117;
-  --color-surface:  #161b22;
-  --color-surface2: #1c2330;
+  --color-bg:       #090d12;
+  --color-surface:  #111520;
+  --color-surface2: #181e2e;
   --color-ink:      #e6edf3;
   --color-muted:    #7d8590;
-  --border-color:   rgba(255,255,255,0.08);
-  --border2-color:  rgba(255,255,255,0.14);
+  --border-color:   rgba(255,255,255,0.05);
+  --border2-color:  rgba(255,255,255,0.10);
 }
 
 :root.light {
   color-scheme: light;
-  --color-bg:       #f6f8fa;
+  --color-bg:       #f0f2f5;
   --color-surface:  #ffffff;
   --color-surface2: #eaeef2;
   --color-ink:      #1c2330;
   --color-muted:    #57606a;
-  --border-color:   rgba(0,0,0,0.08);
-  --border2-color:  rgba(0,0,0,0.14);
+  --border-color:   rgba(0,0,0,0.06);
+  --border2-color:  rgba(0,0,0,0.12);
 }
 
 body { background: var(--color-bg); color: var(--color-ink); }
 * { box-sizing: border-box; }
+
+/* ── Override Tailwind's white borders globally ─────────────────────
+   border-white/8 = rgba(255,255,255,0.08) — too visible.
+   We replace with near-invisible tint + shadow elevation on cards.   */
+.bg-surface.border,
+.bg-surface2.border {
+  border-color: rgba(255,255,255,0.04) !important;
+}
+
+/* Any rounded card on a dark bg gets automatic shadow lift */
+.bg-surface.rounded-lg,
+.bg-surface.rounded-xl,
+.bg-surface.rounded-2xl,
+.bg-surface.rounded-3xl {
+  box-shadow: 0 2px 16px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
+}
+.bg-surface2.rounded-lg,
+.bg-surface2.rounded-xl,
+.bg-surface2.rounded-2xl {
+  box-shadow: 0 1px 8px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.03);
+}
+
+/* border-b / border-t dividers inside cards — very subtle */
+.bg-surface .border-b,
+.bg-surface .border-t {
+  border-color: rgba(255,255,255,0.05) !important;
+}
+
+/* ── Named utility classes ─────────────────────────────────────────── */
+@layer components {
+  .card {
+    @apply bg-surface rounded-2xl;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
+  }
+  .card:hover {
+    box-shadow: 0 4px 24px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06);
+  }
+  .card-sm {
+    @apply bg-surface rounded-xl;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.04);
+  }
+  .card-inset {
+    @apply bg-surface2 rounded-xl;
+    box-shadow: inset 0 1px 4px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.03);
+  }
+}

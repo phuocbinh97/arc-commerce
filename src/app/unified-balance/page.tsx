@@ -190,7 +190,7 @@ function UnifiedBalanceInner() {
               <div className="text-[11px] text-muted mt-0.5">USDC · spendable across all chains</div>
             </div>
             <button onClick={fetchPoolBalance} disabled={balLoading}
-              className="px-3 py-1.5 rounded-lg bg-surface2 border border-white/8 text-[12px] text-muted hover:text-ink transition-colors disabled:opacity-50">
+              className="px-3 py-1.5 rounded-2xl bg-surface2 border border-white/8 text-[12px] text-muted hover:text-ink transition-colors disabled:opacity-50">
               {balLoading ? "…" : "↻ Check"}
             </button>
           </div>
@@ -200,7 +200,7 @@ function UnifiedBalanceInner() {
         <div className="w-full flex gap-1 p-1 bg-surface border border-white/8 rounded-xl">
           {(["deposit", "spend"] as Tab[]).map(t => (
             <button key={t} onClick={() => { setTab(t); setStatus(""); setSucceeded(false); setEstimate(null); }}
-              className={`flex-1 py-2 rounded-lg text-[13px] font-semibold transition-all capitalize ${tab === t ? "bg-accent text-white" : "text-muted hover:text-ink"}`}>
+              className={`flex-1 py-2 rounded-2xl text-[13px] font-semibold transition-all capitalize ${tab === t ? "bg-accent text-white" : "text-muted hover:text-ink"}`}>
               {t === "deposit" ? "⬇ Deposit" : "⬆ Spend"}
             </button>
           ))}
@@ -217,12 +217,12 @@ function UnifiedBalanceInner() {
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[11px] font-semibold text-muted uppercase tracking-wider">From Chain</label>
                   <select value={depChain} onChange={e => setDepChain(e.target.value)}
-                    className="w-full bg-bg border border-white/6 rounded-lg px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent cursor-pointer">
+                    className="w-full bg-bg border border-white/6 rounded-2xl px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent cursor-pointer">
                     {DEPOSIT_CHAINS.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
                   </select>
                 </div>
                 {srcChain.gas !== "USDC" && (
-                  <div className="text-[11.5px] text-amber px-3 py-2 rounded-lg bg-amber/8 border border-amber/20">
+                  <div className="text-[11.5px] text-amber px-3 py-2 rounded-2xl bg-amber/8 border border-amber/20">
                     ⚠ Need {srcChain.gas} for gas on {srcChain.label}
                   </div>
                 )}
@@ -261,7 +261,7 @@ function UnifiedBalanceInner() {
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[11px] font-semibold text-muted uppercase tracking-wider">Destination Chain</label>
                   <select value={spendDst} onChange={e => { setSpendDst(e.target.value); setEstimate(null); }}
-                    className="w-full bg-bg border border-white/6 rounded-lg px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent cursor-pointer">
+                    className="w-full bg-bg border border-white/6 rounded-2xl px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent cursor-pointer">
                     {SPEND_CHAINS.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
                   </select>
                 </div>
@@ -269,7 +269,7 @@ function UnifiedBalanceInner() {
                   <label className="text-[11px] font-semibold text-muted uppercase tracking-wider">Recipient</label>
                   <input value={spendTo} onChange={e => { setSpendTo(e.target.value); setEstimate(null); }}
                     placeholder="0x..."
-                    className="w-full bg-bg border border-white/6 rounded-lg px-3 py-2.5 text-[13px] font-mono text-ink outline-none focus:border-accent transition-colors placeholder:text-muted" />
+                    className="w-full bg-bg border border-white/6 rounded-2xl px-3 py-2.5 text-[13px] font-mono text-ink outline-none focus:border-accent transition-colors placeholder:text-muted" />
                 </div>
                 <div className="bg-bg rounded-xl p-4">
                   <div className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2">Amount</div>

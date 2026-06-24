@@ -61,7 +61,7 @@ function TokenDropdown({ value, onChange, balances }: { value: PayToken; onChang
   return (
     <div className="relative">
       <button onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center gap-3 px-3 py-2.5 bg-surface2 border border-white/14 rounded-lg hover:border-white/30 transition-colors">
+        className="w-full flex items-center gap-3 px-3 py-2.5 bg-surface2 border border-white/14 rounded-2xl hover:border-white/30 transition-colors">
         <div className="w-7 h-7 rounded-full grid place-items-center text-[13px] font-bold shrink-0"
           style={{ background: meta.bg, color: meta.color }}>{meta.symbol}</div>
         <div className="flex-1 text-left">
@@ -272,7 +272,7 @@ function CheckoutContent() {
               className="block text-center mt-3 text-accent font-semibold text-sm hover:underline">View on ArcScan →</a>
           </div>
           {redirect ? <p className="text-muted text-xs mb-3">Redirecting back to shop in 3s…</p> : null}
-          <button onClick={reset} className="w-full py-3 border border-white/8 rounded-lg font-semibold text-sm text-ink hover:bg-surface2">← New Payment</button>
+          <button onClick={reset} className="w-full py-3 border border-white/8 rounded-2xl font-semibold text-sm text-ink hover:bg-surface2">← New Payment</button>
         </div>
       </div>
     );
@@ -287,14 +287,14 @@ function CheckoutContent() {
           <div className="p-6">
 
             {/* Wallet status */}
-            <div className="flex items-center justify-between mb-4 p-3 bg-surface2 border border-white/8 rounded-lg text-sm">
+            <div className="flex items-center justify-between mb-4 p-3 bg-surface2 border border-white/8 rounded-2xl text-sm">
               <span className="text-muted">{isConnected ? `Connected: ${shortAddr(account)}` : "Wallet not connected"}</span>
               {isArcNetwork && <span className="flex items-center gap-1.5 text-accent font-semibold"><span className="w-2 h-2 rounded-full bg-accent" />Arc Testnet</span>}
             </div>
 
             {/* Merchant */}
-            <div className="mb-5 p-3.5 bg-surface2 border border-white/8 rounded-lg flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-accent grid place-items-center text-white font-bold text-lg shrink-0">{displayName.charAt(0).toUpperCase()}</div>
+            <div className="mb-5 p-3.5 bg-surface2 border border-white/8 rounded-2xl flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-accent grid place-items-center text-white font-bold text-lg shrink-0">{displayName.charAt(0).toUpperCase()}</div>
               <div className="flex-1 min-w-0">
                 <div className="text-[11px] font-semibold text-muted uppercase">Merchant</div>
                 <div className="font-semibold text-ink">{loadingMerchant ? "Loading…" : displayName}</div>
@@ -316,17 +316,17 @@ function CheckoutContent() {
               </div>
               <TokenDropdown value={payToken} onChange={setPayToken} balances={{ USDC: usdcBalance, EURC: eurcBalance }} />
               {payToken === "EURC" && (
-                <div className="mt-2 px-3 py-2 bg-surface2 border border-white/8 rounded-lg text-[11.5px] text-muted">
+                <div className="mt-2 px-3 py-2 bg-surface2 border border-white/8 rounded-2xl text-[11.5px] text-muted">
                   ~{(parseFloat(amount) * 1.01).toFixed(2)} EURC will be swapped → {amount} USDC via Arc App Kit.
                 </div>
               )}
               {TOKENS[payToken].status === "crosschain-soon" && (
-                <div className="mt-2 px-3 py-2 bg-purple/10 border border-purple/20 rounded-lg text-[11.5px] text-[#a371f7]">
+                <div className="mt-2 px-3 py-2 bg-purple/10 border border-purple/20 rounded-2xl text-[11.5px] text-[#a371f7]">
                   🔗 Cross-chain via LI.FI — coming on Arc Mainnet. {activeMeta.label} → USDC auto-swap.
                 </div>
               )}
               {payToken === "cirBTC" && (
-                <div className="mt-2 px-3 py-2 bg-amber/10 border border-amber/20 rounded-lg text-[11.5px] text-amber">
+                <div className="mt-2 px-3 py-2 bg-amber/10 border border-amber/20 rounded-2xl text-[11.5px] text-amber">
                   ⏳ cirBTC swap coming soon on Arc App Kit.
                 </div>
               )}
@@ -334,7 +334,7 @@ function CheckoutContent() {
 
             {/* Balance row */}
             {isConnected && TOKENS[payToken].status === "live" && (
-              <div className={`mb-4 flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium
+              <div className={`mb-4 flex items-center justify-between px-3 py-2 rounded-2xl text-sm font-medium
                 ${activeSufficient ? "bg-green/10 border border-green/20 text-green" : "bg-red/10 border border-red/20 text-red"}`}>
                 <span>Your {activeMeta.label} balance: {activeBalance}</span>
                 <div className="flex items-center gap-2">
@@ -351,7 +351,7 @@ function CheckoutContent() {
 
             {/* No gas warning */}
             {isConnected && payToken === "EURC" && !hasGas && (
-              <div className="mb-4 px-3 py-2.5 bg-amber/10 border border-amber/30 rounded-lg text-amber text-[12.5px]">
+              <div className="mb-4 px-3 py-2.5 bg-amber/10 border border-amber/30 rounded-2xl text-amber text-[12.5px]">
                 ⛽ Arc uses USDC as gas. You need at least <strong>~0.01 USDC</strong> for network fees.{" "}
                 <a href="https://faucet.circle.com" target="_blank" rel="noreferrer" className="underline font-semibold">Get free USDC →</a>
               </div>
@@ -361,33 +361,33 @@ function CheckoutContent() {
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
                 <label className="text-xs font-semibold text-muted uppercase mb-1 block">Amount</label>
-                <input value={formatUsdc(amount)} readOnly className="w-full border border-white/8 rounded-lg px-3 py-2.5 text-sm bg-surface2 text-ink" />
+                <input value={formatUsdc(amount)} readOnly className="w-full border border-white/8 rounded-2xl px-3 py-2.5 text-sm bg-surface2 text-ink" />
               </div>
               <div>
                 <label className="text-xs font-semibold text-muted uppercase mb-1 block">Merchant receives</label>
-                <input value="USDC" disabled className="w-full border border-white/8 rounded-lg px-3 py-2.5 text-sm bg-surface2 text-ink" />
+                <input value="USDC" disabled className="w-full border border-white/8 rounded-2xl px-3 py-2.5 text-sm bg-surface2 text-ink" />
               </div>
             </div>
             <div className="mb-3">
               <label className="text-xs font-semibold text-muted uppercase mb-1 block">Order ID</label>
-              <input value={orderId} readOnly className="w-full border border-white/8 rounded-lg px-3 py-2.5 text-sm bg-surface2 text-ink font-mono" />
+              <input value={orderId} readOnly className="w-full border border-white/8 rounded-2xl px-3 py-2.5 text-sm bg-surface2 text-ink font-mono" />
             </div>
             <div className="mb-3">
               <label className="text-xs font-semibold text-muted uppercase mb-1 block">Your name <span className="normal-case font-normal text-muted">(optional)</span></label>
               <input value={payerName} onChange={e => setPayerName(e.target.value)}
                 placeholder="e.g. John Doe"
-                className="w-full border border-white/8 rounded-lg px-3 py-2.5 text-sm bg-surface2 text-ink outline-none focus:border-accent transition-colors" />
+                className="w-full border border-white/8 rounded-2xl px-3 py-2.5 text-sm bg-surface2 text-ink outline-none focus:border-accent transition-colors" />
             </div>
             {memo && (
               <div className="mb-4">
                 <label className="text-xs font-semibold text-muted uppercase mb-1 block">Memo</label>
-                <textarea value={memo} readOnly rows={2} className="w-full border border-white/8 rounded-lg px-3 py-2.5 text-sm bg-surface2 text-ink resize-none" />
+                <textarea value={memo} readOnly rows={2} className="w-full border border-white/8 rounded-2xl px-3 py-2.5 text-sm bg-surface2 text-ink resize-none" />
               </div>
             )}
 
             {/* Pre-flight fee estimate */}
             {feeEst && isConnected && isArcNetwork && (
-              <div className="mb-3 px-3 py-2.5 bg-surface2 border border-white/8 rounded-lg text-[12px]">
+              <div className="mb-3 px-3 py-2.5 bg-surface2 border border-white/8 rounded-2xl text-[12px]">
                 <div className="flex items-center justify-between text-muted mb-1">
                   <span>Network fee (gas)</span>
                   <span className="font-mono text-ink">~{feeEst.gas} USDC</span>
@@ -399,14 +399,14 @@ function CheckoutContent() {
               </div>
             )}
 
-            {error && <div className="mb-3 px-3 py-2 bg-red/10 border border-red/20 rounded-lg text-red text-sm">{error}</div>}
+            {error && <div className="mb-3 px-3 py-2 bg-red/10 border border-red/20 rounded-2xl text-red text-sm">{error}</div>}
 
             <div className="flex gap-2">
               <button onClick={handlePay} disabled={!canPay}
-                className="flex-1 py-2.5 bg-accent text-white rounded-lg font-semibold text-sm disabled:opacity-60 hover:bg-accent/90 transition-colors">
+                className="flex-1 py-2.5 bg-accent text-white rounded-2xl font-semibold text-sm disabled:opacity-60 hover:bg-accent/90 transition-colors">
                 {payLabel}
               </button>
-              <button onClick={switchToArc} className="px-4 py-2.5 border border-white/8 rounded-lg font-semibold text-sm text-muted hover:bg-surface2">
+              <button onClick={switchToArc} className="px-4 py-2.5 border border-white/8 rounded-2xl font-semibold text-sm text-muted hover:bg-surface2">
                 Switch network
               </button>
             </div>

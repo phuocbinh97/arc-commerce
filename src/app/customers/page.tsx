@@ -59,25 +59,25 @@ export default function Customers() {
       <Topbar title="Customers" />
       <div className="p-4 lg:p-7 flex-1">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-3.5 mb-6">
-          <div className="bg-surface border border-white/8 rounded-lg p-4">
+          <div className="bg-surface border border-white/8 rounded-2xl p-4">
             <div className="text-xs text-muted mb-1">Total Customers</div>
             <div className="text-2xl font-bold font-mono">{customers.length}</div>
           </div>
-          <div className="bg-surface border border-white/8 rounded-lg p-4">
+          <div className="bg-surface border border-white/8 rounded-2xl p-4">
             <div className="text-xs text-muted mb-1">Total Revenue</div>
             <div className="text-2xl font-bold font-mono text-green">{formatUsdc(totalRev)}</div>
           </div>
-          <div className="bg-surface border border-white/8 rounded-lg p-4">
+          <div className="bg-surface border border-white/8 rounded-2xl p-4">
             <div className="text-xs text-muted mb-1">Avg Order Value</div>
             <div className="text-2xl font-bold font-mono">{formatUsdc(aov)}</div>
           </div>
         </div>
 
-        <div className="bg-surface border border-white/8 rounded-lg overflow-x-auto">
+        <div className="bg-surface border border-white/8 rounded-2xl overflow-x-auto">
           <div className="px-4 lg:px-5 py-4 border-b border-white/8 flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-between">
             <div className="font-semibold text-sm">All Customers</div>
             <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search by address…"
-              className="bg-surface2 border border-white/14 rounded-lg px-3 py-1.5 text-[13px] text-ink outline-none focus:border-accent w-full sm:w-[220px]" />
+              className="bg-surface2 border border-white/14 rounded-2xl px-3 py-1.5 text-[13px] text-ink outline-none focus:border-accent w-full sm:w-[220px]" />
           </div>
           <table className="w-full">
             <thead>
@@ -97,7 +97,7 @@ export default function Customers() {
                   onClick={() => window.open(`${ARC_EXPLORER}/address/${c.addr}`, "_blank")}>
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-purple/10 grid place-items-center text-[12px] font-bold text-purple font-mono shrink-0">
+                      <div className="w-9 h-9 rounded-2xl bg-purple/10 grid place-items-center text-[12px] font-bold text-purple font-mono shrink-0">
                         {c.addr.slice(2, 4).toUpperCase()}
                       </div>
                       <div>

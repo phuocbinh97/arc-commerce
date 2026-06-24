@@ -239,17 +239,17 @@ export default function Treasury() {
               <div className="flex gap-1.5">
                 {!isConnected ? (
                   <button onClick={connect}
-                    className="px-3 py-1.5 bg-accent text-white rounded-lg text-[12px] font-semibold hover:bg-accent/90">
+                    className="px-3 py-1.5 bg-accent text-white rounded-2xl text-[12px] font-semibold hover:bg-accent/90">
                     Connect Wallet
                   </button>
                 ) : (
                   <button onClick={refreshBalances}
-                    className="px-3 py-1.5 bg-surface2 border border-white/8 text-muted rounded-lg text-[12px] font-semibold hover:text-ink transition-colors">
+                    className="px-3 py-1.5 bg-surface2 border border-white/8 text-muted rounded-2xl text-[12px] font-semibold hover:text-ink transition-colors">
                     ↻ Refresh
                   </button>
                 )}
                 <a href="https://faucet.circle.com" target="_blank" rel="noreferrer"
-                  className="px-3 py-1.5 bg-surface2 border border-white/8 rounded-lg text-[12px] font-semibold text-muted hover:text-ink transition-colors">
+                  className="px-3 py-1.5 bg-surface2 border border-white/8 rounded-2xl text-[12px] font-semibold text-muted hover:text-ink transition-colors">
                   Faucet
                 </a>
               </div>
@@ -270,7 +270,7 @@ export default function Treasury() {
                 setSwapFrom(tok);
                 if (tok === swapTo) setSwapTo(SWAP_TOKENS.find(t => t !== tok)!);
                 setSwapStatus("");
-              }} className="w-full bg-surface2 border border-white/6 rounded-lg px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
+              }} className="w-full bg-surface2 border border-white/6 rounded-2xl px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
                 {SWAP_TOKENS.map(t => <option key={t} value={t}>{TOKEN_META[t].label}</option>)}
               </select>
               <div className="flex items-center gap-3">
@@ -297,7 +297,7 @@ export default function Treasury() {
                 setSwapTo(tok);
                 if (tok === swapFrom) setSwapFrom(SWAP_TOKENS.find(t => t !== tok)!);
                 setSwapStatus("");
-              }} className="w-full bg-surface2 border border-white/6 rounded-lg px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
+              }} className="w-full bg-surface2 border border-white/6 rounded-2xl px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
                 {SWAP_TOKENS.filter(t => t !== swapFrom).map(t => <option key={t} value={t}>{TOKEN_META[t].label}</option>)}
               </select>
               <div className="flex flex-col gap-1">
