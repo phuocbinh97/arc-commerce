@@ -186,7 +186,7 @@ function CheckoutContent() {
       const id = parseChainId(hex);
       setRawChainId(id);
       setCustomerChain(getChainByChainId(id) || null);
-      setBridgeMode(false);
+      // Do NOT reset bridgeMode here — user may have selected a non-Arc chain intentionally
     };
     eth.on?.("chainChanged", handler);
     // Also poll every 2s as fallback (some wallets don't fire chainChanged)
@@ -344,12 +344,20 @@ function CheckoutContent() {
 
   async function handlePay() {
     if (!isConnected) { setShowWalletModal(true); return; }
-    if (bridgeMode && customerChain && customerChain.key !== ARC_CHAIN.key) {
-      await bridgeAndPay({ amount, orderId, memo, payerName: payerName.trim() || undefined, merchantOverride, sourceChainKey: customerChain.key, provider: getProvider() }).catch(() => {});
+    const payFromChain = selectedPayChain || customerChain;
+    if (bridgeMode && payFromChain && payFromChain.key !== ARC_CHAIN.key) {
+      await bridgeAndPay({ amount, orderId, memo, payerName: payerName.trim() || undefined, merchantOverride, sourceChainKey: payFromChain.key, provider: (window as any).ethereum }).catch(() => {});
       return;
     }
-    if (!isArcNetwork) { await switchToArc(); return; }
-    await pay({ amount, orderId, memo, payerName: payerName.trim() || undefined, merchantOverride, payToken: payToken as "USDC" | "EURC", provider: getProvider() }).catch(() => {});
+    // Direct Arc payment
+    const eth = (window as any).ethereum;
+    if (!eth) return;
+    const chainHex = await eth.request({ method: "eth_chainId" });
+    if (parseChainId(chainHex) !== ARC_CHAIN_ID_NUM) {
+      await switchToChain(ARC_CHAIN);
+      return;
+    }
+    await pay({ amount, orderId, memo, payerName: payerName.trim() || undefined, merchantOverride, payToken: payToken as "USDC" | "EURC", provider: eth }).catch(() => {});
   }
 
   const isBridging = ["bridging", "waiting-bridge", "switching-network"].includes(step);
