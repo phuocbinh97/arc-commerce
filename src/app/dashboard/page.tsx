@@ -170,7 +170,7 @@ export default function Dashboard() {
             style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-[11px] font-bold uppercase tracking-widest text-accent/80">Unified Pool Balance</span>
+                <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "#60a5fa", textShadow: "0 0 12px rgba(96,165,250,0.6)" }}>Unified Pool Balance</span>
                 <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-semibold text-green"
                   style={{ background: "rgba(63,185,80,0.1)", boxShadow: "0 0 0 1px rgba(63,185,80,0.18)" }}>
                   <span className="w-1.5 h-1.5 rounded-full bg-green animate-pulse inline-block" />
