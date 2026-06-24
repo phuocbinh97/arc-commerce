@@ -14,25 +14,18 @@
   --border2-color:  rgba(255,255,255,0.12);
 }
 
+/* Light mode = softer dark navy — keeps all inline colours readable */
 :root.light {
-  color-scheme: light;
-  --color-bg:       #eef0f4;
-  --color-surface:  #ffffff;
-  --color-surface2: #f3f5f8;
-  --color-ink:      #1a2030;
-  --color-muted:    #5a6474;
-  --border-color:   rgba(0,0,0,0.08);
-  --border2-color:  rgba(0,0,0,0.14);
+  color-scheme: dark;
+  --color-bg:       #141c2e;
+  --color-surface:  #1c2640;
+  --color-surface2: #223050;
+  --color-ink:      #e6edf3;
+  --color-muted:    #8ea3c0;
+  --border-color:   rgba(255,255,255,0.08);
+  --border2-color:  rgba(255,255,255,0.14);
 }
-
-/* Light mode: override explicit dark bg references */
-:root.light body { background: #eef0f4; }
-:root.light .bg-\[#0d1018\]  { background: #ffffff !important; }
-:root.light .bg-\[#090d12\]  { background: #f3f5f8 !important; }
-:root.light .bg-\[#111520\]  { background: #ffffff !important; }
-:root.light .bg-\[#181e2e\]  { background: #f3f5f8 !important; }
-:root.light .bg-\[#0a1a3a\]  { background: #e8ecf5 !important; }
-:root.light .text-muted       { color: #5a6474 !important; }
+:root.light body { background: #141c2e; }
 
 body { background: var(--color-bg); color: var(--color-ink); }
 * { box-sizing: border-box; }

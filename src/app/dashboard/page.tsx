@@ -160,7 +160,7 @@ export default function Dashboard() {
 
         {/* ── UNIFIED BALANCE HERO ── */}
         <div className="relative rounded-3xl overflow-hidden"
-          style={{ background: "linear-gradient(135deg, #0a1a3a 0%, #111520 60%, #111520 100%)", boxShadow: "0 8px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(7,87,249,0.12)" }}>
+          style={{ background: "linear-gradient(135deg, #0a1a3a 0%, #111520 60%, #111520 100%)", boxShadow: "0 4px 24px rgba(0,0,0,0.7), 0 0 0 1px rgba(30,100,255,0.35), 0 0 32px rgba(7,87,249,0.1)" }}>
           {/* glow blobs */}
           <div className="absolute -top-16 -left-16 w-64 h-64 rounded-full blur-3xl pointer-events-none" style={{ background: "rgba(7,87,249,0.18)" }} />
           <div className="absolute -bottom-8 right-8 w-40 h-40 rounded-full blur-3xl pointer-events-none" style={{ background: "rgba(163,113,247,0.08)" }} />
