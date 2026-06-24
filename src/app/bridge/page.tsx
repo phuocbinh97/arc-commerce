@@ -800,7 +800,7 @@ export default function Bridge() {
           </div>
 
           {/* ── Progress panel ── */}
-          <div className="w-[220px] sm:w-[260px] shrink-0 bg-surface border border-white/8 rounded-2xl overflow-hidden sticky top-6">
+          {(step > 0 || succeeded) && <div className="w-[220px] sm:w-[260px] shrink-0 bg-surface border border-white/8 rounded-2xl overflow-hidden sticky top-6">
               <div className="px-4 py-3.5 border-b border-white/8">
                 <div className="font-bold text-[13px]">Bridge Progress</div>
                 <div className="text-[11px] text-muted mt-0.5">
@@ -837,7 +837,7 @@ export default function Bridge() {
                   {isKitMode ? "Circle App Kit · CCTP" : "No gas on destination · Circle pays"}
                 </div>
               </div>
-            </div>
+            </div>}
         </div>
 
         {/* ── Info row: accordions ── */}
