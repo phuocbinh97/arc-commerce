@@ -62,8 +62,7 @@ export default function Sidebar() {
       `}>
 
         {/* Logo */}
-        <div className="px-[18px] py-4 flex items-center justify-between"
-          className="border-b border-white/8">
+        <div className="px-[18px] py-4 flex items-center justify-between border-b border-white/8">
           <div>
             <div className="flex items-end gap-0">
               <span className="text-[22px] font-black tracking-tight text-ink leading-none">Nex</span>
