@@ -239,6 +239,59 @@ function PendingBridgeRow({ p, onDismiss, onArrived, getProvider }: { p: any; on
   );
 }
 
+function ChainPicker({ value, onChange, exclude, balances, label }: {
+  value: string; onChange: (v: string) => void; exclude: string;
+  balances: Record<string, string>; label: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const c = CHAINS[value];
+  return (
+    <div className="relative">
+      <button onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-2.5 px-3.5 py-2.5 bg-surface2 border border-white/8 rounded-xl hover:border-white/16 transition-all">
+        <span className="text-lg shrink-0 w-6 text-center flex items-center justify-center">
+          {c.icon === "arc" ? <img src="/arc-logo.png" alt="Arc" width={20} height={20} className="rounded-sm" /> : c.icon}
+        </span>
+        <div className="flex-1 text-left min-w-0">
+          <div className="text-[13px] font-semibold text-ink truncate">{c.label}</div>
+          {balances[value] && balances[value] !== "—" && (
+            <div className="text-[11px] font-mono text-muted">{balances[value]} USDC</div>
+          )}
+        </div>
+        <span className={`text-muted text-[10px] transition-transform duration-150 shrink-0 ${open ? "rotate-180" : ""}`}>▼</span>
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 right-0 top-full mt-1.5 z-40 rounded-xl border border-white/10 overflow-hidden"
+            style={{ background: "#111520", boxShadow: "0 16px 48px rgba(0,0,0,0.7)" }}>
+            {CHAIN_IDS.filter(id => id !== exclude).map(id => {
+              const ch = CHAINS[id]; const bal = balances[id];
+              const isSelected = id === value;
+              return (
+                <button key={id} onClick={() => { onChange(id); setOpen(false); }}
+                  className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left transition-colors hover:bg-white/5 ${isSelected ? "bg-accent/10" : ""}`}>
+                  <span className="text-base shrink-0 w-6 text-center flex items-center justify-center">
+                    {ch.icon === "arc" ? <img src="/arc-logo.png" alt="Arc" width={18} height={18} className="rounded-sm" /> : ch.icon}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className={`text-[13px] font-medium truncate ${isSelected ? "text-accent" : "text-ink"}`}>{ch.label}</div>
+                    {ch.gas !== "USDC" && <div className="text-[10.5px] text-amber">needs {ch.gas} for gas</div>}
+                  </div>
+                  {bal && bal !== "—" && (
+                    <span className="font-mono text-[11px] text-green shrink-0">{bal} USDC</span>
+                  )}
+                  {isSelected && <span className="text-accent text-[10px] shrink-0">✓</span>}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function Bridge() {
   const { account, isConnected, connect, getProvider } = useWallet();
   const [fromChain, setFromChain] = useState("Arc_Testnet");
@@ -622,34 +675,19 @@ export default function Bridge() {
             <div className="p-4 flex flex-col gap-3">
               {/* FROM block */}
               <div className="bg-bg rounded-xl p-4 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">From</span>
-                  <div className="flex items-center gap-2">
-                    {chainBals[fromChain] && chainBals[fromChain] !== "—" && (
-                      <span className="text-[11px] text-muted">
-                        Balance: <span className="text-ink font-mono">{chainBals[fromChain]} USDC</span>
-                      </span>
-                    )}
-                    {src.gas !== "USDC" && (
-                      <span className="text-[11px] text-amber">⚠ Need {src.gas} for gas</span>
-                    )}
-                  </div>
-                </div>
-                <select value={fromChain} onChange={e => { setFromChain(e.target.value); setFeeInfo(null); setStatus(""); setStep(0); setSucceeded(false); }}
-                  className="w-full bg-surface2 border border-white/6 rounded-2xl px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
-                  {CHAIN_IDS.filter(id => id !== toChain).map(id => {
-                    const bal = chainBals[id];
-                    const balStr = bal && bal !== "—" ? ` · ${bal} USDC` : "";
-                    const ico = CHAINS[id].icon === "arc" ? "⚡" : CHAINS[id].icon;
-                    return <option key={id} value={id}>{ico}  {CHAINS[id].label}{balStr}</option>;
-                  })}
-                </select>
-                <div className="flex items-center gap-3">
-                  <input type="number" value={amount} onChange={e => { setAmount(e.target.value); setFeeInfo(null); }}
+                <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">From</span>
+                <ChainPicker value={fromChain} onChange={v => { setFromChain(v); setFeeInfo(null); setStatus(""); setStep(0); setSucceeded(false); setBridgeEst(null); }} exclude={toChain} balances={chainBals} label="From" />
+                <div className="flex items-center gap-3 mt-1">
+                  <input type="number" value={amount} onChange={e => { setAmount(e.target.value); setFeeInfo(null); setBridgeEst(null); }}
                     placeholder="0.00"
-                    className="flex-1 bg-transparent text-[28px] font-bold text-ink outline-none placeholder:text-muted w-0" />
-                  <span className="text-[13px] text-muted font-medium shrink-0">USDC</span>
+                    className="flex-1 bg-transparent text-[28px] font-bold text-ink outline-none placeholder:text-muted/30 w-0" />
+                  <span className="text-[13px] font-semibold text-muted shrink-0">USDC</span>
                 </div>
+                {src.gas !== "USDC" && (
+                  <div className="flex items-center gap-1.5 text-[11px] text-amber bg-amber/6 border border-amber/15 rounded-lg px-3 py-1.5">
+                    ⚠ You need {src.gas} in your wallet for gas on {src.label}
+                  </div>
+                )}
               </div>
 
               {/* Swap button */}
@@ -665,17 +703,12 @@ export default function Bridge() {
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">To</span>
                   {!isKitMode && dst.gwFee !== "—" && (
-                    <span className="text-[11px] text-muted">fwd fee ~{dst.gwFee}</span>
+                    <span className="text-[11px] text-muted bg-surface2 border border-white/8 rounded-full px-2 py-0.5">fwd fee ~{dst.gwFee}</span>
                   )}
                 </div>
-                <select value={toChain} onChange={e => { setToChain(e.target.value); setFeeInfo(null); setStatus(""); setStep(0); setSucceeded(false); }}
-                  className="w-full bg-surface2 border border-white/6 rounded-2xl px-3 py-2.5 text-[13px] text-ink outline-none focus:border-accent transition-colors cursor-pointer">
-                  {CHAIN_IDS.filter(id => id !== fromChain).map(id => (
-                    <option key={id} value={id}>{CHAINS[id].icon === "arc" ? "⚡" : CHAINS[id].icon}  {CHAINS[id].label}</option>
-                  ))}
-                </select>
-                <div className="flex items-center gap-3">
-                  <span className={`flex-1 text-[28px] font-bold ${amtNum > 0 ? "text-green" : "text-muted"}`}>
+                <ChainPicker value={toChain} onChange={v => { setToChain(v); setFeeInfo(null); setStatus(""); setStep(0); setSucceeded(false); setBridgeEst(null); }} exclude={fromChain} balances={chainBals} label="To" />
+                <div className="flex items-center gap-3 mt-1">
+                  <span className={`flex-1 text-[28px] font-bold tabular-nums ${amtNum > 0 ? "text-green" : "text-muted/30"}`}>
                     {amtNum > 0
                       ? (isKitMode
                           ? `~${(amtNum - amtNum*0.00005).toFixed(4)}`
@@ -684,7 +717,7 @@ export default function Bridge() {
                       : "0.00"
                     }
                   </span>
-                  <span className="text-[13px] text-muted font-medium shrink-0">USDC</span>
+                  <span className="text-[13px] font-semibold text-muted shrink-0">USDC</span>
                 </div>
               </div>
 
