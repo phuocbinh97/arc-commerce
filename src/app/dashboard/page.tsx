@@ -146,7 +146,7 @@ export default function Dashboard() {
           <div className="px-6 pt-6 pb-5 flex flex-col lg:flex-row lg:items-start gap-6 border-b border-white/8">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-[11px] font-bold uppercase tracking-widest text-accent">Unified Pool Balance</span>
+                <span className="text-[12px] font-black uppercase tracking-widest text-white">Unified Pool Balance</span>
                 <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-green/10 border border-green/20 text-green font-semibold">
                   <span className="w-1.5 h-1.5 rounded-full bg-green animate-pulse inline-block" />Circle CCTP
                 </span>
