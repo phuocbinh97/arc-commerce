@@ -5,6 +5,7 @@ import { useWallet } from "@/hooks/useWallet";
 import { useCheckout } from "@/hooks/useCheckout";
 import { formatUsdc, shortAddr, ARC_EXPLORER, EURC_ADDRESS } from "@/lib/arc";
 import { getSettings } from "@/lib/storage";
+import WalletModal from "@/components/WalletModal";
 
 type PayToken = "USDC" | "EURC" | "cirBTC" | "ETH" | "BNB" | "SOL" | "BTC" | "MATIC";
 
@@ -118,7 +119,8 @@ function CheckoutContent() {
   const merchantWalletParam = params.get("merchantWallet") || "";
   const redirect  = params.get("redirect")     || "";
 
-  const { account, isConnected, isArcNetwork, connect, switchToArc, getProvider } = useWallet();
+  const { account, isConnected, isArcNetwork, connect, connectWithProvider, switchToArc, disconnect, getProvider } = useWallet();
+  const [showWalletModal, setShowWalletModal] = useState(false);
   const { step, txHash, error, pay, reset } = useCheckout();
 
   const [usdcBalance, setUsdcBalance] = useState("—");
@@ -287,9 +289,34 @@ function CheckoutContent() {
           <div className="p-6">
 
             {/* Wallet status */}
+            {showWalletModal && (
+              <WalletModal
+                onConnect={(provider, addr, name) => { setShowWalletModal(false); connectWithProvider(provider, addr, name); }}
+                onClose={() => setShowWalletModal(false)}
+              />
+            )}
             <div className="flex items-center justify-between mb-4 p-3 bg-surface2 border border-white/8 rounded-2xl text-sm">
-              <span className="text-muted">{isConnected ? `Connected: ${shortAddr(account)}` : "Wallet not connected"}</span>
-              {isArcNetwork && <span className="flex items-center gap-1.5 text-accent font-semibold"><span className="w-2 h-2 rounded-full bg-accent" />Arc Testnet</span>}
+              {isConnected ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-green shrink-0" />
+                    <span className="text-ink font-mono text-[12.5px]">{shortAddr(account)}</span>
+                    {isArcNetwork && <span className="text-[11px] text-accent font-semibold">· Arc Testnet</span>}
+                  </div>
+                  <button onClick={() => { disconnect(); }}
+                    className="text-[11px] text-muted hover:text-red transition-colors font-medium">
+                    Đổi ví
+                  </button>
+                </>
+              ) : (
+                <>
+                  <span className="text-muted text-[13px]">Chưa kết nối ví</span>
+                  <button onClick={() => setShowWalletModal(true)}
+                    className="px-3 py-1.5 bg-accent text-white text-[12px] font-bold rounded-xl hover:bg-accent/90 transition-all">
+                    Kết nối ví
+                  </button>
+                </>
+              )}
             </div>
 
             {/* Merchant */}
