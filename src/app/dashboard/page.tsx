@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Topbar from "@/components/Topbar";
+import { useWallet } from "@/hooks/useWallet";
 import { PaymentHistory } from "@/lib/storage";
 import { formatUsdc, shortAddr, timeAgo, ARC_EXPLORER } from "@/lib/arc";
 import Link from "next/link";
@@ -33,6 +34,7 @@ async function fetchUsdcOn(chain: typeof UNIFIED_CHAINS[0], addr: string): Promi
 }
 
 export default function Dashboard() {
+  const { account } = useWallet();
   const [hist, setHist] = useState<PaymentHistory[]>([]);
   const [range, setRange] = useState(7);
   const [mounted, setMounted] = useState(false);
@@ -40,28 +42,21 @@ export default function Dashboard() {
   const [poolBal, setPoolBal] = useState<string | null>(null);
   const [poolLoading, setPoolLoading] = useState(false);
 
+  // Load chain balances whenever wallet account changes
+  useEffect(() => {
+    const addr = account || localStorage.getItem("arcExpectedAddress") || "";
+    if (!addr) return;
+    checkPoolBalance(addr);
+    Promise.all(UNIFIED_CHAINS.map(c => fetchUsdcOn(c, addr).then(bal => ({ key: c.key, bal }))))
+      .then(results => {
+        const bals: Record<string, string> = {};
+        results.forEach(r => { bals[r.key] = r.bal; });
+        setChainBals(bals);
+      });
+  }, [account]);
+
   useEffect(() => {
     setMounted(true);
-
-    async function loadBalances() {
-      let addr = localStorage.getItem("arcExpectedAddress") || "";
-      if (!addr) {
-        try {
-          const eth = (window as any).ethereum;
-          const accs: string[] = eth ? await eth.request({ method: "eth_accounts" }).catch(() => []) : [];
-          if (accs[0]) addr = accs[0];
-        } catch {}
-      }
-      if (!addr) return;
-      checkPoolBalance(addr);
-      Promise.all(UNIFIED_CHAINS.map(c => fetchUsdcOn(c, addr).then(bal => ({ key: c.key, bal }))))
-        .then(results => {
-          const bals: Record<string, string> = {};
-          results.forEach(r => { bals[r.key] = r.bal; });
-          setChainBals(bals);
-        });
-    }
-    loadBalances();
 
     if (localStorage.getItem("arcWalletDisconnected") === "1") return;
     async function loadTxns() {
