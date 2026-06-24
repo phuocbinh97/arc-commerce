@@ -178,11 +178,11 @@ export default function Treasury() {
   return (
     <>
       <Topbar title="Treasury" />
-      <div className="p-6 flex-1 flex flex-col items-center gap-5 max-w-[860px] mx-auto w-full">
+      <div className="p-6 flex-1 flex flex-col items-center gap-5 max-w-[560px] mx-auto w-full">
 
         {/* Balance Overview — Confirmed / Pending / In Motion */}
         {isConnected && (
-          <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="w-full grid grid-cols-2 gap-3">
             {/* Confirmed */}
             <div className="bg-surface border border-white/8 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-2">

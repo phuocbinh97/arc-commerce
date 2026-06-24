@@ -554,7 +554,7 @@ export default function Bridge() {
   return (
     <>
       <Topbar title="Bridge" />
-      <div className="p-4 lg:p-6 flex-1 flex flex-col items-center gap-4 lg:gap-5 max-w-[860px] mx-auto w-full">
+      <div className="p-4 lg:p-6 flex-1 flex flex-col items-center gap-4 lg:gap-5 max-w-[560px] mx-auto w-full">
 
         {/* Pending bridge relay banner */}
         {pendingBridges.length > 0 && !relaying && (

@@ -169,7 +169,7 @@ function UnifiedBalanceInner() {
   return (
     <>
       <Topbar title="Unified Balance" />
-      <div className="p-4 lg:p-6 flex-1 flex flex-col items-center gap-4 max-w-[600px] mx-auto w-full">
+      <div className="p-4 lg:p-6 flex-1 flex flex-col items-center gap-4 max-w-[520px] mx-auto w-full">
 
         {/* Explainer */}
         <div className="w-full bg-accent/6 border border-accent/20 rounded-xl px-4 py-3">

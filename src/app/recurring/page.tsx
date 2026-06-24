@@ -435,7 +435,7 @@ export default function Recurring() {
   return (
     <>
       <Topbar title="Recurring Payments" action={{ label: "+ New Schedule", onClick: () => setShowForm(true) }} />
-      <div className="p-4 lg:p-7 flex-1">
+      <div className="p-4 lg:p-7 flex-1 max-w-[760px] mx-auto w-full">
 
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6">
