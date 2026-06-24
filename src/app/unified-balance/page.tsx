@@ -48,19 +48,24 @@ function UnifiedBalanceInner() {
   const spendAmtNum = parseFloat(spendAmt) || 0;
 
   useEffect(() => {
-    if (account) fetchPoolBalance();
+    fetchPoolBalance();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account]);
 
   async function fetchPoolBalance() {
-    if (!account) return;
+    // resolve address from connected wallet or localStorage cache
+    const addr = account
+      || localStorage.getItem("arcExpectedAddress")
+      || (() => { try { const e = (window as any).ethereum; return null; } catch { return null; } })()
+      || "";
+    if (!addr) return;
     setBalLoading(true);
     try {
       const { AppKit } = await import("@circle-fin/app-kit") as any;
       const kit = new AppKit();
       const res = await kit.unifiedBalance.getBalances({
         token: "USDC",
-        sources: { address: account, chains: ["Arc_Testnet","Ethereum_Sepolia","Base_Sepolia","Arbitrum_Sepolia","Optimism_Sepolia"] },
+        sources: { address: addr, chains: ["Arc_Testnet","Ethereum_Sepolia","Base_Sepolia","Arbitrum_Sepolia","Optimism_Sepolia"] },
       });
       setPoolBal(parseFloat(res?.totalConfirmedBalance ?? "0").toFixed(2));
     } catch {

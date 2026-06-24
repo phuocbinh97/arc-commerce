@@ -50,9 +50,34 @@ export default function Dashboard() {
 
   useEffect(() => {
     setMounted(true);
-    if (localStorage.getItem("arcWalletDisconnected") === "1") return;
 
-    async function load() {
+    // Always try to load balances — even when wallet UI is "disconnected",
+    // the address may still be cached or readable via eth_accounts.
+    async function loadBalances() {
+      // Resolve address: cached → MetaMask eth_accounts → give up
+      let addr = localStorage.getItem("arcExpectedAddress") || "";
+      if (!addr) {
+        try {
+          const eth = (window as any).ethereum;
+          const accs: string[] = eth ? await eth.request({ method: "eth_accounts" }).catch(() => []) : [];
+          if (accs[0]) addr = accs[0];
+        } catch {}
+      }
+      if (!addr) return;
+
+      checkPoolBalance();
+      Promise.all(UNIFIED_CHAINS.map(c => fetchUsdcOn(c, addr).then(bal => ({ key: c.key, bal }))))
+        .then(results => {
+          const bals: Record<string, string> = {};
+          results.forEach(r => { bals[r.key] = r.bal; });
+          setChainBals(bals);
+        });
+    }
+    loadBalances();
+
+    // Transaction history only loads when merchant is fully logged in
+    if (localStorage.getItem("arcWalletDisconnected") === "1") return;
+    async function loadTxns() {
       let session = JSON.parse(localStorage.getItem("arcMerchantSession") || "{}");
       let merchantId = session.merchantId;
       if (!merchantId) {
@@ -74,18 +99,7 @@ export default function Dashboard() {
       deduped.sort((a: any, b: any) => b.ts - a.ts);
       setHist(deduped);
     }
-
-    load();
-    const expectedAddr = localStorage.getItem("arcExpectedAddress") || "";
-    checkPoolBalance();
-    if (expectedAddr) {
-      Promise.all(UNIFIED_CHAINS.map(c => fetchUsdcOn(c, expectedAddr).then(bal => ({ key: c.key, bal }))))
-        .then(results => {
-          const bals: Record<string, string> = {};
-          results.forEach(r => { bals[r.key] = r.bal; });
-          setChainBals(bals);
-        });
-    }
+    loadTxns();
   }, []);
 
   const filtered = range >= 90 ? hist : hist.filter(h => h.ts >= Date.now() - range * 86400000);
@@ -109,7 +123,15 @@ export default function Dashboard() {
   async function checkPoolBalance() {
     setPoolLoading(true);
     try {
-      const expectedAddr = localStorage.getItem("arcExpectedAddress") || "";
+      let expectedAddr = localStorage.getItem("arcExpectedAddress") || "";
+      if (!expectedAddr) {
+        // fallback: try eth_accounts
+        try {
+          const eth = (window as any).ethereum;
+          const accs: string[] = eth ? await eth.request({ method: "eth_accounts" }).catch(() => []) : [];
+          if (accs[0]) expectedAddr = accs[0];
+        } catch {}
+      }
       if (!expectedAddr) { setPoolBal("—"); setPoolLoading(false); return; }
       const { AppKit } = await import("@circle-fin/app-kit") as any;
       const kit = new AppKit();
