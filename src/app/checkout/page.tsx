@@ -602,18 +602,34 @@ function CheckoutContent() {
                 <span className="text-[12.5px] font-semibold text-muted">Pay with</span>
                 <span className="text-[11px] text-muted">Merchant always receives USDC</span>
               </div>
-              <TokenDropdown value={payToken} onChange={setPayToken} balances={{ USDC: usdcBalance, EURC: eurcBalance }} />
-              {payToken === "EURC" && (
+
+              {bridgeMode && selectedPayChain ? (
+                /* Bridge mode: show source chain USDC, not Arc */
+                <div className="w-full flex items-center gap-3 px-3 py-2.5 bg-surface2 border border-purple/30 rounded-2xl">
+                  <div className="w-7 h-7 rounded-full grid place-items-center text-[13px] font-bold shrink-0 bg-[#2775ca] text-white">$</div>
+                  <div className="flex-1 text-left">
+                    <div className="text-[13.5px] font-semibold text-ink">USDC</div>
+                    <div className="text-[10.5px] text-muted">{selectedPayChain.label}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[11px] font-mono text-muted">{crossChainBal !== "—" ? `${crossChainBal} USDC` : "fetching…"}</div>
+                  </div>
+                </div>
+              ) : (
+                <TokenDropdown value={payToken} onChange={setPayToken} balances={{ USDC: usdcBalance, EURC: eurcBalance }} />
+              )}
+
+              {!bridgeMode && payToken === "EURC" && (
                 <div className="mt-2 px-3 py-2 bg-surface2 border border-white/8 rounded-2xl text-[11.5px] text-muted">
                   ~{(parseFloat(amount) * 1.01).toFixed(2)} EURC will be swapped → {amount} USDC via Arc App Kit.
                 </div>
               )}
-              {TOKENS[payToken].status === "crosschain-soon" && (
+              {!bridgeMode && TOKENS[payToken].status === "crosschain-soon" && (
                 <div className="mt-2 px-3 py-2 bg-purple/10 border border-purple/20 rounded-2xl text-[11.5px] text-[#a371f7]">
                   🔗 Cross-chain via LI.FI — coming on Arc Mainnet. {activeMeta.label} → USDC auto-swap.
                 </div>
               )}
-              {payToken === "cirBTC" && (
+              {!bridgeMode && payToken === "cirBTC" && (
                 <div className="mt-2 px-3 py-2 bg-amber/10 border border-amber/20 rounded-2xl text-[11.5px] text-amber">
                   ⏳ cirBTC swap coming soon on Arc App Kit.
                 </div>
@@ -621,7 +637,15 @@ function CheckoutContent() {
             </div>
 
             {/* Balance row */}
-            {isConnected && TOKENS[payToken].status === "live" && (
+            {isConnected && (bridgeMode && selectedPayChain ? (
+              <div className={`mb-4 flex items-center justify-between px-3 py-2 rounded-2xl text-sm font-medium
+                ${crossChainBal !== "—" && parseFloat(crossChainBal) >= parseFloat(amount)
+                  ? "bg-green/10 border border-green/20 text-green"
+                  : "bg-red/10 border border-red/20 text-red"}`}>
+                <span>Your USDC balance on {selectedPayChain.shortLabel}: {crossChainBal !== "—" ? crossChainBal : "…"}</span>
+                <span>{crossChainBal !== "—" && parseFloat(crossChainBal) >= parseFloat(amount) ? "✓ Sufficient" : "✗ Insufficient"}</span>
+              </div>
+            ) : TOKENS[payToken].status === "live" ? (
               <div className={`mb-4 flex items-center justify-between px-3 py-2 rounded-2xl text-sm font-medium
                 ${activeSufficient ? "bg-green/10 border border-green/20 text-green" : "bg-red/10 border border-red/20 text-red"}`}>
                 <span>Your {activeMeta.label} balance: {activeBalance}</span>
@@ -635,7 +659,7 @@ function CheckoutContent() {
                   )}
                 </div>
               </div>
-            )}
+            ) : null)}
 
             {/* No gas warning */}
             {isConnected && payToken === "EURC" && !hasGas && (
