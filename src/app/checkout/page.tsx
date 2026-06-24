@@ -134,10 +134,14 @@ function CheckoutContent() {
   const [feeEst, setFeeEst]           = useState<{ gas: string; total: string } | null>(null);
 
   // Multi-chain state
-  const [customerChain, setCustomerChain] = useState<ChainConfig | null>(null);
-  const [rawChainId, setRawChainId]       = useState<number | null>(null);
-  const [crossChainBal, setCrossChainBal] = useState("—");
-  const [bridgeMode, setBridgeMode]       = useState(false);
+  const [customerChain, setCustomerChain]     = useState<ChainConfig | null>(null);
+  const [rawChainId, setRawChainId]           = useState<number | null>(null);
+  const [crossChainBal, setCrossChainBal]     = useState("—");
+  const [bridgeMode, setBridgeMode]           = useState(false);
+  const [allBalances, setAllBalances]         = useState<Record<string, string>>({});
+  const [loadingBalances, setLoadingBalances] = useState(false);
+  const [selectedPayChain, setSelectedPayChain] = useState<ChainConfig | null>(null);
+  const [switching, setSwitching]             = useState(false);
   const [merchantOverride, setMerchantOverride] = useState<{ wallet: string; merchantId: string } | undefined>();
   const [merchantSiteUrl, setMerchantSiteUrl]   = useState("");
   const [loadingMerchant, setLoadingMerchant]   = useState(false);
@@ -190,15 +194,30 @@ function CheckoutContent() {
     return () => { eth.removeListener?.("chainChanged", handler); clearInterval(poll); };
   }, []);
 
-  // Fetch USDC on customer's current chain
+  // Fetch USDC balance on the currently active chain (for bridge flow)
   useEffect(() => {
-    if (!account || !customerChain) return;
-    if (customerChain.key === ARC_CHAIN.key) {
+    if (!account || !customerChain || customerChain.key === ARC_CHAIN.key) {
       setCrossChainBal("—");
       return;
     }
     fetchUsdcBalance(customerChain, account).then(setCrossChainBal);
   }, [account, customerChain]);
+
+  // Fetch USDC balances on ALL chains so customer can choose where to pay from
+  useEffect(() => {
+    if (!account) return;
+    setLoadingBalances(true);
+    Promise.all(
+      SUPPORTED_CHAINS.map(c =>
+        fetchUsdcBalance(c, account).then(bal => ({ key: c.key, bal }))
+      )
+    ).then(results => {
+      const bals: Record<string, string> = {};
+      results.forEach(r => { bals[r.key] = r.bal; });
+      setAllBalances(bals);
+      setLoadingBalances(false);
+    });
+  }, [account]);
 
   useEffect(() => {
     if (!account) return;
@@ -284,8 +303,42 @@ function CheckoutContent() {
 
   // Show banner whenever wallet is NOT on Arc (rawChainId != 5042002), regardless of whitelist
   const ARC_CHAIN_ID_NUM = 5042002;
+  const ARC_HEX = "0x4CEF52";
+  const CHAIN_HEX: Record<string, string> = {
+    Arc_Testnet:          "0x4CEF52",
+    Ethereum_Sepolia:     "0xaa36a7",
+    Base_Sepolia:         "0x14a34",
+    Arbitrum_Sepolia:     "0x66eee",
+    Optimism_Sepolia:     "0xaa37dc",
+    Polygon_Amoy_Testnet: "0x13882",
+    Avalanche_Fuji:       "0xa869",
+  };
+
+  async function switchToChain(chain: ChainConfig) {
+    const eth = (window as any).ethereum;
+    if (!eth) return;
+    setSwitching(true);
+    try {
+      await eth.request({ method: "wallet_switchEthereumChain", params: [{ chainId: CHAIN_HEX[chain.key] }] });
+    } catch (e: any) {
+      if (e.code === 4902) {
+        // Chain not added yet — add it
+        const rpcMap: Record<string, object> = {
+          Arc_Testnet: { chainId: "0x4CEF52", chainName: "Arc Testnet", rpcUrls: ["https://rpc.testnet.arc.network"], nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 }, blockExplorerUrls: ["https://testnet.arcscan.app"] },
+          Base_Sepolia: { chainId: "0x14a34", chainName: "Base Sepolia", rpcUrls: ["https://sepolia.base.org"], nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 }, blockExplorerUrls: ["https://sepolia.basescan.org"] },
+          Arbitrum_Sepolia: { chainId: "0x66eee", chainName: "Arbitrum Sepolia", rpcUrls: ["https://sepolia-rollup.arbitrum.io/rpc"], nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 }, blockExplorerUrls: ["https://sepolia.arbiscan.io"] },
+          Optimism_Sepolia: { chainId: "0xaa37dc", chainName: "Optimism Sepolia", rpcUrls: ["https://sepolia.optimism.io"], nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 }, blockExplorerUrls: ["https://sepolia-optimism.etherscan.io"] },
+          Polygon_Amoy_Testnet: { chainId: "0x13882", chainName: "Polygon Amoy", rpcUrls: ["https://rpc-amoy.polygon.technology"], nativeCurrency: { name: "MATIC", symbol: "MATIC", decimals: 18 }, blockExplorerUrls: ["https://amoy.polygonscan.com"] },
+          Avalanche_Fuji: { chainId: "0xa869", chainName: "Avalanche Fuji", rpcUrls: ["https://api.avax-test.network/ext/bc/C/rpc"], nativeCurrency: { name: "AVAX", symbol: "AVAX", decimals: 18 }, blockExplorerUrls: ["https://testnet.snowtrace.io"] },
+        };
+        if (rpcMap[chain.key]) await eth.request({ method: "wallet_addEthereumChain", params: [rpcMap[chain.key]] });
+      }
+    }
+    setSwitching(false);
+  }
+
   const isOnNonArcChain = rawChainId != null && rawChainId !== ARC_CHAIN_ID_NUM;
-  const isOnNonArcSupportedChain = isOnNonArcChain; // keep variable name for banner logic
+  const isOnNonArcSupportedChain = isOnNonArcChain;
   const chainDisplayName = customerChain?.label ?? `Chain ID ${rawChainId}`;
   const crossChainSufficient = crossChainBal !== "—" && parseFloat(crossChainBal) >= parseFloat(amount);
 
@@ -378,8 +431,75 @@ function CheckoutContent() {
               )}
             </div>
 
-            {/* Multi-chain banner: customer is on a non-Arc chain */}
-            {isOnNonArcSupportedChain && !bridgeMode && (
+            {/* Chain selector — shown when wallet connected, auto-fetches all balances */}
+            {isConnected && !bridgeMode && (
+              <div className="mb-4">
+                <div className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2">
+                  Pay from
+                  {loadingBalances && <span className="ml-2 text-muted/60 normal-case font-normal">fetching balances…</span>}
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                  {SUPPORTED_CHAINS.map(c => {
+                    const bal = allBalances[c.key] ?? "…";
+                    const hasBal = bal !== "—" && bal !== "…" && parseFloat(bal) >= parseFloat(amount);
+                    const isActive = customerChain?.key === c.key;
+                    return (
+                      <button key={c.key}
+                        disabled={switching}
+                        onClick={async () => {
+                          if (c.key === ARC_CHAIN.key) {
+                            setBridgeMode(false);
+                            setSelectedPayChain(c);
+                            await switchToChain(c);
+                          } else {
+                            setSelectedPayChain(c);
+                            setBridgeMode(true);
+                            await switchToChain(c);
+                          }
+                        }}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-left transition-all
+                          ${isActive
+                            ? "border-accent/50 bg-accent/10"
+                            : hasBal
+                            ? "border-white/10 bg-surface2 hover:border-white/20"
+                            : "border-white/6 bg-surface2/50 opacity-60"
+                          }`}>
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: c.color }} />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[11.5px] font-semibold text-ink truncate">{c.shortLabel}</div>
+                          <div className={`font-mono text-[10.5px] ${hasBal ? "text-green" : "text-muted/60"}`}>
+                            {bal} USDC
+                          </div>
+                        </div>
+                        {isActive && <span className="text-accent text-[10px]">✓</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+                {bridgeMode && selectedPayChain && selectedPayChain.key !== ARC_CHAIN.key && (
+                  <div className="mt-2 flex items-center gap-2 text-[11px] text-muted px-1">
+                    <span className="px-2 py-0.5 rounded-full border border-white/8 bg-surface2 text-[10.5px]">{selectedPayChain.shortLabel}</span>
+                    <span>→ Circle CCTP bridge →</span>
+                    <span className="px-2 py-0.5 rounded-full border border-accent/20 bg-accent/10 text-accent text-[10.5px]">Arc</span>
+                    <span>→ Merchant ✓</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Old bridge mode active banner (non-Arc chain selected) */}
+            {isConnected && bridgeMode && !isOnNonArcSupportedChain && (
+              <div className="mb-4 px-4 py-3 bg-purple/8 border border-purple/20 rounded-2xl">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full" style={{ background: customerChain?.color ?? "#a371f7" }} />
+                  <span className="text-[12.5px] font-semibold text-ink">Wallet on {chainDisplayName}</span>
+                  <button onClick={() => setBridgeMode(false)} className="ml-auto text-[11px] text-muted hover:text-ink">✕</button>
+                </div>
+              </div>
+            )}
+
+            {/* Legacy: non-Arc chain banner */}
+            {isOnNonArcSupportedChain && !bridgeMode && false && (
               <div className="mb-4 px-4 py-3 bg-purple/8 border border-purple/20 rounded-2xl">
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-2">
