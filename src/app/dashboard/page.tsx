@@ -36,7 +36,7 @@ async function fetchUsdcOn(chain: typeof UNIFIED_CHAINS[0], addr: string): Promi
 }
 
 /* ─── inline style helpers ────────────────────────────────────────── */
-const card = { background: "#111520", boxShadow: "0 1px 3px rgba(0,0,0,0.6), 0 6px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(7,87,249,0.18), 0 0 16px rgba(7,87,249,0.05)" } as const;
+const card = { background: "#111520", boxShadow: "0 2px 8px rgba(0,0,0,0.7), 0 0 0 1px rgba(30,100,255,0.35), 0 0 20px rgba(7,87,249,0.12)" } as const;
 const cardHd = { borderBottom: "1px solid rgba(255,255,255,0.05)" } as const;
 const cardRow = { borderBottom: "1px solid rgba(255,255,255,0.04)" } as const;
 
