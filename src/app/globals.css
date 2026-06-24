@@ -80,13 +80,23 @@ body { background: var(--color-bg); color: var(--color-ink); }
 .bg-surface .border-b { border-color: var(--border-color) !important; }
 .bg-surface .border-t { border-color: var(--border-color) !important; }
 
-/* ── Light mode: fix hardcoded dark backgrounds ─────────────────────
-   Elements that use style={{ background: "#111520" }} etc can't be
-   overridden via CSS — we target their wrapper class instead.         */
+/* ── Light mode overrides ───────────────────────────────────────────── */
+/* Force text readable in light mode */
+:root.light .text-ink  { color: #18202e !important; }
+:root.light .text-muted { color: #5a6474 !important; }
+
+/* Fix gradient text (white-on-white) in hero */
+:root.light [style*="WebkitTextFillColor: transparent"],
+:root.light [style*="-webkit-text-fill-color: transparent"] {
+  -webkit-text-fill-color: #18202e !important;
+  background: none !important;
+}
+
+/* Hardcoded dark bg classes used in pages */
 :root.light .bg-\[#0d1018\],
 :root.light .bg-\[#090d12\],
 :root.light .bg-\[#111520\],
-:root.light .bg-\[#131825\] { background-color: #ffffff !important; }
+:root.light .bg-\[#131825\] { background-color: #ffffff !important; color: #18202e; }
 
 :root.light .bg-\[#181e2e\],
 :root.light .bg-\[#1a2236\] { background-color: #f0f4fa !important; }
