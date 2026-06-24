@@ -135,8 +135,9 @@ function CheckoutContent() {
 
   // Multi-chain state
   const [customerChain, setCustomerChain] = useState<ChainConfig | null>(null);
+  const [rawChainId, setRawChainId]       = useState<number | null>(null);
   const [crossChainBal, setCrossChainBal] = useState("—");
-  const [bridgeMode, setBridgeMode]       = useState(false); // true = customer wants to pay from non-Arc chain
+  const [bridgeMode, setBridgeMode]       = useState(false);
   const [merchantOverride, setMerchantOverride] = useState<{ wallet: string; merchantId: string } | undefined>();
   const [merchantSiteUrl, setMerchantSiteUrl]   = useState("");
   const [loadingMerchant, setLoadingMerchant]   = useState(false);
@@ -165,24 +166,28 @@ function CheckoutContent() {
       .finally(() => setLoadingMerchant(false));
   }, [merchantParam]);
 
-  // Detect customer's current chain — read directly from window.ethereum, not cached provider
+  // Detect customer's current chain — read directly from window.ethereum
   useEffect(() => {
     const eth = (window as any).ethereum;
     if (!eth) return;
     const detect = () => {
       eth.request({ method: "eth_chainId" }).then((hex: string) => {
         const id = parseChainId(hex);
+        setRawChainId(id);
         setCustomerChain(getChainByChainId(id) || null);
       }).catch(() => {});
     };
     detect();
     const handler = (hex: string) => {
       const id = parseChainId(hex);
+      setRawChainId(id);
       setCustomerChain(getChainByChainId(id) || null);
       setBridgeMode(false);
     };
     eth.on?.("chainChanged", handler);
-    return () => eth.removeListener?.("chainChanged", handler);
+    // Also poll every 2s as fallback (some wallets don't fire chainChanged)
+    const poll = setInterval(detect, 2000);
+    return () => { eth.removeListener?.("chainChanged", handler); clearInterval(poll); };
   }, []);
 
   // Fetch USDC on customer's current chain
@@ -277,8 +282,11 @@ function CheckoutContent() {
   const activeBalance    = getBalance(payToken);
   const activeMeta       = TOKENS[payToken];
 
-  // Show multi-chain banner whenever wallet is on a non-Arc supported chain (even if useWallet thinks it's Arc)
-  const isOnNonArcSupportedChain = customerChain != null && customerChain.key !== ARC_CHAIN.key;
+  // Show banner whenever wallet is NOT on Arc (rawChainId != 5042002), regardless of whitelist
+  const ARC_CHAIN_ID_NUM = 5042002;
+  const isOnNonArcChain = rawChainId != null && rawChainId !== ARC_CHAIN_ID_NUM;
+  const isOnNonArcSupportedChain = isOnNonArcChain; // keep variable name for banner logic
+  const chainDisplayName = customerChain?.label ?? `Chain ID ${rawChainId}`;
   const crossChainSufficient = crossChainBal !== "—" && parseFloat(crossChainBal) >= parseFloat(amount);
 
   async function handlePay() {
@@ -375,37 +383,49 @@ function CheckoutContent() {
               <div className="mb-4 px-4 py-3 bg-purple/8 border border-purple/20 rounded-2xl">
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: customerChain!.color }} />
-                    <span className="text-[12.5px] font-semibold text-ink">
-                      Wallet on {customerChain!.label}
-                    </span>
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: customerChain?.color ?? "#a371f7" }} />
+                    <span className="text-[12.5px] font-semibold text-ink">Wallet on {chainDisplayName}</span>
                   </div>
-                  <span className="text-[11px] text-muted font-mono">{crossChainBal} USDC</span>
+                  {customerChain && <span className="text-[11px] text-muted font-mono">{crossChainBal} USDC</span>}
                 </div>
-                <p className="text-[11px] text-muted mb-2.5">
-                  Pay directly from {customerChain!.shortLabel} — USDC will auto-bridge to Arc via Circle CCTP (~25s).
-                </p>
-                <div className="flex gap-2">
-                  <button onClick={() => setBridgeMode(true)}
-                    disabled={!crossChainSufficient}
-                    className="flex-1 py-2 bg-purple/20 border border-purple/30 text-[#c084fc] text-[12px] font-bold rounded-xl hover:bg-purple/30 transition-all disabled:opacity-40">
-                    🌉 Pay from {customerChain!.shortLabel} (Bridge & Pay)
-                  </button>
-                  <button onClick={switchToArc}
-                    className="px-3 py-2 bg-surface2 border border-white/8 text-muted text-[12px] rounded-xl hover:bg-surface2/80 transition-all">
-                    Switch to Arc
-                  </button>
-                </div>
-                {!crossChainSufficient && (
-                  <p className="text-[11px] text-red mt-1.5">
-                    Insufficient USDC on {customerChain!.shortLabel} to pay {amount} USDC.
-                  </p>
+                {customerChain ? (
+                  <>
+                    <p className="text-[11px] text-muted mb-2.5">
+                      Pay directly from {customerChain.shortLabel} — USDC will auto-bridge to Arc via Circle CCTP (~25s).
+                    </p>
+                    <div className="flex gap-2">
+                      <button onClick={() => setBridgeMode(true)}
+                        disabled={!crossChainSufficient}
+                        className="flex-1 py-2 bg-purple/20 border border-purple/30 text-[#c084fc] text-[12px] font-bold rounded-xl hover:bg-purple/30 transition-all disabled:opacity-40">
+                        🌉 Pay from {customerChain.shortLabel} (Bridge & Pay)
+                      </button>
+                      <button onClick={switchToArc}
+                        className="px-3 py-2 bg-surface2 border border-white/8 text-muted text-[12px] rounded-xl hover:bg-surface2/80 transition-all">
+                        Switch to Arc
+                      </button>
+                    </div>
+                    {!crossChainSufficient && (
+                      <p className="text-[11px] text-red mt-1.5">
+                        Insufficient USDC on {customerChain.shortLabel} to pay {amount} USDC.
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <p className="text-[11px] text-muted mb-2.5">
+                      This chain is not supported for Bridge & Pay. Please switch to Arc Testnet to pay.
+                    </p>
+                    <button onClick={switchToArc}
+                      className="w-full py-2 bg-accent text-white text-[12px] font-bold rounded-xl hover:bg-accent/90 transition-all">
+                      Switch to Arc Testnet
+                    </button>
+                  </>
                 )}
               </div>
             )}
 
             {/* Bridge mode active */}
-            {bridgeMode && customerChain && customerChain.key !== ARC_CHAIN.key && (
+            {bridgeMode && customerChain && (
               <div className="mb-4 px-4 py-3 bg-purple/8 border border-purple/25 rounded-2xl">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
