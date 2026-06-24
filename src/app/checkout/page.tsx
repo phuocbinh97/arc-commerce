@@ -6,6 +6,7 @@ import { useCheckout } from "@/hooks/useCheckout";
 import { formatUsdc, shortAddr, ARC_EXPLORER, EURC_ADDRESS } from "@/lib/arc";
 import { getSettings } from "@/lib/storage";
 import WalletModal from "@/components/WalletModal";
+import { SUPPORTED_CHAINS, getChainByChainId, parseChainId, fetchUsdcBalance, ARC_CHAIN, type ChainConfig } from "@/lib/multichain";
 
 type PayToken = "USDC" | "EURC" | "cirBTC" | "ETH" | "BNB" | "SOL" | "BTC" | "MATIC";
 
@@ -40,6 +41,9 @@ const STEP_LABELS: Record<string, string> = {
   "confirming-approve": "Confirming approve…",
   paying:               "Step 2/2 — Sending payment…",
   "confirming-pay":     "Waiting for receipt…",
+  bridging:             "Bridging USDC to Arc…",
+  "waiting-bridge":     "Waiting for bridge (~25s)…",
+  "switching-network":  "Switching to Arc network…",
   success:              "Payment Confirmed!",
   error:                "Try again",
 };
@@ -121,13 +125,18 @@ function CheckoutContent() {
 
   const { account, isConnected, isArcNetwork, connect, connectWithProvider, switchToArc, disconnect, getProvider } = useWallet();
   const [showWalletModal, setShowWalletModal] = useState(false);
-  const { step, txHash, error, pay, reset } = useCheckout();
+  const { step, txHash, error, pay, bridgeAndPay, reset } = useCheckout();
 
   const [usdcBalance, setUsdcBalance] = useState("—");
   const [eurcBalance, setEurcBalance] = useState("—");
   const [payToken, setPayToken]       = useState<PayToken>("USDC");
   const [payerName, setPayerName]     = useState("");
   const [feeEst, setFeeEst]           = useState<{ gas: string; total: string } | null>(null);
+
+  // Multi-chain state
+  const [customerChain, setCustomerChain] = useState<ChainConfig | null>(null);
+  const [crossChainBal, setCrossChainBal] = useState("—");
+  const [bridgeMode, setBridgeMode]       = useState(false); // true = customer wants to pay from non-Arc chain
   const [merchantOverride, setMerchantOverride] = useState<{ wallet: string; merchantId: string } | undefined>();
   const [merchantSiteUrl, setMerchantSiteUrl]   = useState("");
   const [loadingMerchant, setLoadingMerchant]   = useState(false);
@@ -155,6 +164,35 @@ function CheckoutContent() {
       .catch(console.error)
       .finally(() => setLoadingMerchant(false));
   }, [merchantParam]);
+
+  // Detect customer's current chain
+  useEffect(() => {
+    if (!isConnected) return;
+    const eth = getProvider();
+    if (!eth) return;
+    eth.request({ method: "eth_chainId" }).then((hex: string) => {
+      const id = parseChainId(hex);
+      const chain = getChainByChainId(id);
+      setCustomerChain(chain || null);
+    });
+    const handler = (hex: string) => {
+      const id = parseChainId(hex);
+      setCustomerChain(getChainByChainId(id) || null);
+      setBridgeMode(false);
+    };
+    eth.on?.("chainChanged", handler);
+    return () => eth.removeListener?.("chainChanged", handler);
+  }, [isConnected, account]);
+
+  // Fetch USDC on customer's current chain
+  useEffect(() => {
+    if (!account || !customerChain) return;
+    if (customerChain.key === ARC_CHAIN.key) {
+      setCrossChainBal("—");
+      return;
+    }
+    fetchUsdcBalance(customerChain, account).then(setCrossChainBal);
+  }, [account, customerChain]);
 
   useEffect(() => {
     if (!account) return;
@@ -238,20 +276,31 @@ function CheckoutContent() {
   const activeBalance    = getBalance(payToken);
   const activeMeta       = TOKENS[payToken];
 
+  const isOnNonArcSupportedChain = isConnected && customerChain && customerChain.key !== ARC_CHAIN.key;
+  const crossChainSufficient = crossChainBal !== "—" && parseFloat(crossChainBal) >= parseFloat(amount);
+
   async function handlePay() {
-    if (!isConnected) { await connect(); return; }
+    if (!isConnected) { setShowWalletModal(true); return; }
+    if (bridgeMode && customerChain && customerChain.key !== ARC_CHAIN.key) {
+      await bridgeAndPay({ amount, orderId, memo, payerName: payerName.trim() || undefined, merchantOverride, sourceChainKey: customerChain.key, provider: getProvider() }).catch(() => {});
+      return;
+    }
     if (!isArcNetwork) { await switchToArc(); return; }
     await pay({ amount, orderId, memo, payerName: payerName.trim() || undefined, merchantOverride, payToken: payToken as "USDC" | "EURC", provider: getProvider() }).catch(() => {});
   }
 
+  const isBridging = ["bridging", "waiting-bridge", "switching-network"].includes(step);
   const payLabel = (step === "idle" || step === "error")
-    ? payToken === "USDC" ? "Pay with USDC" : `Swap ${activeMeta.label} → USDC & Pay`
+    ? bridgeMode
+      ? `Bridge & Pay from ${customerChain?.shortLabel || "Other Chain"}`
+      : payToken === "USDC" ? "Pay with USDC" : `Swap ${activeMeta.label} → USDC & Pay`
     : STEP_LABELS[step];
 
   const canPay = ["idle", "error"].includes(step)
     && !loadingMerchant
-    && !(isConnected && !activeSufficient)
-    && !(isConnected && payToken === "EURC" && !hasGas);
+    && !(isConnected && !bridgeMode && !activeSufficient)
+    && !(isConnected && !bridgeMode && payToken === "EURC" && !hasGas)
+    && !(bridgeMode && !crossChainSufficient);
 
   if (step === "success") {
     return (
@@ -318,6 +367,68 @@ function CheckoutContent() {
                 </>
               )}
             </div>
+
+            {/* Multi-chain banner: customer is on a non-Arc chain */}
+            {isOnNonArcSupportedChain && !bridgeMode && (
+              <div className="mb-4 px-4 py-3 bg-purple/8 border border-purple/20 rounded-2xl">
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: customerChain!.color }} />
+                    <span className="text-[12.5px] font-semibold text-ink">
+                      Ví đang trên {customerChain!.label}
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-muted font-mono">{crossChainBal} USDC</span>
+                </div>
+                <p className="text-[11px] text-muted mb-2.5">
+                  Bạn có thể trả thẳng từ {customerChain!.shortLabel} — USDC sẽ tự bridge về Arc qua Circle CCTP (~25s).
+                </p>
+                <div className="flex gap-2">
+                  <button onClick={() => setBridgeMode(true)}
+                    disabled={!crossChainSufficient}
+                    className="flex-1 py-2 bg-purple/20 border border-purple/30 text-[#c084fc] text-[12px] font-bold rounded-xl hover:bg-purple/30 transition-all disabled:opacity-40">
+                    🌉 Pay from {customerChain!.shortLabel} (Bridge & Pay)
+                  </button>
+                  <button onClick={switchToArc}
+                    className="px-3 py-2 bg-surface2 border border-white/8 text-muted text-[12px] rounded-xl hover:bg-surface2/80 transition-all">
+                    Switch to Arc
+                  </button>
+                </div>
+                {!crossChainSufficient && (
+                  <p className="text-[11px] text-red mt-1.5">
+                    Không đủ USDC trên {customerChain!.shortLabel} để trả {amount} USDC.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Bridge mode active */}
+            {bridgeMode && customerChain && customerChain.key !== ARC_CHAIN.key && (
+              <div className="mb-4 px-4 py-3 bg-purple/8 border border-purple/25 rounded-2xl">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full" style={{ background: customerChain.color }} />
+                    <span className="text-[12.5px] font-bold text-[#c084fc]">
+                      Bridge & Pay từ {customerChain.label}
+                    </span>
+                  </div>
+                  <button onClick={() => setBridgeMode(false)} className="text-[11px] text-muted hover:text-ink">✕ Đổi</button>
+                </div>
+                <div className="flex items-center gap-2 mt-2 text-[11px] text-muted">
+                  <span className="px-2 py-0.5 rounded-full bg-surface2 border border-white/8">{customerChain.shortLabel}</span>
+                  <span>→ CCTP bridge →</span>
+                  <span className="px-2 py-0.5 rounded-full bg-accent/10 border border-accent/20 text-accent">Arc</span>
+                  <span>→</span>
+                  <span className="text-green font-semibold">Merchant ✓</span>
+                </div>
+                {isBridging && (
+                  <div className="mt-2 flex items-center gap-2 text-[11.5px] text-purple-300">
+                    <span className="animate-spin text-base">⟳</span>
+                    <span>{STEP_LABELS[step]}</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Merchant */}
             <div className="mb-5 p-3.5 bg-surface2 border border-white/8 rounded-2xl flex items-center gap-3">
