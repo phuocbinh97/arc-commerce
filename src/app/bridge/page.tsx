@@ -657,7 +657,7 @@ export default function Bridge() {
         )}
 
         {/* Main row: form + progress panel */}
-        <div className="flex flex-col lg:flex-row gap-4 lg:gap-5 lg:items-start w-full">
+        <div className="flex flex-row gap-4 items-start w-full">
 
           {/* ── Bridge card ── */}
           <div className="flex-1 bg-surface border border-white/8 rounded-2xl overflow-hidden">
@@ -800,12 +800,11 @@ export default function Bridge() {
           </div>
 
           {/* ── Progress panel ── */}
-          {(step > 0 || succeeded) && (
-            <div className="w-full lg:w-[280px] shrink-0 bg-surface border border-white/8 rounded-2xl overflow-hidden lg:sticky top-6">
+          <div className="w-[220px] sm:w-[260px] shrink-0 bg-surface border border-white/8 rounded-2xl overflow-hidden sticky top-6">
               <div className="px-4 py-3.5 border-b border-white/8">
                 <div className="font-bold text-[13px]">Bridge Progress</div>
                 <div className="text-[11px] text-muted mt-0.5">
-                  {succeeded ? "All done ✓" : `Step ${displayStep} of ${STEPS.length}`}
+                  {succeeded ? "All done ✓" : step > 0 ? `Step ${displayStep} of ${STEPS.length}` : "Waiting to start"}
                 </div>
               </div>
               <div className="p-3 flex flex-col gap-2">
@@ -839,7 +838,7 @@ export default function Bridge() {
                 </div>
               </div>
             </div>
-          )}
+          </div>
         </div>
 
         {/* ── Info row: accordions ── */}
