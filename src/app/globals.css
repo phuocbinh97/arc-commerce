@@ -3,128 +3,27 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Dark mode (default) ───────────────────────────────────────────── */
 :root {
   color-scheme: dark;
-  --color-bg:       #090d12;
-  --color-surface:  #131825;
-  --color-surface2: #1a2236;
+  --color-bg:       #0d1117;
+  --color-surface:  #161b22;
+  --color-surface2: #1c2330;
   --color-ink:      #e6edf3;
   --color-muted:    #7d8590;
-  --border-color:   rgba(255,255,255,0.07);
-  --border2-color:  rgba(255,255,255,0.13);
-  --card-border:    rgba(30,100,255,0.35);
-  --card-glow:      rgba(7,87,249,0.10);
-  --sidebar-bg:     #0d1018;
-  --topbar-bg:      #0d1018;
+  --border-color:   rgba(255,255,255,0.08);
+  --border2-color:  rgba(255,255,255,0.14);
 }
 
-/* ── Light mode ─────────────────────────────────────────────────────── */
 :root.light {
   color-scheme: light;
-  --color-bg:       #f0f4fa;
+  --color-bg:       #f6f8fa;
   --color-surface:  #ffffff;
-  --color-surface2: #edf0f7;
-  --color-ink:      #18202e;
-  --color-muted:    #5a6474;
-  --border-color:   rgba(0,0,0,0.07);
-  --border2-color:  rgba(0,0,0,0.13);
-  --card-border:    rgba(0,0,0,0.10);
-  --card-glow:      rgba(0,0,0,0);
-  --sidebar-bg:     #1a2236;
-  --topbar-bg:      #ffffff;
+  --color-surface2: #eaeef2;
+  --color-ink:      #1c2330;
+  --color-muted:    #57606a;
+  --border-color:   rgba(0,0,0,0.08);
+  --border2-color:  rgba(0,0,0,0.14);
 }
 
 body { background: var(--color-bg); color: var(--color-ink); }
 * { box-sizing: border-box; }
-
-/* ── Topbar light mode ─────────────────────────────────────────────── */
-:root.light header {
-  background: var(--topbar-bg) !important;
-  box-shadow: 0 1px 0 rgba(0,0,0,0.08), 0 2px 12px rgba(0,0,0,0.06) !important;
-}
-:root.light header span,
-:root.light header button:not(.bg-accent) { color: #18202e !important; }
-
-/* ── Card borders: dark vs light ───────────────────────────────────── */
-.bg-surface.rounded-xl,
-.bg-surface.rounded-2xl,
-.bg-surface.rounded-3xl {
-  box-shadow:
-    0 2px 8px rgba(0,0,0,0.6),
-    0 0 0 1px var(--card-border),
-    0 0 20px var(--card-glow);
-}
-.bg-surface.rounded-xl:hover,
-.bg-surface.rounded-2xl:hover {
-  box-shadow:
-    0 4px 16px rgba(0,0,0,0.65),
-    0 0 0 1px rgba(30,100,255,0.5),
-    0 0 28px rgba(7,87,249,0.14);
-}
-:root.light .bg-surface.rounded-xl:hover,
-:root.light .bg-surface.rounded-2xl:hover {
-  box-shadow: 0 4px 16px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.18) !important;
-}
-
-.bg-surface2.rounded-xl,
-.bg-surface2.rounded-2xl {
-  box-shadow: 0 1px 6px rgba(0,0,0,0.4), 0 0 0 1px var(--card-border);
-}
-
-/* Override Tailwind border-white/8 on surface cards */
-.bg-surface.border,
-.bg-surface2.border { border-color: var(--border-color) !important; }
-
-/* Dividers inside cards */
-.bg-surface .border-b { border-color: var(--border-color) !important; }
-.bg-surface .border-t { border-color: var(--border-color) !important; }
-
-/* ── Light mode overrides ───────────────────────────────────────────── */
-/* Force text readable in light mode */
-:root.light .text-ink  { color: #18202e !important; }
-:root.light .text-muted { color: #5a6474 !important; }
-
-/* Fix gradient text (white-on-white) in hero */
-:root.light [style*="WebkitTextFillColor: transparent"],
-:root.light [style*="-webkit-text-fill-color: transparent"] {
-  -webkit-text-fill-color: #18202e !important;
-  background: none !important;
-}
-
-/* Hardcoded dark bg classes used in pages */
-:root.light .bg-\[#0d1018\],
-:root.light .bg-\[#090d12\],
-:root.light .bg-\[#111520\],
-:root.light .bg-\[#131825\] { background-color: #ffffff !important; color: #18202e; }
-
-:root.light .bg-\[#181e2e\],
-:root.light .bg-\[#1a2236\] { background-color: #f0f4fa !important; }
-
-/* ── Named utility classes ─────────────────────────────────────────── */
-@layer components {
-  .card {
-    background: var(--color-surface);
-    @apply rounded-2xl;
-    box-shadow:
-      0 2px 8px rgba(0,0,0,0.55),
-      0 0 0 1px var(--card-border),
-      0 0 20px var(--card-glow);
-  }
-  .card:hover {
-    box-shadow:
-      0 4px 18px rgba(0,0,0,0.6),
-      0 0 0 1px rgba(30,100,255,0.5),
-      0 0 28px rgba(7,87,249,0.14);
-  }
-  .card-sm {
-    background: var(--color-surface);
-    @apply rounded-xl;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.4), 0 0 0 1px var(--card-border);
-  }
-  .card-inset {
-    background: var(--color-surface2);
-    @apply rounded-xl;
-    box-shadow: inset 0 1px 4px rgba(0,0,0,0.25), 0 0 0 1px var(--card-border);
-  }
-}

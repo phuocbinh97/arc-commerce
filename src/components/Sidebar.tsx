@@ -55,15 +55,15 @@ export default function Sidebar() {
   return (
     <>
       <aside className={`
-        fixed top-0 left-0 bottom-0 w-[220px] bg-[#0d1018]
+        fixed top-0 left-0 bottom-0 w-[220px] bg-surface border-r border-white/8
         flex flex-col z-50 transition-transform duration-300 ease-in-out
         lg:translate-x-0
         ${open ? "translate-x-0" : "-translate-x-full"}
-      `} style={{ background: "var(--sidebar-bg)", boxShadow: "4px 0 32px rgba(0,0,0,0.5)" }}>
+      `}>
 
         {/* Logo */}
         <div className="px-[18px] py-4 flex items-center justify-between"
-          style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+          className="border-b border-white/8">
           <div>
             <div className="flex items-end gap-0">
               <span className="text-[22px] font-black tracking-tight text-ink leading-none">Nex</span>
@@ -136,9 +136,8 @@ export default function Sidebar() {
         </nav>
 
         {/* Status */}
-        <div className="p-3" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
-            style={{ background: "rgba(63,185,80,0.08)", boxShadow: "0 0 0 1px rgba(63,185,80,0.15)" }}>
+        <div className="p-3 border-t border-white/8">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-green/8 border border-green/15">
             <span className="w-2 h-2 rounded-full bg-green shrink-0 animate-pulse" />
             <span className="text-[11.5px] text-green font-medium">Arc Testnet · Live</span>
           </div>
