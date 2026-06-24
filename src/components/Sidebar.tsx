@@ -59,7 +59,7 @@ export default function Sidebar() {
         flex flex-col z-50 transition-transform duration-300 ease-in-out
         lg:translate-x-0
         ${open ? "translate-x-0" : "-translate-x-full"}
-      `} style={{ boxShadow: "4px 0 32px rgba(0,0,0,0.6)" }}>
+      `} style={{ background: "var(--sidebar-bg)", boxShadow: "4px 0 32px rgba(0,0,0,0.5)" }}>
 
         {/* Logo */}
         <div className="px-[18px] py-4 flex items-center justify-between"

@@ -43,7 +43,7 @@ export default function Topbar({ title, action }: TopbarProps) {
 
   return (
     <header className="sticky top-0 z-40 px-4 lg:px-7 h-14 flex items-center justify-between gap-2 lg:gap-4"
-      style={{ background: "#0d1018", boxShadow: "0 1px 0 rgba(255,255,255,0.05), 0 4px 24px rgba(0,0,0,0.4)" }}>
+      style={{ background: "var(--topbar-bg)", boxShadow: "0 1px 0 var(--border-color), 0 4px 24px rgba(0,0,0,0.3)" }}>
       <div className="flex items-center gap-3">
         <button onClick={toggle}
           className="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg text-muted hover:text-ink transition-colors shrink-0"
