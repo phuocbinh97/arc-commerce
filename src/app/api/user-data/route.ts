@@ -1,14 +1,24 @@
 import { kv } from "@vercel/kv";
 import { NextRequest, NextResponse } from "next/server";
 
-const CORS = {
-  "Access-Control-Allow-Origin": "https://arcpay-desk.vercel.app",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-};
+const ALLOWED_ORIGINS = [
+  "https://arcpay-desk.vercel.app",
+  "https://nexmer.xyz",
+  "https://www.nexmer.xyz",
+];
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS });
+function corsHeaders(req: NextRequest) {
+  const origin = req.headers.get("origin") || "";
+  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[1];
+  return {
+    "Access-Control-Allow-Origin": allowed,
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  };
+}
+
+export async function OPTIONS(req: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: corsHeaders(req) });
 }
 
 const DATA_KEYS = [
@@ -26,7 +36,7 @@ export async function GET(req: NextRequest) {
   if (!wallet) return NextResponse.json({ error: "wallet required" }, { status: 400 });
 
   const data = await kv.get<Record<string, unknown>>(`user:${wallet}`);
-  return NextResponse.json(data || {}, { headers: CORS });
+  return NextResponse.json(data || {}, { headers: corsHeaders(req) });
 }
 
 export async function POST(req: NextRequest) {
@@ -44,5 +54,5 @@ export async function POST(req: NextRequest) {
   }
 
   await kv.set(key, updated);
-  return NextResponse.json({ ok: true }, { headers: CORS });
+  return NextResponse.json({ ok: true }, { headers: corsHeaders(req) });
 }

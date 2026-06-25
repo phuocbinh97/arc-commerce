@@ -34,8 +34,13 @@ async function syncKey(wallet: string, key: string, value: unknown) {
 }
 
 function getWallet(): string {
-  try { return JSON.parse(localStorage.getItem("arcMerchantSession") || "{}").wallet || ""; }
-  catch { return ""; }
+  try {
+    return (
+      JSON.parse(localStorage.getItem("arcMerchantSession") || "{}").wallet ||
+      localStorage.getItem("arcExpectedAddress") ||
+      ""
+    );
+  } catch { return ""; }
 }
 
 export interface PaymentHistory {
@@ -119,7 +124,13 @@ function swapKey(addr?: string) { return addr ? `arcSwapHistory:${addr.toLowerCa
 function bridgeKey(addr?: string) { return addr ? `arcBridgeHistory:${addr.toLowerCase()}` : "arcBridgeHistory"; }
 
 function currentAddr() {
-  try { return JSON.parse(localStorage.getItem("arcMerchantSession") || "{}").wallet || ""; } catch { return ""; }
+  try {
+    return (
+      JSON.parse(localStorage.getItem("arcMerchantSession") || "{}").wallet ||
+      localStorage.getItem("arcExpectedAddress") ||
+      ""
+    );
+  } catch { return ""; }
 }
 
 export function getSwapHistory(addr?: string): SwapEntry[] {
