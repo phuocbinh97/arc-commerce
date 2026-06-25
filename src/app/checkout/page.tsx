@@ -363,7 +363,7 @@ function CheckoutContent() {
   const isBridging = ["bridging", "waiting-bridge", "switching-network", "approving", "confirming-approve", "paying", "confirming-pay"].includes(step);
   const payLabel = (step === "idle" || step === "error")
     ? bridgeMode
-      ? `Bridge & Pay from ${customerChain?.shortLabel || "Other Chain"}`
+      ? `Bridge & Pay from ${selectedPayChain?.shortLabel || customerChain?.shortLabel || "Other Chain"}`
       : payToken === "USDC" ? "Pay with USDC" : `Swap ${activeMeta.label} → USDC & Pay`
     : STEP_LABELS[step];
 
@@ -553,19 +553,19 @@ function CheckoutContent() {
             )}
 
             {/* Bridge mode active */}
-            {bridgeMode && customerChain && (
+            {bridgeMode && (selectedPayChain || customerChain) && (
               <div className="mb-4 px-4 py-3 bg-purple/8 border border-purple/25 rounded-2xl">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full" style={{ background: customerChain.color }} />
+                    <span className="w-2 h-2 rounded-full" style={{ background: (selectedPayChain || customerChain)!.color }} />
                     <span className="text-[12.5px] font-bold text-[#c084fc]">
-                      Bridge & Pay from {customerChain.label}
+                      Bridge & Pay from {(selectedPayChain || customerChain)!.label}
                     </span>
                   </div>
-                  <button onClick={() => setBridgeMode(false)} className="text-[11px] text-muted hover:text-ink">✕ Cancel</button>
+                  {!isBridging && <button onClick={() => setBridgeMode(false)} className="text-[11px] text-muted hover:text-ink">✕ Cancel</button>}
                 </div>
                 <div className="flex items-center gap-2 mt-2 text-[11px] text-muted">
-                  <span className="px-2 py-0.5 rounded-full bg-surface2 border border-white/8">{customerChain.shortLabel}</span>
+                  <span className="px-2 py-0.5 rounded-full bg-surface2 border border-white/8">{(selectedPayChain || customerChain)!.shortLabel}</span>
                   <span>→ CCTP bridge →</span>
                   <span className="px-2 py-0.5 rounded-full bg-accent/10 border border-accent/20 text-accent">Arc</span>
                   <span>→</span>
