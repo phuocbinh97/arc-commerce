@@ -578,17 +578,34 @@ function CheckoutContent() {
                   <span>→</span>
                   <span className="text-green font-semibold">Merchant ✓</span>
                 </div>
-                {isBridging && (
-                  <div className="mt-2 flex items-center justify-between text-[11.5px] text-purple-300">
-                    <div className="flex items-center gap-2">
-                      <span className="animate-spin text-base">⟳</span>
-                      <span>{STEP_LABELS[step]}</span>
+                {isBridging && (() => {
+                  // Estimated total: 15s bridge tx + 90s CCTP relay + 15s Arc pay = ~120s
+                  const EST_TOTAL = 120;
+                  const pct = Math.min(bridgeElapsed / EST_TOTAL * 100, 97);
+                  const remaining = Math.max(EST_TOTAL - bridgeElapsed, 0);
+                  const remStr = remaining > 0
+                    ? `~${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, "0")} left`
+                    : "almost done…";
+                  return (
+                    <div className="mt-2.5 flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <div className="flex items-center gap-1.5 text-purple-300">
+                          <span className="animate-spin">⟳</span>
+                          <span>{STEP_LABELS[step]}</span>
+                        </div>
+                        <div className="flex items-center gap-2 font-mono text-muted tabular-nums">
+                          <span>{Math.floor(bridgeElapsed / 60)}:{String(bridgeElapsed % 60).padStart(2, "0")}</span>
+                          <span className="text-muted/50">·</span>
+                          <span className={remaining === 0 ? "text-green" : "text-muted"}>{remStr}</span>
+                        </div>
+                      </div>
+                      <div className="h-1 bg-white/6 rounded-full overflow-hidden">
+                        <div className="h-full bg-purple-400/60 rounded-full transition-all duration-1000"
+                          style={{ width: `${pct}%` }} />
+                      </div>
                     </div>
-                    <span className="font-mono text-muted tabular-nums">
-                      {Math.floor(bridgeElapsed / 60)}:{String(bridgeElapsed % 60).padStart(2, "0")}
-                    </span>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             )}
 
