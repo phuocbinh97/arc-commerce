@@ -360,7 +360,7 @@ function CheckoutContent() {
     await pay({ amount, orderId, memo, payerName: payerName.trim() || undefined, merchantOverride, payToken: payToken as "USDC" | "EURC", provider: eth }).catch(() => {});
   }
 
-  const isBridging = ["bridging", "waiting-bridge", "switching-network"].includes(step);
+  const isBridging = ["bridging", "waiting-bridge", "switching-network", "approving", "confirming-approve", "paying", "confirming-pay"].includes(step);
   const payLabel = (step === "idle" || step === "error")
     ? bridgeMode
       ? `Bridge & Pay from ${customerChain?.shortLabel || "Other Chain"}`
@@ -495,8 +495,8 @@ function CheckoutContent() {
               </div>
             )}
 
-            {/* Old bridge mode active banner (non-Arc chain selected) */}
-            {isConnected && bridgeMode && !isOnNonArcSupportedChain && (
+            {/* Bridge mode active banner — hidden during active bridge steps */}
+            {isConnected && bridgeMode && !isOnNonArcSupportedChain && !isBridging && (
               <div className="mb-4 px-4 py-3 bg-purple/8 border border-purple/20 rounded-2xl">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full" style={{ background: customerChain?.color ?? "#a371f7" }} />
@@ -636,8 +636,8 @@ function CheckoutContent() {
               )}
             </div>
 
-            {/* Balance row */}
-            {isConnected && (bridgeMode && selectedPayChain ? (
+            {/* Balance row — hide during active bridge flow */}
+            {isConnected && !isBridging && (bridgeMode && selectedPayChain ? (
               <div className={`mb-4 flex items-center justify-between px-3 py-2 rounded-2xl text-sm font-medium
                 ${crossChainBal !== "—" && parseFloat(crossChainBal) >= parseFloat(amount)
                   ? "bg-green/10 border border-green/20 text-green"
