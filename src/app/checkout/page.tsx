@@ -142,6 +142,7 @@ function CheckoutContent() {
   const [loadingBalances, setLoadingBalances] = useState(false);
   const [selectedPayChain, setSelectedPayChain] = useState<ChainConfig | null>(null);
   const [switching, setSwitching]             = useState(false);
+  const [bridgeElapsed, setBridgeElapsed]     = useState(0);
   const [merchantOverride, setMerchantOverride] = useState<{ wallet: string; merchantId: string } | undefined>();
   const [merchantSiteUrl, setMerchantSiteUrl]   = useState("");
   const [loadingMerchant, setLoadingMerchant]   = useState(false);
@@ -361,6 +362,12 @@ function CheckoutContent() {
   }
 
   const isBridging = ["bridging", "waiting-bridge", "switching-network", "approving", "confirming-approve", "paying", "confirming-pay"].includes(step);
+
+  useEffect(() => {
+    if (!isBridging) { setBridgeElapsed(0); return; }
+    const t = setInterval(() => setBridgeElapsed(s => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [isBridging]);
   const payLabel = (step === "idle" || step === "error")
     ? bridgeMode
       ? `Bridge & Pay from ${selectedPayChain?.shortLabel || customerChain?.shortLabel || "Other Chain"}`
@@ -572,9 +579,14 @@ function CheckoutContent() {
                   <span className="text-green font-semibold">Merchant ✓</span>
                 </div>
                 {isBridging && (
-                  <div className="mt-2 flex items-center gap-2 text-[11.5px] text-purple-300">
-                    <span className="animate-spin text-base">⟳</span>
-                    <span>{STEP_LABELS[step]}</span>
+                  <div className="mt-2 flex items-center justify-between text-[11.5px] text-purple-300">
+                    <div className="flex items-center gap-2">
+                      <span className="animate-spin text-base">⟳</span>
+                      <span>{STEP_LABELS[step]}</span>
+                    </div>
+                    <span className="font-mono text-muted tabular-nums">
+                      {Math.floor(bridgeElapsed / 60)}:{String(bridgeElapsed % 60).padStart(2, "0")}
+                    </span>
                   </div>
                 )}
               </div>
