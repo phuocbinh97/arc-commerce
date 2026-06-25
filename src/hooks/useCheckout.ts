@@ -189,26 +189,40 @@ export function useCheckout() {
         token: "USDC",
       });
 
-      // Step 2: Wait for bridge finality (~20-30s)
-      setStep("waiting-bridge");
-      await new Promise(res => setTimeout(res, 25000));
-
-      // Step 3: Switch wallet to Arc Testnet
+      // Step 2: Switch to Arc first, then poll until USDC arrives
       setStep("switching-network");
       const ARC_CHAIN_ID = "0x4CEF52";
+      const ARC_RPC = "https://rpc.testnet.arc.network";
+      const ARC_USDC = "0x3600000000000000000000000000000000000000";
       try {
         await eth.request({ method: "wallet_switchEthereumChain", params: [{ chainId: ARC_CHAIN_ID }] });
       } catch (switchErr: any) {
         if (switchErr.code === 4902) {
           await eth.request({
             method: "wallet_addEthereumChain",
-            params: [{ chainId: ARC_CHAIN_ID, chainName: "Arc Testnet", rpcUrls: ["https://rpc.testnet.arc.network"], nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 }, blockExplorerUrls: ["https://testnet.arcscan.app"] }],
+            params: [{ chainId: ARC_CHAIN_ID, chainName: "Arc Testnet", rpcUrls: [ARC_RPC], nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 }, blockExplorerUrls: ["https://testnet.arcscan.app"] }],
           });
         }
       }
 
-      // Wait a moment for network switch to propagate
-      await new Promise(res => setTimeout(res, 2000));
+      // Step 3: Poll Arc USDC balance until bridged amount arrives (max 5 min)
+      setStep("waiting-bridge");
+      const amountUnits = BigInt(Math.floor(parseFloat(amount) * 1_000_000));
+      const getArcBal = async (): Promise<bigint> => {
+        const data = "0x70a08231" + account.toLowerCase().replace("0x", "").padStart(64, "0");
+        const res = await fetch(ARC_RPC, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [{ to: ARC_USDC, data }, "latest"] }),
+        }).then(r => r.json());
+        return BigInt(res.result && res.result !== "0x" ? res.result : "0x0");
+      };
+      const balBefore = await getArcBal();
+      const deadline = Date.now() + 5 * 60 * 1000;
+      while (Date.now() < deadline) {
+        await new Promise(r => setTimeout(r, 4000));
+        const balNow = await getArcBal();
+        if (balNow - balBefore >= amountUnits * 90n / 100n) break; // ≥90% arrived (slippage)
+      }
 
       // Step 4: Normal Arc payment
       const settings = getSettings();

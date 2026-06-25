@@ -42,7 +42,7 @@ const STEP_LABELS: Record<string, string> = {
   paying:               "Step 2/2 — Sending payment…",
   "confirming-pay":     "Waiting for receipt…",
   bridging:             "Bridging USDC to Arc…",
-  "waiting-bridge":     "Waiting for bridge (~25s)…",
+  "waiting-bridge":     "Waiting for USDC to arrive on Arc…",
   "switching-network":  "Switching to Arc network…",
   success:              "Payment Confirmed!",
   error:                "Try again",
