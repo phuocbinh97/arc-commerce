@@ -35,6 +35,75 @@ const EMPTY_FORM = { name: "", wallet: "", category: "employee" as Contact["cate
 
 function genPrlId() { return "prl_" + Math.random().toString(36).slice(2, 10); }
 
+function CategoryDropdown({ contact, contacts, onSave }: { contact: Contact; contacts: Contact[]; onSave: (updated: Contact) => void }) {
+  const [open, setOpen] = useState(false);
+  const [customVal, setCustomVal] = useState(contact.customCategory || "");
+  const ref = useRef<HTMLDivElement>(null);
+  const meta = catMeta(contact.category);
+
+  useEffect(() => {
+    function handler(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); }
+    if (open) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  function pick(cat: Contact["category"]) {
+    if (cat !== "other") {
+      onSave({ ...contact, category: cat, customCategory: undefined });
+      setOpen(false);
+    }
+    // for "other" keep open to let user fill custom
+  }
+
+  function confirmCustom() {
+    onSave({ ...contact, category: "other", customCategory: customVal.trim() || undefined });
+    setOpen(false);
+  }
+
+  const existingCustom = Array.from(new Set(
+    contacts.filter(c => c.category === "other" && c.customCategory && c.id !== contact.id).map(c => c.customCategory as string)
+  ));
+
+  return (
+    <div ref={ref} className="relative inline-block" onClick={e => e.stopPropagation()}>
+      <button onClick={() => { setCustomVal(contact.customCategory || ""); setOpen(v => !v); }}
+        className={`text-[10.5px] font-semibold px-1.5 py-0.5 rounded-full border transition-all hover:opacity-80 ${meta.color}`}>
+        {catLabel(contact)} ▾
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full mt-1 z-30 w-[180px] rounded-xl border border-white/10 overflow-hidden"
+          style={{background:"#161b22",boxShadow:"0 8px 24px rgba(0,0,0,0.7)"}}>
+          {CATEGORIES.map(cat => (
+            <button key={cat.value} onClick={() => pick(cat.value)}
+              className={`w-full text-left px-3 py-2 text-[12px] font-semibold flex items-center gap-2 transition-colors hover:bg-white/5 ${contact.category===cat.value?"text-ink":"text-muted"}`}>
+              <span className={`text-[9px] px-1.5 py-0.5 rounded-full border ${cat.color}`}>{cat.label}</span>
+            </button>
+          ))}
+          {/* custom input for Other */}
+          <div className="px-2 pb-2 pt-1 border-t border-white/8">
+            <input value={customVal} onChange={e => setCustomVal(e.target.value)} placeholder="Custom label…"
+              className="w-full px-2.5 py-1.5 bg-bg border border-white/8 rounded-lg text-[11.5px] text-ink outline-none focus:border-white/20 transition-colors" />
+            {existingCustom.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {existingCustom.map(opt => (
+                  <button key={opt} onClick={() => setCustomVal(opt)}
+                    className="px-2 py-0.5 rounded-full text-[10px] bg-white/5 text-muted hover:text-ink border border-white/8 transition-colors">
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            )}
+            <button onClick={confirmCustom}
+              className="mt-2 w-full py-1 rounded-lg text-[11.5px] font-semibold bg-accent/15 text-[#6ea8fe] hover:bg-accent/25 transition-colors">
+              Apply
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CustomCategoryInput({ value, contacts, onChange }: { value: string; contacts: Contact[]; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
   const existing = Array.from(new Set(
@@ -155,6 +224,12 @@ export default function People() {
     setShowQuickAdd(false);
     setQaForm(EMPTY_FORM);
     setQaErr("");
+  }
+
+  function updateContact(updated: Contact) {
+    const list = getContacts().map(c => c.id === updated.id ? updated : c);
+    saveContacts(list);
+    setContacts(list);
   }
 
   function startEdit(c: Contact) {
@@ -646,7 +721,6 @@ export default function People() {
         ) : (
           <div className="flex flex-col gap-2">
             {filtered.map(c => {
-              const meta = catMeta(c.category);
               const isSelected = selected.has(c.id);
               return (
                 <div key={c.id}
@@ -663,9 +737,9 @@ export default function People() {
                   </div>
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
                       <span className="text-[13.5px] font-semibold text-ink">{c.name}</span>
-                      <span className={`text-[10.5px] font-semibold px-1.5 py-0.5 rounded-full border ${meta.color}`}>{catLabel(c)}</span>
+                      <CategoryDropdown contact={c} contacts={contacts} onSave={updateContact} />
                     </div>
                     <div className="font-mono text-[11.5px] text-muted mt-0.5">{c.wallet}</div>
                     {c.notes && <div className="text-[11px] text-muted/60 mt-0.5 truncate">{c.notes}</div>}
@@ -890,7 +964,10 @@ export default function People() {
                             {picked&&<svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4l2 2L6.5 2" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="text-[12.5px] font-semibold text-ink">{c.name}</div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[12.5px] font-semibold text-ink">{c.name}</span>
+                              <span className={`text-[9.5px] font-semibold px-1.5 py-0.5 rounded-full border ${catMeta(c.category).color}`}>{catLabel(c)}</span>
+                            </div>
                             <div className="font-mono text-[10.5px] text-muted truncate">{c.wallet.slice(0,10)}…</div>
                           </div>
                           {picked && (
