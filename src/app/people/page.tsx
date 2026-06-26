@@ -110,7 +110,7 @@ export default function People() {
           amtRaw.toString(16).padStart(64,"0");
         const hash: string = await eth.request({
           method: "eth_sendTransaction",
-          params: [{ from, to: USDC_ADDRESS, data, gas: "0x186a0", gasPrice }],
+          params: [{ from, to: USDC_ADDRESS, data, gas: "0x186a0", ...gasPrice }],
         });
         await waitForReceipt(eth, hash);
         results.push({ name: c.name, wallet: c.wallet, txHash: hash });
