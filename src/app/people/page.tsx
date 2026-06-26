@@ -178,11 +178,18 @@ export default function People() {
   const [prlPaying, setPrlPaying] = useState(false);
   const [prlStatus, setPrlStatus] = useState("");
   const [paySource, setPaySource] = useState<"arc" | "unified">("arc");
+  const [prlSelected, setPrlSelected] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     setContacts(getContacts());
     setSessions(getPayrollSessions());
   }, []);
+
+  useEffect(() => {
+    if (!prlActive) { setPrlSelected(new Set()); return; }
+    const unpaidIdxs = prlActive.entries.reduce<number[]>((acc, e, i) => { if (!e.paid) acc.push(i); return acc; }, []);
+    setPrlSelected(new Set(unpaidIdxs));
+  }, [prlActive?.id]);
 
   useEffect(() => {
     function handler(e: MouseEvent) {
@@ -293,26 +300,27 @@ export default function People() {
   async function payUnpaid() {
     if (!prlActive) return;
     if (!isConnected) { connect(); return; }
-    const unpaid = prlActive.entries.filter(e => !e.paid && parseFloat(e.amount) > 0);
-    if (unpaid.length === 0) return;
-    setPrlPaying(true); setPrlStatus(`Building ${unpaid.length}-recipient batch…`);
+    const selectedEntries = prlActive.entries.filter((e, i) => !e.paid && prlSelected.has(i) && parseFloat(e.amount) > 0);
+    if (selectedEntries.length === 0) return;
+    setPrlPaying(true); setPrlStatus(`Building ${selectedEntries.length}-recipient batch…`);
     const eth = getProvider(); if (!eth) { setPrlPaying(false); return; }
     try {
       const accs: string[] = await eth.request({ method:"eth_accounts" });
       const from = accs[0];
       try { await eth.request({ method:"wallet_switchEthereumChain", params:[{chainId:"0x4CEF52"}] }); }
       catch(e:any) { if(e.code===4902) await eth.request({ method:"wallet_addEthereumChain", params:[{chainId:"0x4CEF52",chainName:"Arc Testnet",rpcUrls:["https://rpc.testnet.arc.network"],nativeCurrency:{name:"USDC",symbol:"USDC",decimals:18},blockExplorerUrls:["https://testnet.arcscan.app"]}] }); else throw e; }
-      const calls = unpaid.map(e => ({ recipient:e.wallet as `0x${string}`, units:parseUsdcErc20(e.amount) }));
+      const calls = selectedEntries.map(e => ({ recipient:e.wallet as `0x${string}`, units:parseUsdcErc20(e.amount) }));
       const batchData = encodeBatchTransfers(calls);
-      const gasLimit = "0x" + Math.min(unpaid.length*80000+60000, 2_000_000).toString(16);
+      const gasLimit = "0x" + Math.min(selectedEntries.length*80000+60000, 2_000_000).toString(16);
       const gas = await fetchGasPrice(eth);
-      setPrlStatus(`Confirm ${unpaid.length} payments in 1 MetaMask tx…`);
+      setPrlStatus(`Confirm ${selectedEntries.length} payments in 1 MetaMask tx…`);
       const txHash: string = await eth.request({ method:"eth_sendTransaction", params:[{from, to:MULTICALL3FROM, value:"0x0", data:batchData, gas:gasLimit, ...gas}] });
       setPrlStatus("Confirming on Arc…");
       await waitForReceipt(eth, txHash);
       const now = Date.now();
+      const selectedSet = new Set(selectedEntries.map(e=>e.contactId+e.wallet));
       const updEntries = prlActive.entries.map(e =>
-        (!e.paid && unpaid.find(u=>u.contactId===e.contactId && u.wallet===e.wallet)) ? {...e,paid:true,txHash,paidAt:now} : e
+        (!e.paid && selectedSet.has(e.contactId+e.wallet)) ? {...e,paid:true,txHash,paidAt:now} : e
       );
       const allPaid = updEntries.every(e=>e.paid);
       const updated: PayrollSession = { ...prlActive, entries:updEntries, status:allPaid?"paid":"partial", txHash:allPaid?txHash:prlActive.txHash, paidAt:allPaid?now:prlActive.paidAt };
@@ -342,11 +350,10 @@ export default function People() {
         const e = unpaid[i];
         setPrlStatus(`Sending ${i+1}/${unpaid.length} — ${e.name} (${e.amount} USDC)…`);
         const result = await kit.unifiedBalance.spend({
-          from:  { adapter, allocations: [{ amount: parseFloat(e.amount).toFixed(2), chain: "Arc_Testnet" }] },
-          to:    { chain: "Arc_Testnet", recipientAddress: e.wallet, useForwarder: true },
-          token: "USDC",
-          amount: parseFloat(e.amount).toFixed(2),
-          config: { kitKey: `KIT_KEY:${KIT_KEY}` },
+          from:    { adapter, allocations: [{ amount: parseFloat(e.amount).toFixed(2), chain: "Arc_Testnet" }] },
+          to:      { chain: "Arc_Testnet", recipientAddress: e.wallet, useForwarder: true },
+          token:   "USDC",
+          amountIn: parseFloat(e.amount).toFixed(2),
         });
         if (!result || result.state === "error") throw new Error(result?.error?.message || `Failed for ${e.name}`);
         const idx = updEntries.findIndex(u => u.contactId===e.contactId && u.wallet===e.wallet);
@@ -549,6 +556,17 @@ export default function People() {
   if (tab === "payroll" && prlView === "session" && prlActive) {
     const unpaidCount = prlActive.entries.filter(e=>!e.paid).length;
     const paidCount   = prlActive.entries.filter(e=>e.paid).length;
+    const unpaidIdxs  = prlActive.entries.reduce<number[]>((acc,e,i)=>{ if(!e.paid) acc.push(i); return acc; },[]);
+    const allChecked  = unpaidIdxs.length > 0 && unpaidIdxs.every(i=>prlSelected.has(i));
+    const selCount    = unpaidIdxs.filter(i=>prlSelected.has(i)).length;
+    const selTotal    = prlActive.entries.filter((_,i)=>prlSelected.has(i)).reduce((s,e)=>s+parseFloat(e.amount),0);
+    function toggleAll() {
+      if (allChecked) setPrlSelected(new Set());
+      else setPrlSelected(new Set(unpaidIdxs));
+    }
+    function toggleRow(idx: number) {
+      setPrlSelected(prev => { const next=new Set(prev); next.has(idx)?next.delete(idx):next.add(idx); return next; });
+    }
     return (
       <>
         <Topbar title="People" />
@@ -579,24 +597,10 @@ export default function People() {
             </div>
             {unpaidCount > 0 && (
               <div className="flex flex-col items-end gap-1.5">
-                {/* Source toggle */}
-                <div className="flex rounded-lg overflow-hidden border border-white/10 text-[11px] font-semibold">
-                  <button onClick={()=>setPaySource("arc")}
-                    className={`px-2.5 py-1 transition-colors ${paySource==="arc"?"bg-surface2 text-ink":"text-muted hover:text-ink"}`}>
-                    Arc Wallet
-                  </button>
-                  <button onClick={()=>setPaySource("unified")}
-                    className={`px-2.5 py-1 transition-colors ${paySource==="unified"?"bg-accent/20 text-[#6ea8fe]":"text-muted hover:text-ink"}`}>
-                    Unified Balance
-                  </button>
-                </div>
-                <button onClick={paySource==="unified" ? payUnpaidUnified : payUnpaid} disabled={prlPaying}
+                <button onClick={payUnpaid} disabled={prlPaying || selCount === 0}
                   className="flex items-center gap-2 px-4 py-2.5 bg-accent text-white rounded-xl text-[13px] font-semibold hover:bg-accent/90 transition-all disabled:opacity-50">
                   <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-                  {prlPaying ? prlStatus||"Processing…"
-                    : paySource==="unified"
-                      ? `Pay ${unpaidCount} unpaid · ${formatUsdc(prlTotalUnpaid(prlActive))} USDC (Unified)`
-                      : `Pay ${unpaidCount} unpaid · ${formatUsdc(prlTotalUnpaid(prlActive))} USDC (1 tx)`}
+                  {prlPaying ? prlStatus||"Processing…" : `Pay ${selCount} selected · ${formatUsdc(selTotal.toFixed(2))} USDC (1 tx)`}
                 </button>
               </div>
             )}
@@ -611,11 +615,27 @@ export default function People() {
             ))}
           </div>
           <div className="bg-surface border border-white/8 rounded-2xl overflow-hidden">
-            <div className="px-5 py-3 border-b border-white/8 text-[11px] font-semibold text-muted uppercase tracking-wider grid grid-cols-[1fr_90px_100px_120px] gap-2">
+            <div className="px-5 py-3 border-b border-white/8 text-[11px] font-semibold text-muted uppercase tracking-wider grid grid-cols-[28px_1fr_90px_100px_120px] gap-2 items-center">
+              <button onClick={toggleAll} disabled={unpaidIdxs.length===0}
+                className={`w-4 h-4 rounded border flex items-center justify-center transition-all shrink-0 ${allChecked?"bg-accent border-accent":"border-white/20 hover:border-white/40"} disabled:opacity-30`}>
+                {allChecked && <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1.5 5l2.5 2.5 5-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                {!allChecked && selCount>0 && <div className="w-2 h-0.5 bg-accent rounded-full"/>}
+              </button>
               <span>Recipient</span><span className="text-right">Amount</span><span className="text-center">Status</span><span className="text-right">Tx</span>
             </div>
             {prlActive.entries.map((e,i)=>(
-              <div key={i} className="grid grid-cols-[1fr_90px_100px_120px] gap-2 items-center px-5 py-3 border-b border-white/5 last:border-0 hover:bg-surface2/40 transition-colors">
+              <div key={i} onClick={()=>{ if(!e.paid) toggleRow(i); }}
+                className={`grid grid-cols-[28px_1fr_90px_100px_120px] gap-2 items-center px-5 py-3 border-b border-white/5 last:border-0 transition-colors ${e.paid?"opacity-60":"cursor-pointer hover:bg-surface2/40"}`}>
+                <div className="flex items-center">
+                  {e.paid
+                    ? <div className="w-4 h-4 rounded border border-white/10 flex items-center justify-center opacity-40">
+                        <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1.5 5l2.5 2.5 5-5" stroke="#3fb950" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </div>
+                    : <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${prlSelected.has(i)?"bg-accent border-accent":"border-white/20"}`}>
+                        {prlSelected.has(i) && <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1.5 5l2.5 2.5 5-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                      </div>
+                  }
+                </div>
                 <div>
                   <div className="text-[13px] font-semibold">{e.name}</div>
                   <div className="font-mono text-[10.5px] text-muted">{e.wallet.slice(0,8)}…{e.wallet.slice(-4)}</div>
@@ -626,7 +646,7 @@ export default function People() {
                     ? <span className="text-[11px] text-green bg-green/10 border border-green/20 px-2 py-0.5 rounded-full">✓ Paid</span>
                     : <span className="text-[11px] text-amber bg-amber/10 border border-amber/20 px-2 py-0.5 rounded-full">Pending</span>}
                 </div>
-                <div className="text-right">
+                <div className="text-right" onClick={e2=>e2.stopPropagation()}>
                   {e.txHash ? <a href={`${ARC_EXPLORER}/tx/${e.txHash}`} target="_blank" rel="noreferrer" className="text-[11px] font-mono text-accent hover:underline">{e.txHash.slice(0,8)}…</a>
                     : <span className="text-muted/30 text-[11px]">—</span>}
                 </div>
