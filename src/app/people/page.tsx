@@ -169,6 +169,9 @@ export default function People() {
   const [sessIds, setSessIds]     = useState<Set<string>>(new Set());
   const [sessAmts, setSessAmts]   = useState<Record<string, string>>({});
   const [sessFilter, setSessFilter] = useState<string>("all");
+  const [sessCustomCatFilter, setSessCustomCatFilter] = useState<string>("");
+  const [sessOtherDropOpen, setSessOtherDropOpen] = useState(false);
+  const sessOtherDropRef = useRef<HTMLDivElement>(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [qaForm, setQaForm] = useState(EMPTY_FORM);
   const [qaErr, setQaErr] = useState("");
@@ -187,6 +190,14 @@ export default function People() {
     if (otherDropOpen) document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [otherDropOpen]);
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (sessOtherDropRef.current && !sessOtherDropRef.current.contains(e.target as Node)) setSessOtherDropOpen(false);
+    }
+    if (sessOtherDropOpen) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [sessOtherDropOpen]);
 
   function save() {
     if (!form.name.trim()) { setFormErr("Name is required."); return; }
@@ -274,7 +285,7 @@ export default function People() {
     const s: PayrollSession = { id:genPrlId(), title:sessTitle.trim(), description:sessDesc.trim()||undefined, entries, createdAt:Date.now(), status:"draft" };
     const list = [s, ...sessions];
     savePayrollSessions(list); setSessions(list);
-    setShowNewSess(false); setSessTitle(""); setSessDesc(""); setSessIds(new Set()); setSessAmts({}); setSessFilter("all");
+    setShowNewSess(false); setSessTitle(""); setSessDesc(""); setSessIds(new Set()); setSessAmts({}); setSessFilter("all"); setSessCustomCatFilter(""); setSessOtherDropOpen(false);
     setPrlActive(s); setPrlView("session");
   }
 
@@ -979,13 +990,36 @@ export default function People() {
                   <div className="text-[11px] text-muted">{sessIds.size} selected · <span className="text-ink font-mono">{Object.entries(sessAmts).filter(([id])=>sessIds.has(id)).reduce((s,[,v])=>s+(parseFloat(v)||0),0).toFixed(2)} USDC</span></div>
                 </div>
                 <div className="flex items-center justify-between gap-2 mb-2">
-                  <div className="flex gap-1 flex-wrap">
-                    {["all","employee","vendor","partner","other"].map(f=>(
-                      <button key={f} onClick={()=>setSessFilter(f)}
+                  <div className="flex gap-1 flex-wrap items-center">
+                    {["all","employee","vendor","partner"].map(f=>(
+                      <button key={f} onClick={()=>{ setSessFilter(f); setSessCustomCatFilter(""); setSessOtherDropOpen(false); }}
                         className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border transition-all ${sessFilter===f?"bg-accent/15 text-[#6ea8fe] border-accent/30":"border-white/8 text-muted hover:text-ink"}`}>
                         {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
                       </button>
                     ))}
+                    {/* Other with dropdown */}
+                    <div ref={sessOtherDropRef} className="relative">
+                      <button onClick={()=>{ setSessFilter("other"); setSessOtherDropOpen(v=>!v); }}
+                        className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border transition-all ${sessFilter==="other"?"bg-accent/15 text-[#6ea8fe] border-accent/30":"border-white/8 text-muted hover:text-ink"}`}>
+                        {sessFilter==="other" && sessCustomCatFilter ? sessCustomCatFilter : "Other"}
+                        {customCatOptions.length > 0 && <span className="text-[9px] opacity-60">▾</span>}
+                      </button>
+                      {sessOtherDropOpen && customCatOptions.length > 0 && (
+                        <div className="absolute left-0 top-full mt-1 z-20 min-w-[160px] rounded-xl border border-white/10 overflow-hidden"
+                          style={{background:"#161b22",boxShadow:"0 8px 24px rgba(0,0,0,0.7)"}}>
+                          <button onClick={()=>{ setSessCustomCatFilter(""); setSessOtherDropOpen(false); }}
+                            className={`w-full text-left px-3.5 py-2 text-[12px] font-semibold transition-colors hover:bg-white/5 ${!sessCustomCatFilter?"text-ink":"text-muted"}`}>
+                            All Other
+                          </button>
+                          {customCatOptions.map(opt=>(
+                            <button key={opt} onClick={()=>{ setSessCustomCatFilter(opt); setSessOtherDropOpen(false); }}
+                              className={`w-full text-left px-3.5 py-2 text-[12px] font-semibold transition-colors hover:bg-white/5 ${sessCustomCatFilter===opt?"text-ink":"text-muted"}`}>
+                              {opt}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <button onClick={()=>{setQaForm(EMPTY_FORM);setQaErr("");setShowQuickAdd(true);}}
                     className="shrink-0 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border border-white/14 text-muted hover:text-ink hover:border-white/25 transition-all whitespace-nowrap">
@@ -996,7 +1030,11 @@ export default function People() {
                   <div className="text-[12px] text-muted py-4 text-center">No contacts — add them in the Contacts tab first.</div>
                 ) : (
                   <div className="flex flex-col gap-1.5 max-h-[260px] overflow-y-auto pr-1">
-                    {contacts.filter(c => sessFilter === "all" || c.category === sessFilter).map(c=>{
+                    {contacts.filter(c => {
+                      if (sessFilter === "all") return true;
+                      if (sessFilter === "other" && sessCustomCatFilter) return c.category === "other" && (c.customCategory || "") === sessCustomCatFilter;
+                      return c.category === sessFilter;
+                    }).map(c=>{
                       const picked=sessIds.has(c.id);
                       return (
                         <div key={c.id} onClick={()=>setSessIds(prev=>{const s=new Set(prev);s.has(c.id)?s.delete(c.id):s.add(c.id);return s;})}
