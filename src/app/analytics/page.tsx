@@ -98,18 +98,46 @@ export default function Analytics() {
   const topCustomers = Object.values(customerMap).sort((a,b)=>b.total-a.total).slice(0,5);
   const maxSpend = topCustomers[0]?.total||1;
 
+  function exportCsv() {
+    const rows = [["Date","Time","Order ID","Amount (USDC)","Customer","Tx Hash"]];
+    filtered.forEach(h => {
+      const d = new Date(h.ts);
+      rows.push([
+        d.toLocaleDateString("en-US"),
+        d.toLocaleTimeString("en-US",{hour12:false}),
+        h.orderId || "",
+        (parseFloat(h.amount)||0).toFixed(6),
+        h.merchant || "",
+        h.txHash || "",
+      ]);
+    });
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url;
+    a.download = `nexmer-transactions-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+  }
+
   if (!mounted) return null;
 
   return (
     <>
       <Topbar title="Analytics" />
       <div className="p-4 lg:p-7 flex-1">
-        <div className="flex justify-end mb-5 gap-1">
+        <div className="flex justify-between items-center mb-5">
+          <button onClick={exportCsv} disabled={filtered.length===0}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-surface border border-white/8 text-muted hover:text-ink hover:border-white/14 transition-all disabled:opacity-30 disabled:cursor-not-allowed">
+            <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            Export CSV
+          </button>
+          <div className="flex gap-1">
           {[7,30,90].map(r=>(
             <button key={r} onClick={()=>setRange(r)} className={`px-3 py-1 rounded-md text-[12.5px] font-semibold transition-all ${range===r?"bg-surface2 text-ink border border-white/14":"text-muted hover:text-ink"}`}>
               {r>=90?"All":`${r}d`}
             </button>
           ))}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-3.5 mb-6">
