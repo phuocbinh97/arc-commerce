@@ -31,8 +31,8 @@ export default function People() {
 
   // Batch send
   const [batchMode, setBatchMode] = useState(false);
-  const [batchAmount, setBatchAmount] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [perAmt, setPerAmt] = useState<Record<string, string>>({}); // id → amount
   const [sending, setSending] = useState(false);
   const [sendStatus, setSendStatus] = useState("");
   const [sendResults, setSendResults] = useState<{ name: string; wallet: string; txHash?: string; error?: string }[]>([]);
@@ -88,8 +88,8 @@ export default function People() {
   }
 
   async function sendBatch() {
-    const targets = contacts.filter(c => selected.has(c.id));
-    if (targets.length === 0 || !batchAmount || parseFloat(batchAmount) <= 0) return;
+    const targets = contacts.filter(c => selected.has(c.id) && parseFloat(perAmt[c.id] || "0") > 0);
+    if (targets.length === 0) return;
     if (!isConnected) { connect(); return; }
     setSending(true); setSendResults([]); setSendStatus("");
 
@@ -97,14 +97,13 @@ export default function People() {
     if (!eth) { setSending(false); return; }
     const accs: string[] = await eth.request({ method: "eth_accounts" });
     const from = accs[0];
-    const amtRaw = BigInt(Math.round(parseFloat(batchAmount) * 1_000_000));
     const gasPrice = await fetchGasPrice(eth);
 
     const results: typeof sendResults = [];
     for (const c of targets) {
       setSendStatus(`Sending to ${c.name}…`);
       try {
-        // ERC-20 transfer(address,uint256) on Arc
+        const amtRaw = BigInt(Math.round(parseFloat(perAmt[c.id]) * 1_000_000));
         const data = "0xa9059cbb" +
           c.wallet.toLowerCase().replace("0x","").padStart(64,"0") +
           amtRaw.toString(16).padStart(64,"0");
@@ -130,7 +129,8 @@ export default function People() {
   });
 
   const batchTargets = batchMode ? contacts.filter(c => selected.has(c.id)) : [];
-  const batchTotal = batchTargets.length * (parseFloat(batchAmount) || 0);
+  const batchTotal = batchTargets.reduce((s, c) => s + (parseFloat(perAmt[c.id] || "0") || 0), 0);
+  const batchReady = batchTargets.filter(c => parseFloat(perAmt[c.id] || "0") > 0).length;
 
   return (
     <>
@@ -162,7 +162,7 @@ export default function People() {
                   <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
                   CSV
                 </button>
-                <button onClick={() => { setBatchMode(v => !v); setSelected(new Set()); setSendResults([]); }}
+                <button onClick={() => { setBatchMode(v => !v); setSelected(new Set()); setPerAmt({}); setSendResults([]); }}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold border transition-all ${batchMode ? "bg-accent/15 text-accent border-accent/30" : "bg-surface border-white/8 text-muted hover:text-ink"}`}>
                   <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
                   {batchMode ? "Cancel Batch" : "Batch Send"}
@@ -179,23 +179,22 @@ export default function People() {
         {/* Batch send panel */}
         {batchMode && (
           <div className="mb-5 p-4 bg-surface border border-accent/20 rounded-2xl">
-            <div className="text-[13px] font-semibold mb-3">Batch Send USDC <span className="text-muted font-normal">(Arc Testnet)</span></div>
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="flex items-center gap-2">
-                <span className="text-[12px] text-muted">Amount per person</span>
-                <input value={batchAmount} onChange={e => setBatchAmount(e.target.value)} placeholder="0.00"
-                  className="w-[100px] px-3 py-1.5 bg-bg border border-white/8 rounded-lg text-[13px] font-mono text-ink outline-none focus:border-white/20" />
-                <span className="text-[12px] text-muted">USDC</span>
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <div className="text-[13px] font-semibold">Batch Send USDC <span className="text-muted font-normal">(Arc Testnet)</span></div>
+                <div className="text-[11.5px] text-muted mt-0.5">Check contacts below → enter amount for each → confirm</div>
               </div>
-              {batchTargets.length > 0 && (
-                <div className="text-[12px] text-muted">
-                  → {batchTargets.length} person{batchTargets.length>1?"s":""} · <span className="text-ink font-mono">{batchTotal.toFixed(2)} USDC</span> total
-                </div>
-              )}
-              <button onClick={sendBatch} disabled={sending || batchTargets.length === 0 || !batchAmount}
-                className="ml-auto px-4 py-1.5 rounded-lg text-[12.5px] font-semibold bg-accent text-white hover:bg-accent/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
-                {sending ? sendStatus || "Sending…" : `Send to ${batchTargets.length} selected`}
-              </button>
+              <div className="flex items-center gap-3">
+                {batchTargets.length > 0 && (
+                  <div className="text-[12px] text-muted">
+                    {batchReady}/{batchTargets.length} ready · <span className="text-ink font-mono font-semibold">{batchTotal.toFixed(2)} USDC</span> total
+                  </div>
+                )}
+                <button onClick={sendBatch} disabled={sending || batchReady === 0}
+                  className="px-4 py-1.5 rounded-lg text-[12.5px] font-semibold bg-accent text-white hover:bg-accent/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                  {sending ? sendStatus || "Sending…" : `Send to ${batchReady} recipient${batchReady!==1?"s":""}`}
+                </button>
+              </div>
             </div>
             {sendResults.length > 0 && (
               <div className="mt-3 flex flex-col gap-1.5">
@@ -233,7 +232,7 @@ export default function People() {
               return (
                 <div key={c.id}
                   onClick={() => batchMode && setSelected(prev => { const s = new Set(prev); s.has(c.id) ? s.delete(c.id) : s.add(c.id); return s; })}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all ${batchMode ? "cursor-pointer" : ""} ${isSelected ? "bg-accent/10 border-accent/30" : "bg-surface border-white/8 hover:border-white/14"}`}>
+                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all ${batchMode ? "cursor-pointer select-none" : ""} ${isSelected ? "bg-accent/10 border-accent/30" : "bg-surface border-white/8 hover:border-white/14"}`}>
                   {batchMode && (
                     <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${isSelected ? "bg-accent border-accent" : "border-white/20"}`}>
                       {isSelected && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 2.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
@@ -252,6 +251,18 @@ export default function People() {
                     <div className="font-mono text-[11.5px] text-muted mt-0.5">{c.wallet}</div>
                     {c.notes && <div className="text-[11px] text-muted/60 mt-0.5 truncate">{c.notes}</div>}
                   </div>
+                  {/* Per-person amount in batch mode */}
+                  {batchMode && isSelected && (
+                    <div className="flex items-center gap-1.5 shrink-0" onClick={e => e.stopPropagation()}>
+                      <input
+                        value={perAmt[c.id] || ""}
+                        onChange={e => setPerAmt(p => ({ ...p, [c.id]: e.target.value }))}
+                        placeholder="0.00"
+                        className="w-[80px] px-2.5 py-1.5 bg-bg border border-white/14 rounded-lg text-[12.5px] font-mono text-ink outline-none focus:border-accent/60 transition-colors"
+                      />
+                      <span className="text-[11px] text-muted">USDC</span>
+                    </div>
+                  )}
                   {/* Actions */}
                   {!batchMode && (
                     <div className="flex items-center gap-1 shrink-0">
