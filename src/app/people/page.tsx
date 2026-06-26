@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Topbar from "@/components/Topbar";
 import { useWallet } from "@/hooks/useWallet";
 import { getContacts, saveContacts, Contact } from "@/lib/storage";
-import { fetchGasPrice, waitForReceipt, USDC_ADDRESS } from "@/lib/arc";
+import { fetchGasPrice, waitForReceipt, USDC_ADDRESS, MULTICALL3FROM, encodeBatchTransfers, parseUsdcErc20 } from "@/lib/arc";
 
 interface ImportRow {
   name: string;
@@ -211,33 +211,44 @@ export default function People() {
     const targets = contacts.filter(c => selected.has(c.id) && parseFloat(perAmt[c.id] || "0") > 0);
     if (targets.length === 0) return;
     if (!isConnected) { connect(); return; }
-    setSending(true); setSendResults([]); setSendStatus("");
+    setSending(true); setSendResults([]); setSendStatus(`Building batch for ${targets.length} recipients…`);
 
     const eth = getProvider();
     if (!eth) { setSending(false); return; }
-    const accs: string[] = await eth.request({ method: "eth_accounts" });
-    const from = accs[0];
-    const gasPrice = await fetchGasPrice(eth);
+    try {
+      const accs: string[] = await eth.request({ method: "eth_accounts" });
+      const from = accs[0];
 
-    const results: typeof sendResults = [];
-    for (const c of targets) {
-      setSendStatus(`Sending to ${c.name}…`);
+      // Switch to Arc
       try {
-        const amtRaw = BigInt(Math.round(parseFloat(perAmt[c.id]) * 1_000_000));
-        const data = "0xa9059cbb" +
-          c.wallet.toLowerCase().replace("0x","").padStart(64,"0") +
-          amtRaw.toString(16).padStart(64,"0");
-        const hash: string = await eth.request({
-          method: "eth_sendTransaction",
-          params: [{ from, to: USDC_ADDRESS, data, gas: "0x186a0", ...gasPrice }],
-        });
-        await waitForReceipt(eth, hash);
-        results.push({ name: c.name, wallet: c.wallet, txHash: hash });
+        await eth.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x4CEF52" }] });
       } catch (e: any) {
-        results.push({ name: c.name, wallet: c.wallet, error: e.message || "Failed" });
+        if (e.code === 4902) {
+          await eth.request({ method: "wallet_addEthereumChain", params: [{ chainId: "0x4CEF52", chainName: "Arc Testnet", rpcUrls: ["https://rpc.testnet.arc.network"], nativeCurrency: { name:"USDC",symbol:"USDC",decimals:18 }, blockExplorerUrls:["https://testnet.arcscan.app"] }] });
+        } else throw e;
       }
+
+      const calls = targets.map(c => ({
+        recipient: c.wallet as `0x${string}`,
+        units: parseUsdcErc20(perAmt[c.id]),
+      }));
+      const batchData = encodeBatchTransfers(calls);
+      const gasLimit = "0x" + Math.min(targets.length * 80000 + 60000, 2_000_000).toString(16);
+      const gas = await fetchGasPrice(eth);
+
+      setSendStatus(`Confirm ${targets.length} payments in 1 MetaMask tx…`);
+      const txHash: string = await eth.request({
+        method: "eth_sendTransaction",
+        params: [{ from, to: MULTICALL3FROM, value: "0x0", data: batchData, gas: gasLimit, ...gas }],
+      });
+
+      setSendStatus("Confirming on Arc…");
+      await waitForReceipt(eth, txHash);
+
+      setSendResults(targets.map(c => ({ name: c.name, wallet: c.wallet, txHash })));
+    } catch (e: any) {
+      setSendResults([{ name: "Batch", wallet: "", error: e.message || "Failed" }]);
     }
-    setSendResults(results);
     setSendStatus("");
     setSending(false);
   }
@@ -329,7 +340,7 @@ export default function People() {
                     <span className={r.txHash ? "text-green" : "text-red"}>{r.txHash ? "✓" : "✗"}</span>
                     <span className="text-ink">{r.name}</span>
                     {r.txHash
-                      ? <a href={`https://testnet.arcscan.app/tx/${r.txHash}`} target="_blank" rel="noreferrer" className="ml-auto text-accent font-mono hover:underline">{r.txHash.slice(0,10)}…</a>
+                      ? <a href={`https://testnet.arcscan.app/tx/${r.txHash}`} target="_blank" rel="noreferrer" className="ml-auto text-accent font-mono text-[11px] hover:underline">{r.name === "Batch" ? "View tx" : r.txHash.slice(0,10)+"…"}</a>
                       : <span className="ml-auto text-red/80">{r.error}</span>}
                   </div>
                 ))}

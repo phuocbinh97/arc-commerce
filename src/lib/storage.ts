@@ -3,7 +3,7 @@
 
 const LS_KEYS = [
   "arcCheckoutHistory","arcCommerceInvoices","arcCommerceSettings",
-  "arcBridgeHistory","arcRecurringPayments","arcRecurringInvoices","arcMerchantSession","arcPeopleContacts",
+  "arcBridgeHistory","arcRecurringPayments","arcRecurringInvoices","arcMerchantSession","arcPeopleContacts","arcPayrollSessions",
 ];
 
 /** Load all data from KV into localStorage. Call after wallet connects. */
@@ -214,6 +214,37 @@ export function getContacts(): Contact[] {
   if (!isBrowser()) return [];
   try { return JSON.parse(localStorage.getItem("arcPeopleContacts") || "[]"); } catch { return []; }
 }
+export interface PayrollEntry {
+  contactId: string;
+  name: string;
+  wallet: string;
+  amount: string;
+  paid: boolean;
+  txHash?: string;
+  paidAt?: number;
+}
+
+export interface PayrollSession {
+  id: string;
+  title: string;           // "Lương tháng 6/2026"
+  description?: string;
+  entries: PayrollEntry[];
+  createdAt: number;
+  paidAt?: number;         // when fully paid
+  txHash?: string;         // multicall tx
+  status: "draft" | "partial" | "paid";
+}
+
+export function getPayrollSessions(): PayrollSession[] {
+  if (!isBrowser()) return [];
+  try { return JSON.parse(localStorage.getItem("arcPayrollSessions") || "[]"); } catch { return []; }
+}
+export function savePayrollSessions(list: PayrollSession[]) {
+  if (!isBrowser()) return;
+  localStorage.setItem("arcPayrollSessions", JSON.stringify(list));
+  syncKey(getWallet(), "arcPayrollSessions", list);
+}
+
 export function saveContacts(list: Contact[]) {
   if (!isBrowser()) return;
   localStorage.setItem("arcPeopleContacts", JSON.stringify(list));

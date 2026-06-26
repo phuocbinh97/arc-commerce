@@ -30,6 +30,7 @@ const DATA_KEYS = [
   "arcRecurringInvoices",
   "arcMerchantSession",
   "arcPeopleContacts",
+  "arcPayrollSessions",
 ];
 
 export async function GET(req: NextRequest) {
