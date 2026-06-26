@@ -35,6 +35,31 @@ const EMPTY_FORM = { name: "", wallet: "", category: "employee" as Contact["cate
 
 function genPrlId() { return "prl_" + Math.random().toString(36).slice(2, 10); }
 
+function CustomCategoryInput({ value, contacts, onChange }: { value: string; contacts: Contact[]; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const existing = Array.from(new Set(
+    contacts.filter(c => c.category === "other" && c.customCategory).map(c => c.customCategory as string)
+  ));
+  return (
+    <div className="relative mt-2">
+      <input value={value} onChange={e=>onChange(e.target.value)} onFocus={()=>setOpen(true)} onBlur={()=>setTimeout(()=>setOpen(false),150)}
+        placeholder="Custom category (e.g. Contractor, Advisor…)"
+        className="w-full px-3.5 py-2 bg-bg border border-white/8 rounded-xl text-[12.5px] text-ink outline-none focus:border-white/20 transition-colors" />
+      {open && existing.length > 0 && (
+        <div className="absolute left-0 right-0 top-full mt-1 z-10 rounded-xl border border-white/10 overflow-hidden"
+          style={{background:"#161b22",boxShadow:"0 8px 24px rgba(0,0,0,0.6)"}}>
+          {existing.map(opt=>(
+            <button key={opt} onMouseDown={()=>onChange(opt)}
+              className="w-full text-left px-3.5 py-2 text-[12.5px] text-ink hover:bg-white/5 transition-colors">
+              {opt}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function People() {
   const { account, isConnected, connect, getProvider } = useWallet();
   const [tab, setTab] = useState<"contacts" | "payroll">("contacts");
@@ -72,6 +97,9 @@ export default function People() {
   const [sessIds, setSessIds]     = useState<Set<string>>(new Set());
   const [sessAmts, setSessAmts]   = useState<Record<string, string>>({});
   const [sessFilter, setSessFilter] = useState<string>("all");
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [qaForm, setQaForm] = useState(EMPTY_FORM);
+  const [qaErr, setQaErr] = useState("");
   const [prlPaying, setPrlPaying] = useState(false);
   const [prlStatus, setPrlStatus] = useState("");
 
@@ -104,6 +132,29 @@ export default function People() {
     setEditing(null);
     setForm(EMPTY_FORM);
     setFormErr("");
+  }
+
+  function saveQuickAdd() {
+    if (!qaForm.name.trim()) { setQaErr("Name is required."); return; }
+    if (!/^0x[a-fA-F0-9]{40}$/.test(qaForm.wallet)) { setQaErr("Enter a valid wallet address (0x…)."); return; }
+    const list = getContacts();
+    if (list.some(c => c.wallet.toLowerCase() === qaForm.wallet.toLowerCase())) {
+      setQaErr("This wallet is already in your contacts."); return;
+    }
+    const newContact: Contact = {
+      id: genId(), name: qaForm.name.trim(), wallet: qaForm.wallet,
+      category: qaForm.category,
+      customCategory: qaForm.category === "other" ? qaForm.customCategory.trim() : undefined,
+      notes: qaForm.notes.trim() || undefined, createdAt: Date.now(),
+    };
+    list.unshift(newContact);
+    saveContacts(list);
+    setContacts(list);
+    // auto-select in session
+    setSessIds(prev => { const s = new Set(prev); s.add(newContact.id); return s; });
+    setShowQuickAdd(false);
+    setQaForm(EMPTY_FORM);
+    setQaErr("");
   }
 
   function startEdit(c: Contact) {
@@ -690,9 +741,7 @@ export default function People() {
                   ))}
                 </div>
                 {form.category === "other" && (
-                  <input value={form.customCategory} onChange={e => setForm(f=>({...f,customCategory:e.target.value}))}
-                    placeholder="Custom category name (e.g. Contractor, Advisor…)"
-                    className="mt-2 w-full px-3.5 py-2 bg-bg border border-white/8 rounded-xl text-[12.5px] text-ink outline-none focus:border-white/20 transition-colors" />
+                  <CustomCategoryInput value={form.customCategory} contacts={contacts} onChange={v=>setForm(f=>({...f,customCategory:v}))} />
                 )}
               </div>
               <div>
@@ -814,8 +863,8 @@ export default function People() {
                   <label className="text-[11.5px] text-muted font-semibold uppercase tracking-wider">Recipients</label>
                   <div className="text-[11px] text-muted">{sessIds.size} selected · <span className="text-ink font-mono">{Object.entries(sessAmts).filter(([id])=>sessIds.has(id)).reduce((s,[,v])=>s+(parseFloat(v)||0),0).toFixed(2)} USDC</span></div>
                 </div>
-                {contacts.length > 0 && (
-                  <div className="flex gap-1 mb-2 flex-wrap">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex gap-1 flex-wrap">
                     {["all","employee","vendor","partner","other"].map(f=>(
                       <button key={f} onClick={()=>setSessFilter(f)}
                         className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border transition-all ${sessFilter===f?"bg-accent/15 text-[#6ea8fe] border-accent/30":"border-white/8 text-muted hover:text-ink"}`}>
@@ -823,7 +872,11 @@ export default function People() {
                       </button>
                     ))}
                   </div>
-                )}
+                  <button onClick={()=>{setQaForm(EMPTY_FORM);setQaErr("");setShowQuickAdd(true);}}
+                    className="shrink-0 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border border-white/14 text-muted hover:text-ink hover:border-white/25 transition-all whitespace-nowrap">
+                    + New People
+                  </button>
+                </div>
                 {contacts.length === 0 ? (
                   <div className="text-[12px] text-muted py-4 text-center">No contacts — add them in the Contacts tab first.</div>
                 ) : (
@@ -860,6 +913,56 @@ export default function People() {
                 className="px-4 py-2 rounded-xl text-[12.5px] font-semibold bg-accent text-white hover:bg-accent/90 transition-all disabled:opacity-40">
                 Create Session
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Add People (inside New Session modal) */}
+      {showQuickAdd && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4" onClick={()=>setShowQuickAdd(false)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative w-full max-w-[400px] rounded-2xl overflow-hidden flex flex-col"
+            style={{background:"#111520",boxShadow:"0 24px 64px rgba(0,0,0,0.8),0 0 0 1px rgba(255,255,255,0.08)"}}
+            onClick={e=>e.stopPropagation()}>
+            <div className="px-5 py-4 flex items-center justify-between border-b border-white/8 shrink-0">
+              <div className="font-bold text-[14px]">Quick Add Contact</div>
+              <button onClick={()=>setShowQuickAdd(false)} className="w-7 h-7 flex items-center justify-center rounded-lg text-muted hover:text-ink transition-colors">✕</button>
+            </div>
+            <div className="p-5 flex flex-col gap-3 overflow-y-auto">
+              <div>
+                <label className="text-[11px] text-muted font-semibold uppercase tracking-wider block mb-1">Name</label>
+                <input autoFocus value={qaForm.name} onChange={e=>setQaForm(f=>({...f,name:e.target.value}))} placeholder="e.g. Alice Nguyen"
+                  className="w-full px-3.5 py-2.5 bg-bg border border-white/8 rounded-xl text-[13px] text-ink outline-none focus:border-white/20 transition-colors" />
+              </div>
+              <div>
+                <label className="text-[11px] text-muted font-semibold uppercase tracking-wider block mb-1">Wallet</label>
+                <input value={qaForm.wallet} onChange={e=>setQaForm(f=>({...f,wallet:e.target.value}))} placeholder="0x…"
+                  className="w-full px-3.5 py-2.5 bg-bg border border-white/8 rounded-xl text-[13px] font-mono text-ink outline-none focus:border-white/20 transition-colors" />
+              </div>
+              <div>
+                <label className="text-[11px] text-muted font-semibold uppercase tracking-wider block mb-1">Category</label>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {CATEGORIES.map(cat=>(
+                    <button key={cat.value} onClick={()=>setQaForm(f=>({...f,category:cat.value}))}
+                      className={`py-1.5 rounded-xl text-[11.5px] font-semibold border transition-all ${qaForm.category===cat.value?cat.color:"border-white/8 text-muted hover:text-ink"}`}>
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+                {qaForm.category === "other" && (
+                  <CustomCategoryInput
+                    value={qaForm.customCategory}
+                    contacts={contacts}
+                    onChange={v=>setQaForm(f=>({...f,customCategory:v}))}
+                  />
+                )}
+              </div>
+              {qaErr && <div className="text-[12px] text-red px-3 py-2 bg-red/8 rounded-xl border border-red/20">{qaErr}</div>}
+            </div>
+            <div className="px-5 py-4 border-t border-white/8 flex justify-end gap-2 shrink-0">
+              <button onClick={()=>setShowQuickAdd(false)} className="px-4 py-2 rounded-xl text-[12.5px] font-semibold bg-surface2 text-muted hover:text-ink transition-all">Cancel</button>
+              <button onClick={saveQuickAdd} className="px-4 py-2 rounded-xl text-[12.5px] font-semibold bg-accent text-white hover:bg-accent/90 transition-all">Add & Select</button>
             </div>
           </div>
         </div>
