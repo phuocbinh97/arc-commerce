@@ -24,10 +24,14 @@ const CATEGORIES: { value: Contact["category"]; label: string; color: string }[]
 ];
 
 function catMeta(c: string) { return CATEGORIES.find(x => x.value === c) || CATEGORIES[3]; }
+function catLabel(contact: Contact) {
+  if (contact.category === "other" && contact.customCategory) return contact.customCategory;
+  return catMeta(contact.category).label;
+}
 
 function genId() { return "cct_" + Math.random().toString(36).slice(2, 10); }
 
-const EMPTY_FORM = { name: "", wallet: "", category: "employee" as Contact["category"], notes: "" };
+const EMPTY_FORM = { name: "", wallet: "", category: "employee" as Contact["category"], customCategory: "", notes: "" };
 
 function genPrlId() { return "prl_" + Math.random().toString(36).slice(2, 10); }
 
@@ -67,6 +71,7 @@ export default function People() {
   const [sessDesc, setSessDesc]   = useState("");
   const [sessIds, setSessIds]     = useState<Set<string>>(new Set());
   const [sessAmts, setSessAmts]   = useState<Record<string, string>>({});
+  const [sessFilter, setSessFilter] = useState<string>("all");
   const [prlPaying, setPrlPaying] = useState(false);
   const [prlStatus, setPrlStatus] = useState("");
 
@@ -79,16 +84,19 @@ export default function People() {
     if (!form.name.trim()) { setFormErr("Name is required."); return; }
     if (!/^0x[a-fA-F0-9]{40}$/.test(form.wallet)) { setFormErr("Enter a valid wallet address (0x…)."); return; }
 
+    const contactData = {
+      ...form,
+      customCategory: form.category === "other" ? form.customCategory.trim() : undefined,
+    };
     const list = getContacts();
     if (editing) {
       const idx = list.findIndex(c => c.id === editing.id);
-      if (idx >= 0) list[idx] = { ...editing, ...form };
+      if (idx >= 0) list[idx] = { ...editing, ...contactData };
     } else {
-      // Check duplicate wallet
       if (list.some(c => c.wallet.toLowerCase() === form.wallet.toLowerCase())) {
         setFormErr("This wallet is already in your contacts."); return;
       }
-      list.unshift({ id: genId(), ...form, createdAt: Date.now() });
+      list.unshift({ id: genId(), ...contactData, createdAt: Date.now() });
     }
     saveContacts(list);
     setContacts(list);
@@ -100,7 +108,7 @@ export default function People() {
 
   function startEdit(c: Contact) {
     setEditing(c);
-    setForm({ name: c.name, wallet: c.wallet, category: c.category, notes: c.notes || "" });
+    setForm({ name: c.name, wallet: c.wallet, category: c.category, customCategory: c.customCategory || "", notes: c.notes || "" });
     setFormErr("");
     setShowForm(true);
   }
@@ -129,7 +137,7 @@ export default function People() {
     const s: PayrollSession = { id:genPrlId(), title:sessTitle.trim(), description:sessDesc.trim()||undefined, entries, createdAt:Date.now(), status:"draft" };
     const list = [s, ...sessions];
     savePayrollSessions(list); setSessions(list);
-    setShowNewSess(false); setSessTitle(""); setSessDesc(""); setSessIds(new Set()); setSessAmts({});
+    setShowNewSess(false); setSessTitle(""); setSessDesc(""); setSessIds(new Set()); setSessAmts({}); setSessFilter("all");
     setPrlActive(s); setPrlView("session");
   }
 
@@ -606,7 +614,7 @@ export default function People() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-[13.5px] font-semibold text-ink">{c.name}</span>
-                      <span className={`text-[10.5px] font-semibold px-1.5 py-0.5 rounded-full border ${meta.color}`}>{meta.label}</span>
+                      <span className={`text-[10.5px] font-semibold px-1.5 py-0.5 rounded-full border ${meta.color}`}>{catLabel(c)}</span>
                     </div>
                     <div className="font-mono text-[11.5px] text-muted mt-0.5">{c.wallet}</div>
                     {c.notes && <div className="text-[11px] text-muted/60 mt-0.5 truncate">{c.notes}</div>}
@@ -681,6 +689,11 @@ export default function People() {
                     </button>
                   ))}
                 </div>
+                {form.category === "other" && (
+                  <input value={form.customCategory} onChange={e => setForm(f=>({...f,customCategory:e.target.value}))}
+                    placeholder="Custom category name (e.g. Contractor, Advisor…)"
+                    className="mt-2 w-full px-3.5 py-2 bg-bg border border-white/8 rounded-xl text-[12.5px] text-ink outline-none focus:border-white/20 transition-colors" />
+                )}
               </div>
               <div>
                 <label className="text-[11.5px] text-muted font-semibold uppercase tracking-wider block mb-1.5">Notes <span className="normal-case font-normal">(optional)</span></label>
@@ -801,11 +814,21 @@ export default function People() {
                   <label className="text-[11.5px] text-muted font-semibold uppercase tracking-wider">Recipients</label>
                   <div className="text-[11px] text-muted">{sessIds.size} selected · <span className="text-ink font-mono">{Object.entries(sessAmts).filter(([id])=>sessIds.has(id)).reduce((s,[,v])=>s+(parseFloat(v)||0),0).toFixed(2)} USDC</span></div>
                 </div>
+                {contacts.length > 0 && (
+                  <div className="flex gap-1 mb-2 flex-wrap">
+                    {["all","employee","vendor","partner","other"].map(f=>(
+                      <button key={f} onClick={()=>setSessFilter(f)}
+                        className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border transition-all ${sessFilter===f?"bg-accent/15 text-[#6ea8fe] border-accent/30":"border-white/8 text-muted hover:text-ink"}`}>
+                        {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 {contacts.length === 0 ? (
                   <div className="text-[12px] text-muted py-4 text-center">No contacts — add them in the Contacts tab first.</div>
                 ) : (
                   <div className="flex flex-col gap-1.5 max-h-[260px] overflow-y-auto pr-1">
-                    {contacts.map(c=>{
+                    {contacts.filter(c => sessFilter === "all" || c.category === sessFilter).map(c=>{
                       const picked=sessIds.has(c.id);
                       return (
                         <div key={c.id} onClick={()=>setSessIds(prev=>{const s=new Set(prev);s.has(c.id)?s.delete(c.id):s.add(c.id);return s;})}

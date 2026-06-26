@@ -206,6 +206,7 @@ export interface Contact {
   name: string;
   wallet: string;
   category: "employee" | "vendor" | "partner" | "other";
+  customCategory?: string; // used when category === "other"
   notes?: string;
   createdAt: number;
 }
