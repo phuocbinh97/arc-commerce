@@ -137,6 +137,9 @@ export default function People() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<string>("all");
+  const [customCatFilter, setCustomCatFilter] = useState<string>(""); // sub-filter within "other"
+  const [otherDropOpen, setOtherDropOpen] = useState(false);
+  const otherDropRef = useRef<HTMLDivElement>(null);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Contact | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -176,6 +179,14 @@ export default function People() {
     setContacts(getContacts());
     setSessions(getPayrollSessions());
   }, []);
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (otherDropRef.current && !otherDropRef.current.contains(e.target as Node)) setOtherDropOpen(false);
+    }
+    if (otherDropOpen) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [otherDropOpen]);
 
   function save() {
     if (!form.name.trim()) { setFormErr("Name is required."); return; }
@@ -467,9 +478,16 @@ export default function People() {
     setSending(false);
   }
 
+  const customCatOptions = Array.from(new Set(
+    contacts.filter(c => c.category === "other" && c.customCategory).map(c => c.customCategory as string)
+  ));
+
   const filtered = contacts.filter(c => {
     const matchQ = !q || c.name.toLowerCase().includes(q.toLowerCase()) || c.wallet.toLowerCase().includes(q.toLowerCase());
-    const matchCat = filter === "all" || c.category === filter;
+    let matchCat = filter === "all" || c.category === filter;
+    if (filter === "other" && customCatFilter) {
+      matchCat = c.category === "other" && (c.customCategory || "") === customCatFilter;
+    }
     return matchQ && matchCat;
   });
 
@@ -633,13 +651,36 @@ export default function People() {
               <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search name or wallet…"
                 className="pl-8 pr-3 py-1.5 bg-surface border border-white/8 rounded-lg text-[12.5px] text-ink placeholder:text-muted outline-none focus:border-white/20 w-[200px]" />
             </div>
-            <div className="flex gap-1">
-              {[{value:"all",label:"All"},...CATEGORIES.map(c=>({value:c.value,label:c.label}))].map(opt=>(
-                <button key={opt.value} onClick={()=>setFilter(opt.value)}
+            <div className="flex gap-1 items-center">
+              {[{value:"all",label:"All"},...CATEGORIES.filter(c=>c.value!=="other").map(c=>({value:c.value,label:c.label}))].map(opt=>(
+                <button key={opt.value} onClick={()=>{ setFilter(opt.value); setCustomCatFilter(""); setOtherDropOpen(false); }}
                   className={`px-2.5 py-1 rounded-md text-[11.5px] font-semibold transition-all ${filter===opt.value?"bg-surface2 text-ink border border-white/14":"text-muted hover:text-ink"}`}>
                   {opt.label}
                 </button>
               ))}
+              {/* Other with dropdown */}
+              <div ref={otherDropRef} className="relative">
+                <button onClick={()=>{ setFilter("other"); setOtherDropOpen(v=>!v); }}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11.5px] font-semibold transition-all ${filter==="other"?"bg-surface2 text-ink border border-white/14":"text-muted hover:text-ink"}`}>
+                  {filter==="other" && customCatFilter ? customCatFilter : "Other"}
+                  {customCatOptions.length > 0 && <span className="text-[9px] opacity-60">▾</span>}
+                </button>
+                {otherDropOpen && customCatOptions.length > 0 && (
+                  <div className="absolute left-0 top-full mt-1 z-20 min-w-[160px] rounded-xl border border-white/10 overflow-hidden"
+                    style={{background:"#161b22",boxShadow:"0 8px 24px rgba(0,0,0,0.7)"}}>
+                    <button onClick={()=>{ setCustomCatFilter(""); setOtherDropOpen(false); }}
+                      className={`w-full text-left px-3.5 py-2 text-[12px] font-semibold transition-colors hover:bg-white/5 ${!customCatFilter?"text-ink":"text-muted"}`}>
+                      All Other
+                    </button>
+                    {customCatOptions.map(opt=>(
+                      <button key={opt} onClick={()=>{ setCustomCatFilter(opt); setOtherDropOpen(false); }}
+                        className={`w-full text-left px-3.5 py-2 text-[12px] font-semibold transition-colors hover:bg-white/5 ${customCatFilter===opt?"text-ink":"text-muted"}`}>
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
