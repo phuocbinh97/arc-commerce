@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Topbar from "@/components/Topbar";
 import { useWallet } from "@/hooks/useWallet";
 import { getContacts, saveContacts, Contact, getPayrollSessions, savePayrollSessions, PayrollSession, PayrollEntry } from "@/lib/storage";
-import { fetchGasPrice, waitForReceipt, USDC_ADDRESS, MULTICALL3FROM, encodeBatchTransfers, parseUsdcErc20, formatUsdc, timeAgo, ARC_EXPLORER } from "@/lib/arc";
+import { fetchGasPrice, waitForReceipt, USDC_ADDRESS, MULTICALL3FROM, encodeBatchTransfers, parseUsdcErc20, formatUsdc, timeAgo, ARC_EXPLORER, KIT_KEY } from "@/lib/arc";
 
 interface ImportRow {
   name: string;
@@ -177,6 +177,7 @@ export default function People() {
   const [qaErr, setQaErr] = useState("");
   const [prlPaying, setPrlPaying] = useState(false);
   const [prlStatus, setPrlStatus] = useState("");
+  const [paySource, setPaySource] = useState<"arc" | "unified">("arc");
 
   useEffect(() => {
     setContacts(getContacts());
@@ -315,6 +316,44 @@ export default function People() {
       );
       const allPaid = updEntries.every(e=>e.paid);
       const updated: PayrollSession = { ...prlActive, entries:updEntries, status:allPaid?"paid":"partial", txHash:allPaid?txHash:prlActive.txHash, paidAt:allPaid?now:prlActive.paidAt };
+      const list = sessions.map(s=>s.id===updated.id?updated:s);
+      savePayrollSessions(list); setSessions(list); setPrlActive(updated);
+      setPrlStatus("");
+    } catch(e:any) { setPrlStatus("Error: "+(e.message||"Failed")); }
+    setPrlPaying(false);
+  }
+
+  async function payUnpaidUnified() {
+    if (!prlActive) return;
+    if (!isConnected) { connect(); return; }
+    const unpaid = prlActive.entries.filter(e => !e.paid && parseFloat(e.amount) > 0);
+    if (unpaid.length === 0) return;
+    setPrlPaying(true);
+    try {
+      const eth = getProvider(); if (!eth) throw new Error("No wallet");
+      const adapterModule = await import("@circle-fin/adapter-viem-v2");
+      const createAdapterFromProvider = (adapterModule as any).createAdapterFromProvider;
+      const adapter = await createAdapterFromProvider({ provider: eth });
+      const { AppKit } = await import("@circle-fin/app-kit") as any;
+      const kit = new AppKit();
+      const now = Date.now();
+      const updEntries = [...prlActive.entries];
+      for (let i = 0; i < unpaid.length; i++) {
+        const e = unpaid[i];
+        setPrlStatus(`Sending ${i+1}/${unpaid.length} — ${e.name} (${e.amount} USDC)…`);
+        const result = await kit.unifiedBalance.spend({
+          from:  { adapter, allocations: [{ amount: parseFloat(e.amount).toFixed(2), chain: "Arc_Testnet" }] },
+          to:    { chain: "Arc_Testnet", recipientAddress: e.wallet, useForwarder: true },
+          token: "USDC",
+          amount: parseFloat(e.amount).toFixed(2),
+          config: { kitKey: `KIT_KEY:${KIT_KEY}` },
+        });
+        if (!result || result.state === "error") throw new Error(result?.error?.message || `Failed for ${e.name}`);
+        const idx = updEntries.findIndex(u => u.contactId===e.contactId && u.wallet===e.wallet);
+        if (idx>=0) updEntries[idx] = { ...updEntries[idx], paid:true, txHash:result.txHash||"", paidAt:now };
+      }
+      const allPaid = updEntries.every(e=>e.paid);
+      const updated: PayrollSession = { ...prlActive, entries:updEntries, status:allPaid?"paid":"partial", paidAt:allPaid?now:prlActive.paidAt };
       const list = sessions.map(s=>s.id===updated.id?updated:s);
       savePayrollSessions(list); setSessions(list); setPrlActive(updated);
       setPrlStatus("");
@@ -539,11 +578,27 @@ export default function People() {
               <div className="text-[11.5px] text-muted mt-1">Created {timeAgo(prlActive.createdAt)}</div>
             </div>
             {unpaidCount > 0 && (
-              <button onClick={payUnpaid} disabled={prlPaying}
-                className="flex items-center gap-2 px-4 py-2.5 bg-accent text-white rounded-xl text-[13px] font-semibold hover:bg-accent/90 transition-all disabled:opacity-50">
-                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-                {prlPaying ? prlStatus||"Processing…" : `Pay ${unpaidCount} unpaid · ${formatUsdc(prlTotalUnpaid(prlActive))} USDC (1 tx)`}
-              </button>
+              <div className="flex flex-col items-end gap-1.5">
+                {/* Source toggle */}
+                <div className="flex rounded-lg overflow-hidden border border-white/10 text-[11px] font-semibold">
+                  <button onClick={()=>setPaySource("arc")}
+                    className={`px-2.5 py-1 transition-colors ${paySource==="arc"?"bg-surface2 text-ink":"text-muted hover:text-ink"}`}>
+                    Arc Wallet
+                  </button>
+                  <button onClick={()=>setPaySource("unified")}
+                    className={`px-2.5 py-1 transition-colors ${paySource==="unified"?"bg-accent/20 text-[#6ea8fe]":"text-muted hover:text-ink"}`}>
+                    Unified Balance
+                  </button>
+                </div>
+                <button onClick={paySource==="unified" ? payUnpaidUnified : payUnpaid} disabled={prlPaying}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-accent text-white rounded-xl text-[13px] font-semibold hover:bg-accent/90 transition-all disabled:opacity-50">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                  {prlPaying ? prlStatus||"Processing…"
+                    : paySource==="unified"
+                      ? `Pay ${unpaidCount} unpaid · ${formatUsdc(prlTotalUnpaid(prlActive))} USDC (Unified)`
+                      : `Pay ${unpaidCount} unpaid · ${formatUsdc(prlTotalUnpaid(prlActive))} USDC (1 tx)`}
+                </button>
+              </div>
             )}
           </div>
           <div className="grid grid-cols-3 gap-3 mb-6">
