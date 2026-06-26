@@ -3,7 +3,7 @@
 
 const LS_KEYS = [
   "arcCheckoutHistory","arcCommerceInvoices","arcCommerceSettings",
-  "arcBridgeHistory","arcRecurringPayments","arcRecurringInvoices","arcMerchantSession",
+  "arcBridgeHistory","arcRecurringPayments","arcRecurringInvoices","arcMerchantSession","arcPeopleContacts",
 ];
 
 /** Load all data from KV into localStorage. Call after wallet connects. */
@@ -201,6 +201,25 @@ export function getRecurringInvoices(): RecurringInvoice[] {
   if (!isBrowser()) return [];
   try { return JSON.parse(localStorage.getItem("arcRecurringInvoices") || "[]"); } catch { return []; }
 }
+export interface Contact {
+  id: string;
+  name: string;
+  wallet: string;
+  category: "employee" | "vendor" | "partner" | "other";
+  notes?: string;
+  createdAt: number;
+}
+
+export function getContacts(): Contact[] {
+  if (!isBrowser()) return [];
+  try { return JSON.parse(localStorage.getItem("arcPeopleContacts") || "[]"); } catch { return []; }
+}
+export function saveContacts(list: Contact[]) {
+  if (!isBrowser()) return;
+  localStorage.setItem("arcPeopleContacts", JSON.stringify(list));
+  syncKey(getWallet(), "arcPeopleContacts", list);
+}
+
 export function saveRecurringInvoice(inv: RecurringInvoice) {
   if (!isBrowser()) return;
   const list = getRecurringInvoices();
