@@ -1,10 +1,20 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Topbar from "@/components/Topbar";
 import { useWallet } from "@/hooks/useWallet";
 import { getContacts, saveContacts, Contact } from "@/lib/storage";
-import { shortAddr, fetchGasPrice, waitForReceipt, USDC_ADDRESS } from "@/lib/arc";
+import { fetchGasPrice, waitForReceipt, USDC_ADDRESS } from "@/lib/arc";
+
+interface ImportRow {
+  name: string;
+  wallet: string;
+  amount: string;
+  category: Contact["category"];
+  notes: string;
+  valid: boolean;
+  error?: string;
+}
 
 const CATEGORIES: { value: Contact["category"]; label: string; color: string }[] = [
   { value: "employee", label: "Employee",  color: "text-blue-400  bg-blue-400/10  border-blue-400/20"  },
@@ -36,6 +46,12 @@ export default function People() {
   const [sending, setSending] = useState(false);
   const [sendStatus, setSendStatus] = useState("");
   const [sendResults, setSendResults] = useState<{ name: string; wallet: string; txHash?: string; error?: string }[]>([]);
+
+  // Import
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [importRows, setImportRows] = useState<ImportRow[]>([]);
+  const [showImport, setShowImport] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     setContacts(getContacts());
@@ -74,6 +90,110 @@ export default function People() {
   function remove(id: string) {
     const list = contacts.filter(c => c.id !== id);
     saveContacts(list); setContacts(list);
+  }
+
+  function parseCategory(raw: string): Contact["category"] {
+    const v = (raw || "").toLowerCase().trim();
+    if (v.includes("employee") || v.includes("staff") || v.includes("nhân viên")) return "employee";
+    if (v.includes("vendor") || v.includes("supplier") || v.includes("nhà cung cấp")) return "vendor";
+    if (v.includes("partner") || v.includes("đối tác")) return "partner";
+    return "other";
+  }
+
+  function rowsFromMatrix(matrix: string[][]): ImportRow[] {
+    if (matrix.length < 2) return [];
+    // Detect header row — find columns
+    const header = matrix[0].map(h => h.toLowerCase().trim());
+    const colName   = header.findIndex(h => h.includes("name") || h.includes("tên"));
+    const colWallet = header.findIndex(h => h.includes("wallet") || h.includes("address") || h.includes("địa chỉ"));
+    const colAmt    = header.findIndex(h => h.includes("amount") || h.includes("usdc") || h.includes("số tiền"));
+    const colCat    = header.findIndex(h => h.includes("category") || h.includes("loại") || h.includes("type"));
+    const colNotes  = header.findIndex(h => h.includes("note") || h.includes("ghi chú") || h.includes("memo"));
+
+    return matrix.slice(1).filter(r => r.some(c => c.trim())).map(row => {
+      const name   = colName   >= 0 ? (row[colName]   || "").trim() : (row[0] || "").trim();
+      const wallet = colWallet >= 0 ? (row[colWallet] || "").trim() : (row[1] || "").trim();
+      const amount = colAmt    >= 0 ? (row[colAmt]    || "").trim() : (row[2] || "").trim();
+      const cat    = parseCategory(colCat >= 0 ? row[colCat] : "");
+      const notes  = colNotes  >= 0 ? (row[colNotes]  || "").trim() : (row[4] || "").trim();
+      const valid  = !!name && /^0x[a-fA-F0-9]{40}$/.test(wallet);
+      const error  = !name ? "Missing name" : !wallet ? "Missing wallet" : !/^0x[a-fA-F0-9]{40}$/.test(wallet) ? "Invalid wallet" : undefined;
+      return { name, wallet, amount, category: cat, notes, valid, error };
+    });
+  }
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+
+    const name = file.name.toLowerCase();
+    if (name.endsWith(".csv")) {
+      const text = await file.text();
+      // Simple CSV parser
+      const lines = text.split(/\r?\n/).filter(l => l.trim());
+      const matrix = lines.map(line => {
+        const cols: string[] = [];
+        let cur = "", inQ = false;
+        for (const ch of line) {
+          if (ch === '"') { inQ = !inQ; }
+          else if (ch === "," && !inQ) { cols.push(cur); cur = ""; }
+          else cur += ch;
+        }
+        cols.push(cur);
+        return cols.map(c => c.replace(/^"|"$/g, "").trim());
+      });
+      setImportRows(rowsFromMatrix(matrix));
+      setShowImport(true);
+    } else if (name.endsWith(".xlsx") || name.endsWith(".xls")) {
+      const { read, utils } = await import("xlsx");
+      const buf = await file.arrayBuffer();
+      const wb = read(buf, { type: "array" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const matrix: string[][] = utils.sheet_to_json(ws, { header: 1, raw: false, defval: "" }) as string[][];
+      setImportRows(rowsFromMatrix(matrix));
+      setShowImport(true);
+    }
+  }
+
+  function confirmImport() {
+    setImporting(true);
+    const list = getContacts();
+    const existingWallets = new Set(list.map(c => c.wallet.toLowerCase()));
+    const newAmounts: Record<string, string> = {};
+    let added = 0;
+
+    for (const row of importRows) {
+      if (!row.valid) continue;
+      if (existingWallets.has(row.wallet.toLowerCase())) continue;
+      const id = genId();
+      list.unshift({ id, name: row.name, wallet: row.wallet, category: row.category, notes: row.notes, createdAt: Date.now() });
+      existingWallets.add(row.wallet.toLowerCase());
+      if (row.amount && parseFloat(row.amount) > 0) newAmounts[id] = row.amount;
+      added++;
+    }
+    saveContacts(list);
+    setContacts(list);
+
+    // Auto-enable batch mode and fill amounts if file had amounts
+    if (Object.keys(newAmounts).length > 0) {
+      setBatchMode(true);
+      setSelected(new Set(Object.keys(newAmounts)));
+      setPerAmt(newAmounts);
+    }
+
+    setShowImport(false);
+    setImporting(false);
+    alert(`Imported ${added} contact${added !== 1 ? "s" : ""}.`);
+  }
+
+  function downloadTemplate() {
+    const csv = `"Name","Wallet","Amount (USDC)","Category","Notes"\n"Alice Johnson","0xAbCd…","500","employee","Monthly salary"\n"Acme Corp","0x1234…","1500","vendor","Monthly invoice"`;
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url;
+    a.download = "nexmer-import-template.csv"; a.click();
+    URL.revokeObjectURL(url);
   }
 
   function exportCsv() {
@@ -169,6 +289,12 @@ export default function People() {
                 </button>
               </>
             )}
+            <button onClick={() => fileRef.current?.click()}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-surface border border-white/8 text-muted hover:text-ink transition-all">
+              <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+              Import
+            </button>
+            <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleFile} />
             <button onClick={() => { setShowForm(true); setEditing(null); setForm(EMPTY_FORM); setFormErr(""); }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-accent text-white hover:bg-accent/90 transition-all">
               + Add Contact
@@ -330,6 +456,85 @@ export default function People() {
                 className="w-full py-2.5 bg-accent text-white rounded-xl text-[13px] font-bold hover:bg-accent/90 transition-all mt-1">
                 {editing ? "Save Changes" : "Add Contact"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import Preview Modal */}
+      {showImport && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          onClick={() => setShowImport(false)}>
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+          <div className="relative w-full max-w-[720px] bg-surface border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[90vh]"
+            onClick={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-white/8 flex items-center justify-between shrink-0">
+              <div>
+                <div className="font-bold text-[14px]">Import Preview</div>
+                <div className="text-[11.5px] text-muted mt-0.5">
+                  {importRows.filter(r=>r.valid).length} valid · {importRows.filter(r=>!r.valid).length} invalid · {importRows.filter(r=>r.valid && parseFloat(r.amount||"0")>0).length} with amount
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={downloadTemplate}
+                  className="text-[11.5px] text-muted hover:text-ink px-2.5 py-1 rounded-lg bg-surface2 transition-all">
+                  Download Template
+                </button>
+                <button onClick={() => setShowImport(false)} className="text-muted hover:text-ink w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/8 transition-all">✕</button>
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="overflow-auto flex-1">
+              <table className="w-full text-[12px]">
+                <thead className="sticky top-0 bg-surface border-b border-white/8">
+                  <tr className="text-[10.5px] font-semibold text-muted uppercase tracking-wider">
+                    <th className="px-4 py-2.5 text-left w-6">#</th>
+                    <th className="px-4 py-2.5 text-left">Name</th>
+                    <th className="px-4 py-2.5 text-left">Wallet</th>
+                    <th className="px-4 py-2.5 text-right">Amount (USDC)</th>
+                    <th className="px-4 py-2.5 text-left">Category</th>
+                    <th className="px-4 py-2.5 text-left">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {importRows.map((r, i) => (
+                    <tr key={i} className={`border-b border-white/5 ${r.valid ? "" : "opacity-40"}`}>
+                      <td className="px-4 py-2 text-muted">{i+1}</td>
+                      <td className="px-4 py-2 font-medium text-ink">{r.name || <span className="text-red/60">—</span>}</td>
+                      <td className="px-4 py-2 font-mono text-[11px] text-muted">{r.wallet ? r.wallet.slice(0,8)+"…"+r.wallet.slice(-4) : <span className="text-red/60">—</span>}</td>
+                      <td className="px-4 py-2 text-right font-mono">{r.amount ? <span className="text-green">{parseFloat(r.amount).toFixed(2)}</span> : <span className="text-muted/40">—</span>}</td>
+                      <td className="px-4 py-2">
+                        <span className={`text-[10.5px] font-semibold px-1.5 py-0.5 rounded-full border ${catMeta(r.category).color}`}>{r.category}</span>
+                      </td>
+                      <td className="px-4 py-2">
+                        {r.valid
+                          ? <span className="text-green text-[11px]">✓ OK</span>
+                          : <span className="text-red text-[11px]">✗ {r.error}</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 py-4 border-t border-white/8 flex items-center justify-between shrink-0">
+              <div className="text-[11.5px] text-muted">
+                Columns auto-detected · invalid rows skipped · duplicates skipped
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setShowImport(false)}
+                  className="px-4 py-2 rounded-xl text-[12.5px] font-semibold bg-surface2 text-muted hover:text-ink transition-all">
+                  Cancel
+                </button>
+                <button onClick={confirmImport} disabled={importing || importRows.filter(r=>r.valid).length===0}
+                  className="px-4 py-2 rounded-xl text-[12.5px] font-semibold bg-accent text-white hover:bg-accent/90 transition-all disabled:opacity-40">
+                  {importing ? "Importing…" : `Import ${importRows.filter(r=>r.valid).length} contacts`}
+                </button>
+              </div>
             </div>
           </div>
         </div>
