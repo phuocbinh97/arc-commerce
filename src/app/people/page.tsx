@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import Topbar from "@/components/Topbar";
 import { useWallet } from "@/hooks/useWallet";
-import { getContacts, saveContacts, Contact } from "@/lib/storage";
-import { fetchGasPrice, waitForReceipt, USDC_ADDRESS, MULTICALL3FROM, encodeBatchTransfers, parseUsdcErc20 } from "@/lib/arc";
+import { getContacts, saveContacts, Contact, getPayrollSessions, savePayrollSessions, PayrollSession, PayrollEntry } from "@/lib/storage";
+import { fetchGasPrice, waitForReceipt, USDC_ADDRESS, MULTICALL3FROM, encodeBatchTransfers, parseUsdcErc20, formatUsdc, timeAgo, ARC_EXPLORER } from "@/lib/arc";
 
 interface ImportRow {
   name: string;
@@ -29,8 +29,13 @@ function genId() { return "cct_" + Math.random().toString(36).slice(2, 10); }
 
 const EMPTY_FORM = { name: "", wallet: "", category: "employee" as Contact["category"], notes: "" };
 
+function genPrlId() { return "prl_" + Math.random().toString(36).slice(2, 10); }
+
 export default function People() {
   const { account, isConnected, connect, getProvider } = useWallet();
+  const [tab, setTab] = useState<"contacts" | "payroll">("contacts");
+
+  // ── Contacts tab state ─────────────────────────────────────────────────────
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<string>("all");
@@ -53,8 +58,21 @@ export default function People() {
   const [showImport, setShowImport] = useState(false);
   const [importing, setImporting] = useState(false);
 
+  // ── Payroll tab state ──────────────────────────────────────────────────────
+  const [sessions, setSessions]   = useState<PayrollSession[]>([]);
+  const [prlView, setPrlView]     = useState<"list" | "session">("list");
+  const [prlActive, setPrlActive] = useState<PayrollSession | null>(null);
+  const [showNewSess, setShowNewSess] = useState(false);
+  const [sessTitle, setSessTitle] = useState("");
+  const [sessDesc, setSessDesc]   = useState("");
+  const [sessIds, setSessIds]     = useState<Set<string>>(new Set());
+  const [sessAmts, setSessAmts]   = useState<Record<string, string>>({});
+  const [prlPaying, setPrlPaying] = useState(false);
+  const [prlStatus, setPrlStatus] = useState("");
+
   useEffect(() => {
     setContacts(getContacts());
+    setSessions(getPayrollSessions());
   }, []);
 
   function save() {
@@ -90,6 +108,68 @@ export default function People() {
   function remove(id: string) {
     const list = contacts.filter(c => c.id !== id);
     saveContacts(list); setContacts(list);
+  }
+
+  // ── Payroll helpers ────────────────────────────────────────────────────────
+  function prlTotalAll(s: PayrollSession)    { return s.entries.reduce((x,e)=>x+parseFloat(e.amount),0); }
+  function prlTotalPaid(s: PayrollSession)   { return s.entries.filter(e=>e.paid).reduce((x,e)=>x+parseFloat(e.amount),0); }
+  function prlTotalUnpaid(s: PayrollSession) { return s.entries.filter(e=>!e.paid).reduce((x,e)=>x+parseFloat(e.amount),0); }
+  const prlStatusColor = (s: PayrollSession["status"]) =>
+    s==="paid"    ? "text-green  bg-green/10  border-green/20"
+    : s==="partial" ? "text-amber  bg-amber/10  border-amber/20"
+    : "text-muted bg-white/5 border-white/10";
+
+  function createSession() {
+    if (!sessTitle.trim()) return;
+    const entries: PayrollEntry[] = contacts
+      .filter(c => sessIds.has(c.id))
+      .map(c => ({ contactId:c.id, name:c.name, wallet:c.wallet, amount:sessAmts[c.id]||"0", paid:false }))
+      .filter(e => parseFloat(e.amount) > 0);
+    if (entries.length === 0) return;
+    const s: PayrollSession = { id:genPrlId(), title:sessTitle.trim(), description:sessDesc.trim()||undefined, entries, createdAt:Date.now(), status:"draft" };
+    const list = [s, ...sessions];
+    savePayrollSessions(list); setSessions(list);
+    setShowNewSess(false); setSessTitle(""); setSessDesc(""); setSessIds(new Set()); setSessAmts({});
+    setPrlActive(s); setPrlView("session");
+  }
+
+  async function payUnpaid() {
+    if (!prlActive) return;
+    if (!isConnected) { connect(); return; }
+    const unpaid = prlActive.entries.filter(e => !e.paid && parseFloat(e.amount) > 0);
+    if (unpaid.length === 0) return;
+    setPrlPaying(true); setPrlStatus(`Building ${unpaid.length}-recipient batch…`);
+    const eth = getProvider(); if (!eth) { setPrlPaying(false); return; }
+    try {
+      const accs: string[] = await eth.request({ method:"eth_accounts" });
+      const from = accs[0];
+      try { await eth.request({ method:"wallet_switchEthereumChain", params:[{chainId:"0x4CEF52"}] }); }
+      catch(e:any) { if(e.code===4902) await eth.request({ method:"wallet_addEthereumChain", params:[{chainId:"0x4CEF52",chainName:"Arc Testnet",rpcUrls:["https://rpc.testnet.arc.network"],nativeCurrency:{name:"USDC",symbol:"USDC",decimals:18},blockExplorerUrls:["https://testnet.arcscan.app"]}] }); else throw e; }
+      const calls = unpaid.map(e => ({ recipient:e.wallet as `0x${string}`, units:parseUsdcErc20(e.amount) }));
+      const batchData = encodeBatchTransfers(calls);
+      const gasLimit = "0x" + Math.min(unpaid.length*80000+60000, 2_000_000).toString(16);
+      const gas = await fetchGasPrice(eth);
+      setPrlStatus(`Confirm ${unpaid.length} payments in 1 MetaMask tx…`);
+      const txHash: string = await eth.request({ method:"eth_sendTransaction", params:[{from, to:MULTICALL3FROM, value:"0x0", data:batchData, gas:gasLimit, ...gas}] });
+      setPrlStatus("Confirming on Arc…");
+      await waitForReceipt(eth, txHash);
+      const now = Date.now();
+      const updEntries = prlActive.entries.map(e =>
+        (!e.paid && unpaid.find(u=>u.contactId===e.contactId && u.wallet===e.wallet)) ? {...e,paid:true,txHash,paidAt:now} : e
+      );
+      const allPaid = updEntries.every(e=>e.paid);
+      const updated: PayrollSession = { ...prlActive, entries:updEntries, status:allPaid?"paid":"partial", txHash:allPaid?txHash:prlActive.txHash, paidAt:allPaid?now:prlActive.paidAt };
+      const list = sessions.map(s=>s.id===updated.id?updated:s);
+      savePayrollSessions(list); setSessions(list); setPrlActive(updated);
+      setPrlStatus("");
+    } catch(e:any) { setPrlStatus("Error: "+(e.message||"Failed")); }
+    setPrlPaying(false);
+  }
+
+  function deleteSession(id: string) {
+    const list = sessions.filter(s=>s.id!==id);
+    savePayrollSessions(list); setSessions(list);
+    if (prlActive?.id===id) { setPrlActive(null); setPrlView("list"); }
   }
 
   function parseCategory(raw: string): Contact["category"] {
@@ -263,10 +343,153 @@ export default function People() {
   const batchTotal = batchTargets.reduce((s, c) => s + (parseFloat(perAmt[c.id] || "0") || 0), 0);
   const batchReady = batchTargets.filter(c => parseFloat(perAmt[c.id] || "0") > 0).length;
 
+  // ── Payroll session detail view ─────────────────────────────────────────────
+  if (tab === "payroll" && prlView === "session" && prlActive) {
+    const unpaidCount = prlActive.entries.filter(e=>!e.paid).length;
+    const paidCount   = prlActive.entries.filter(e=>e.paid).length;
+    return (
+      <>
+        <Topbar title="People" />
+        <div className="p-4 lg:p-7 flex-1 max-w-[720px]">
+          {/* Tabs */}
+          <div className="flex gap-1 mb-6 border-b border-white/8 pb-0">
+            {(["contacts","payroll"] as const).map(t=>(
+              <button key={t} onClick={()=>{setTab(t);if(t==="contacts"){}else setPrlView("list");}}
+                className={`px-4 py-2 text-[13px] font-semibold capitalize border-b-2 -mb-px transition-colors ${tab===t?"border-accent text-ink":"border-transparent text-muted hover:text-ink"}`}>
+                {t==="contacts"?"Contacts":"Payroll"}
+              </button>
+            ))}
+          </div>
+          <button onClick={()=>setPrlView("list")} className="flex items-center gap-1.5 text-[12px] text-muted hover:text-ink mb-5 transition-colors">
+            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+            All sessions
+          </button>
+          <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
+            <div>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h1 className="text-[18px] font-bold">{prlActive.title}</h1>
+                <span className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full border ${prlStatusColor(prlActive.status)}`}>
+                  {prlActive.status==="paid"?"Fully Paid":prlActive.status==="partial"?"Partial":"Draft"}
+                </span>
+              </div>
+              {prlActive.description && <div className="text-[12.5px] text-muted mt-1">{prlActive.description}</div>}
+              <div className="text-[11.5px] text-muted mt-1">Created {timeAgo(prlActive.createdAt)}</div>
+            </div>
+            {unpaidCount > 0 && (
+              <button onClick={payUnpaid} disabled={prlPaying}
+                className="flex items-center gap-2 px-4 py-2.5 bg-accent text-white rounded-xl text-[13px] font-semibold hover:bg-accent/90 transition-all disabled:opacity-50">
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                {prlPaying ? prlStatus||"Processing…" : `Pay ${unpaidCount} unpaid · ${formatUsdc(prlTotalUnpaid(prlActive))} USDC (1 tx)`}
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            {([["Total",formatUsdc(prlTotalAll(prlActive)),"USDC","text-ink"],["Paid",formatUsdc(prlTotalPaid(prlActive)),`${paidCount} recipients`,"text-green"],["Unpaid",formatUsdc(prlTotalUnpaid(prlActive)),`${unpaidCount} pending`,"text-amber"]] as const).map(([l,v,u,c])=>(
+              <div key={l} className="bg-surface border border-white/8 rounded-2xl p-4">
+                <div className="text-[11px] text-muted mb-1.5">{l}</div>
+                <div className={`text-[18px] font-bold font-mono ${c}`}>{v}</div>
+                <div className="text-[11px] text-muted mt-0.5">{u}</div>
+              </div>
+            ))}
+          </div>
+          <div className="bg-surface border border-white/8 rounded-2xl overflow-hidden">
+            <div className="px-5 py-3 border-b border-white/8 text-[11px] font-semibold text-muted uppercase tracking-wider grid grid-cols-[1fr_90px_100px_120px] gap-2">
+              <span>Recipient</span><span className="text-right">Amount</span><span className="text-center">Status</span><span className="text-right">Tx</span>
+            </div>
+            {prlActive.entries.map((e,i)=>(
+              <div key={i} className="grid grid-cols-[1fr_90px_100px_120px] gap-2 items-center px-5 py-3 border-b border-white/5 last:border-0 hover:bg-surface2/40 transition-colors">
+                <div>
+                  <div className="text-[13px] font-semibold">{e.name}</div>
+                  <div className="font-mono text-[10.5px] text-muted">{e.wallet.slice(0,8)}…{e.wallet.slice(-4)}</div>
+                </div>
+                <div className="text-right font-mono text-[13px] font-semibold">{formatUsdc(e.amount)}</div>
+                <div className="text-center">
+                  {e.paid
+                    ? <span className="text-[11px] text-green bg-green/10 border border-green/20 px-2 py-0.5 rounded-full">✓ Paid</span>
+                    : <span className="text-[11px] text-amber bg-amber/10 border border-amber/20 px-2 py-0.5 rounded-full">Pending</span>}
+                </div>
+                <div className="text-right">
+                  {e.txHash ? <a href={`${ARC_EXPLORER}/tx/${e.txHash}`} target="_blank" rel="noreferrer" className="text-[11px] font-mono text-accent hover:underline">{e.txHash.slice(0,8)}…</a>
+                    : <span className="text-muted/30 text-[11px]">—</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <Topbar title="People" />
       <div className="p-4 lg:p-7 flex-1 max-w-[860px]">
+
+        {/* Tab switcher */}
+        <div className="flex gap-1 mb-5 border-b border-white/8 pb-0">
+          {(["contacts","payroll"] as const).map(t=>(
+            <button key={t} onClick={()=>{setTab(t);setPrlView("list");}}
+              className={`px-4 py-2 text-[13px] font-semibold capitalize border-b-2 -mb-px transition-colors ${tab===t?"border-accent text-ink":"border-transparent text-muted hover:text-ink"}`}>
+              {t==="contacts"?"Contacts":`Payroll ${sessions.length>0?`(${sessions.length})`:""}`}
+            </button>
+          ))}
+        </div>
+
+        {/* ── PAYROLL LIST TAB ─────────────────────────────────────────── */}
+        {tab === "payroll" && (
+          <div className="max-w-[720px]">
+            <div className="flex items-center justify-between mb-5">
+              <div className="text-[12px] text-muted">Group contacts into payment runs — track who's paid each period</div>
+              <button onClick={()=>setShowNewSess(true)} className="px-4 py-2 bg-accent text-white rounded-xl text-[13px] font-semibold hover:bg-accent/90 transition-all">
+                + New Session
+              </button>
+            </div>
+            {sessions.length === 0 ? (
+              <div className="flex flex-col items-center py-20 gap-3">
+                <div className="text-[40px] opacity-20">💸</div>
+                <div className="text-muted text-sm">No sessions yet. Create your first payroll run.</div>
+                <button onClick={()=>setShowNewSess(true)} className="mt-2 px-4 py-2 bg-accent text-white rounded-xl text-[13px] font-semibold hover:bg-accent/90 transition-all">+ New Session</button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {sessions.map(s=>{
+                  const paid=s.entries.filter(e=>e.paid).length, total=s.entries.length;
+                  const pct=total>0?paid/total*100:0;
+                  return (
+                    <div key={s.id} onClick={()=>{setPrlActive(s);setPrlView("session");}}
+                      className="bg-surface border border-white/8 hover:border-white/14 rounded-2xl p-4 cursor-pointer transition-all group">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2.5 flex-wrap">
+                            <span className="text-[14px] font-bold group-hover:text-accent transition-colors">{s.title}</span>
+                            <span className={`text-[10.5px] font-semibold px-2 py-0.5 rounded-full border ${prlStatusColor(s.status)}`}>
+                              {s.status==="paid"?"Fully Paid":s.status==="partial"?"Partial":"Draft"}
+                            </span>
+                          </div>
+                          {s.description && <div className="text-[12px] text-muted mt-0.5">{s.description}</div>}
+                          <div className="text-[11.5px] text-muted mt-1">{timeAgo(s.createdAt)} · {total} recipients · <span className="font-mono">{formatUsdc(prlTotalAll(s))} USDC</span></div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <div className="text-right">
+                            <div className="text-[11px] text-muted">{paid}/{total} paid</div>
+                            <div className="text-[12px] font-mono font-semibold text-green mt-0.5">{formatUsdc(prlTotalPaid(s))}</div>
+                          </div>
+                          <button onClick={e=>{e.stopPropagation();deleteSession(s.id);}} className="w-7 h-7 flex items-center justify-center rounded-lg text-muted hover:text-red hover:bg-red/8 transition-all text-[11px]">✕</button>
+                        </div>
+                      </div>
+                      <div className="mt-3 h-1.5 bg-surface2 rounded-full overflow-hidden">
+                        <div className="h-full bg-green rounded-full transition-all duration-500" style={{width:`${pct}%`}} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── CONTACTS TAB ─────────────────────────────────────────────── */}
+        {tab === "contacts" && <>
 
         {/* Header row */}
         <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
@@ -422,6 +645,8 @@ export default function People() {
             })}
           </div>
         )}
+        </> /* end contacts tab */}
+
       </div>
 
       {/* Add/Edit Modal */}
@@ -546,6 +771,72 @@ export default function People() {
                   {importing ? "Importing…" : `Import ${importRows.filter(r=>r.valid).length} contacts`}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Session Modal */}
+      {showNewSess && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={()=>setShowNewSess(false)}>
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+          <div className="relative w-full max-w-[600px] bg-surface border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[90vh]" onClick={e=>e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-white/8 flex items-center justify-between shrink-0">
+              <div className="font-bold text-[14px]">New Payment Session</div>
+              <button onClick={()=>setShowNewSess(false)} className="text-muted hover:text-ink w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/8 transition-all">✕</button>
+            </div>
+            <div className="p-5 flex flex-col gap-4 overflow-auto flex-1">
+              <div>
+                <label className="text-[11.5px] text-muted font-semibold uppercase tracking-wider block mb-1.5">Session Title</label>
+                <input value={sessTitle} onChange={e=>setSessTitle(e.target.value)} placeholder="e.g. June 2026 Payroll"
+                  className="w-full px-3.5 py-2.5 bg-bg border border-white/8 rounded-xl text-[13px] text-ink outline-none focus:border-white/20 transition-colors" />
+              </div>
+              <div>
+                <label className="text-[11.5px] text-muted font-semibold uppercase tracking-wider block mb-1.5">Description <span className="normal-case font-normal">(optional)</span></label>
+                <input value={sessDesc} onChange={e=>setSessDesc(e.target.value)} placeholder="e.g. Full-time staff + contractors"
+                  className="w-full px-3.5 py-2.5 bg-bg border border-white/8 rounded-xl text-[13px] text-ink outline-none focus:border-white/20 transition-colors" />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-[11.5px] text-muted font-semibold uppercase tracking-wider">Recipients</label>
+                  <div className="text-[11px] text-muted">{sessIds.size} selected · <span className="text-ink font-mono">{Object.entries(sessAmts).filter(([id])=>sessIds.has(id)).reduce((s,[,v])=>s+(parseFloat(v)||0),0).toFixed(2)} USDC</span></div>
+                </div>
+                {contacts.length === 0 ? (
+                  <div className="text-[12px] text-muted py-4 text-center">No contacts — add them in the Contacts tab first.</div>
+                ) : (
+                  <div className="flex flex-col gap-1.5 max-h-[260px] overflow-y-auto pr-1">
+                    {contacts.map(c=>{
+                      const picked=sessIds.has(c.id);
+                      return (
+                        <div key={c.id} onClick={()=>setSessIds(prev=>{const s=new Set(prev);s.has(c.id)?s.delete(c.id):s.add(c.id);return s;})}
+                          className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl border cursor-pointer transition-all select-none ${picked?"bg-accent/10 border-accent/30":"bg-bg border-white/6 hover:border-white/14"}`}>
+                          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all ${picked?"bg-accent border-accent":"border-white/20"}`}>
+                            {picked&&<svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4l2 2L6.5 2" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[12.5px] font-semibold text-ink">{c.name}</div>
+                            <div className="font-mono text-[10.5px] text-muted truncate">{c.wallet.slice(0,10)}…</div>
+                          </div>
+                          {picked && (
+                            <div className="flex items-center gap-1 shrink-0" onClick={e=>e.stopPropagation()}>
+                              <input value={sessAmts[c.id]||""} onChange={e=>setSessAmts(p=>({...p,[c.id]:e.target.value}))} placeholder="0.00"
+                                className="w-[72px] px-2 py-1 bg-bg border border-white/14 rounded-lg text-[12px] font-mono text-ink outline-none focus:border-accent/60" />
+                              <span className="text-[10.5px] text-muted">USDC</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="px-5 py-4 border-t border-white/8 flex justify-end gap-2 shrink-0">
+              <button onClick={()=>setShowNewSess(false)} className="px-4 py-2 rounded-xl text-[12.5px] font-semibold bg-surface2 text-muted hover:text-ink transition-all">Cancel</button>
+              <button onClick={createSession} disabled={!sessTitle.trim()||sessIds.size===0}
+                className="px-4 py-2 rounded-xl text-[12.5px] font-semibold bg-accent text-white hover:bg-accent/90 transition-all disabled:opacity-40">
+                Create Session
+              </button>
             </div>
           </div>
         </div>

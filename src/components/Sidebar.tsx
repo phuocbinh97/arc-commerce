@@ -10,7 +10,6 @@ const NAV = [
   { href: "/invoices",         icon: "◧", label: "Invoices",         section: "Merchant" },
   { href: "/customers",        icon: "◎", label: "Customers",        section: "Merchant" },
   { href: "/people",           icon: "👥", label: "People",            section: "Merchant" },
-  { href: "/payroll",          icon: "💸", label: "Payroll",           section: "Merchant" },
   { href: "/analytics",        icon: "◉", label: "Analytics",        section: "Analytics" },
   { href: "/bridge",           icon: "⇄", label: "Bridge",           section: "Tools" },
   { href: "/send",             icon: "↗", label: "Send",             section: "Tools" },

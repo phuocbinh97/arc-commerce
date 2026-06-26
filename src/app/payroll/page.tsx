@@ -306,12 +306,12 @@ export default function Payroll() {
             <div className="p-5 flex flex-col gap-4 overflow-auto flex-1">
               <div>
                 <label className="text-[11.5px] text-muted font-semibold uppercase tracking-wider block mb-1.5">Session Title</label>
-                <input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="e.g. Lương tháng 6/2026"
+                <input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="e.g. June 2026 Payroll"
                   className="w-full px-3.5 py-2.5 bg-bg border border-white/8 rounded-xl text-[13px] text-ink outline-none focus:border-white/20 transition-colors" />
               </div>
               <div>
                 <label className="text-[11.5px] text-muted font-semibold uppercase tracking-wider block mb-1.5">Description <span className="normal-case font-normal">(optional)</span></label>
-                <input value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="e.g. Full-time staff + contractors"
+                <input value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="e.g. Full-time staff + contractors (optional)"
                   className="w-full px-3.5 py-2.5 bg-bg border border-white/8 rounded-xl text-[13px] text-ink outline-none focus:border-white/20 transition-colors" />
               </div>
 
