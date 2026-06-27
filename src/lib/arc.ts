@@ -212,10 +212,21 @@ export async function fetchGasPrice(provider: any) {
   } catch { return { maxFeePerGas:"0x4a817c800", maxPriorityFeePerGas:"0x0" }; }
 }
 const TRANSFER_SIG = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
-const MEMO_SIG     = "0x60a0f5b4fe6d2d1a1e434f1d876eea4e2aae6b1a36c2ad2d14f93c9d8f9e3c5"; // Memo(address,address,bytes32,bytes32,bytes,uint256)
+const CHUNK = 900; // Arc RPC: max ~1000 blocks per eth_getLogs call
 
 function padAddr(a: string): string {
   return "0x" + a.replace("0x","").toLowerCase().padStart(64,"0");
+}
+
+async function arcLogs(params: object): Promise<any[]> {
+  try {
+    const res = await fetch(ARC_RPC, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc:"2.0", id:1, method:"eth_getLogs", params:[params] }),
+    }).then(r=>r.json());
+    return res.result || [];
+  } catch { return []; }
 }
 
 export interface ContactPayment {
@@ -223,74 +234,81 @@ export interface ContactPayment {
   amount:   string; // human-readable USDC
   block:    number;
   ts:       number; // unix ms
-  label?:   string; // decoded from Memo event if available
+  label?:   string; // from Memo event memoData
 }
 
-/** Query Arc RPC for all USDC transfers from `fromWallet` to `toWallet` */
+/** Query Arc RPC for all USDC transfers from `fromWallet` to `toWallet`.
+ *  Scans backwards in 900-block chunks (Arc limit), up to `maxBlocks` total. */
 export async function fetchContactPayments(
   fromWallet: string,
   toWallet:   string,
+  maxBlocks = 500_000,
 ): Promise<ContactPayment[]> {
-  const rpc = ARC_RPC;
-
-  // 1. USDC Transfer logs: from=fromWallet, to=toWallet
-  const transferLogs: any[] = await fetch(rpc, {
+  // 1. Get current block
+  const latestHex: string = await fetch(ARC_RPC, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jsonrpc:"2.0", id:1, method:"eth_getLogs", params:[{
-      address:   USDC_ADDRESS,
-      fromBlock: "0x0",
-      toBlock:   "latest",
-      topics:    [TRANSFER_SIG, padAddr(fromWallet), padAddr(toWallet)],
-    }]}),
-  }).then(r=>r.json()).then(r=>r.result||[]).catch(()=>[]);
+    body: JSON.stringify({ jsonrpc:"2.0", id:0, method:"eth_blockNumber", params:[] }),
+  }).then(r=>r.json()).then(r=>r.result).catch(()=>"0x0");
+  const latest = parseInt(latestHex, 16);
+  const earliest = Math.max(0, latest - maxBlocks);
 
-  if (transferLogs.length === 0) return [];
-
-  // 2. Fetch block timestamps for unique blocks
-  const blockNums = [...new Set(transferLogs.map((l:any)=>l.blockNumber))];
-  const blockMap: Record<string, number> = {};
-  await Promise.all(blockNums.map(async bn => {
-    const res = await fetch(rpc, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ jsonrpc:"2.0", id:2, method:"eth_getBlockByNumber", params:[bn, false] }),
-    }).then(r=>r.json()).catch(()=>null);
-    if (res?.result?.timestamp) blockMap[bn as string] = parseInt(res.result.timestamp, 16) * 1000;
-  }));
-
-  // 3. Memo events from MEMO_CONTRACT sent by fromWallet (to correlate txHash → label)
-  const memoLogs: any[] = await fetch(rpc, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jsonrpc:"2.0", id:3, method:"eth_getLogs", params:[{
-      address:   MEMO_CONTRACT,
-      fromBlock: "0x0",
-      toBlock:   "latest",
-      topics:    [MEMO_SIG, padAddr(fromWallet)],
-    }]}),
-  }).then(r=>r.json()).then(r=>r.result||[]).catch(()=>[]);
-
-  const memoByTx: Record<string, string> = {};
-  for (const log of memoLogs) {
-    const decoded = decodeMemoData(log.data || "");
-    if (decoded) {
-      try {
-        const obj = JSON.parse(decoded);
-        memoByTx[log.transactionHash] = obj.lbl || obj.ord || decoded;
-      } catch { memoByTx[log.transactionHash] = decoded; }
-    }
+  // 2. Build chunk ranges [from, to] scanning backwards
+  const chunks: [number, number][] = [];
+  for (let to = latest; to > earliest; to -= CHUNK) {
+    chunks.push([Math.max(earliest, to - CHUNK + 1), to]);
   }
 
-  // 4. Build result
-  return transferLogs.map((log: any) => {
+  // 3. Fetch chunks in parallel batches of 10
+  const allLogs: any[] = [];
+  for (let i = 0; i < chunks.length; i += 10) {
+    const batch = chunks.slice(i, i + 10);
+    const results = await Promise.all(batch.map(([from, to]) =>
+      arcLogs({
+        address:   USDC_ADDRESS,
+        fromBlock: "0x" + from.toString(16),
+        toBlock:   "0x" + to.toString(16),
+        topics:    [TRANSFER_SIG, padAddr(fromWallet), padAddr(toWallet)],
+      })
+    ));
+    for (const r of results) allLogs.push(...r);
+  }
+
+  if (allLogs.length === 0) return [];
+
+  // 4. Fetch Memo tx inputs for matching txHashes to decode labels
+  const txHashes = [...new Set(allLogs.map((l:any) => l.transactionHash))];
+  const memoByTx: Record<string, string> = {};
+  await Promise.all(txHashes.map(async hash => {
+    try {
+      const res = await fetch(ARC_RPC, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc:"2.0", id:1, method:"eth_getTransactionByHash", params:[hash] }),
+      }).then(r=>r.json());
+      const tx = res.result;
+      if (tx?.to?.toLowerCase() === MEMO_CONTRACT.toLowerCase()) {
+        const decoded = decodeMemoData(tx.input || "");
+        if (decoded) {
+          try {
+            const obj = JSON.parse(decoded);
+            memoByTx[hash] = obj.lbl || obj.ord || decoded;
+          } catch { memoByTx[hash] = decoded; }
+        }
+      }
+    } catch { /* ignore */ }
+  }));
+
+  // 5. Build result — blockTimestamp is included in Arc log response
+  return allLogs.map((log: any) => {
     const units = BigInt(log.data);
     const amount = (Number(units) / 1_000_000).toFixed(2);
+    const ts = log.blockTimestamp ? parseInt(log.blockTimestamp, 16) * 1000 : 0;
     return {
       txHash: log.transactionHash,
       amount,
       block:  parseInt(log.blockNumber, 16),
-      ts:     blockMap[log.blockNumber] ?? 0,
+      ts,
       label:  memoByTx[log.transactionHash],
     };
   }).sort((a, b) => b.ts - a.ts);
