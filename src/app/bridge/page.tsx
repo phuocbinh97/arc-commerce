@@ -315,7 +315,7 @@ export default function Bridge() {
   // Fetch USDC balances on all chains + auto-suggest richest as FROM
   useEffect(() => {
     if (!account) return;
-    setHistory(getBridgeHistory(account));
+    setHistory(getBridgeHistory());
     setPendingBridges(JSON.parse(localStorage.getItem("arcPendingBridges") || "[]"));
     Promise.all(
       CHAIN_IDS.map(id => fetchChainUsdcBalance(id, account).then(bal => ({ id, bal })))
@@ -476,8 +476,8 @@ export default function Bridge() {
                 const updated_pending = JSON.parse(localStorage.getItem("arcPendingBridges") || "[]");
                 localStorage.setItem("arcPendingBridges", JSON.stringify(updated_pending.filter((x: any) => x.burnTxHash !== burnTxHash)));
                 setPendingBridges(prev => prev.filter(x => x.burnTxHash !== burnTxHash));
-                saveBridgeEntry({ from: fromChain, to: toChain, amount: arrived.toFixed(2), token: "USDC", ts: Date.now(), status: "completed" }, account);
-                const updated = getBridgeHistory(account); setHistory(updated); setPage(1);
+                saveBridgeEntry({ from: fromChain, to: toChain, amount: arrived.toFixed(2), token: "USDC", ts: Date.now(), status: "completed" });
+                const updated = getBridgeHistory(); setHistory(updated); setPage(1);
                 setStatus(`✅ ${arrived.toFixed(2)} USDC arrived on ${dst.label}!`);
                 setStep(0); setSucceeded(true); setRelaying(false);
                 return;
@@ -498,8 +498,8 @@ export default function Bridge() {
         }
 
         setStep(KIT_STEP_BRIDGE);
-        saveBridgeEntry({ from: fromChain, to: toChain, amount, token: "USDC", ts: Date.now(), status: "completed" }, account);
-        const updated = getBridgeHistory(account); setHistory(updated); setPage(1);
+        saveBridgeEntry({ from: fromChain, to: toChain, amount, token: "USDC", ts: Date.now(), status: "completed" });
+        const updated = getBridgeHistory(); setHistory(updated); setPage(1);
         setStatus(`✅ ${amount} USDC bridged via CCTP!`);
         setStep(0); setSucceeded(true);
         return;
@@ -580,8 +580,8 @@ export default function Bridge() {
         if (!poll.ok) continue;
         const d = await poll.json();
         if (d.status === "confirmed" || d.status === "finalized") {
-          saveBridgeEntry({ from: fromChain, to: toChain, amount, token: "USDC", ts: Date.now(), status: "completed", txId: transferId }, account);
-          const updated = getBridgeHistory(account);
+          saveBridgeEntry({ from: fromChain, to: toChain, amount, token: "USDC", ts: Date.now(), status: "completed", txId: transferId });
+          const updated = getBridgeHistory();
           setHistory(updated); setPage(1);
           setStatus(`✅ ${amount} USDC arrived on ${dst.label}!`);
           setStep(0); setSucceeded(true);
@@ -631,8 +631,8 @@ export default function Bridge() {
                 const f = pendingBridges.filter((_,j)=>j!==i);
                 setPendingBridges(f);
                 localStorage.setItem("arcPendingBridges", JSON.stringify(f));
-                saveBridgeEntry({ from: p.from, to: p.to, amount: p.amount, token: "USDC", ts: Date.now(), status: "completed" }, account!);
-                setHistory(getBridgeHistory(account!));
+                saveBridgeEntry({ from: p.from, to: p.to, amount: p.amount, token: "USDC", ts: Date.now(), status: "completed" });
+                setHistory(getBridgeHistory());
               }} getProvider={getProvider} />
             ))}
             <div className="text-[11px] text-muted/70">Your USDC is safe. Circle typically relays within 1–5 min.</div>

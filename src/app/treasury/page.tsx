@@ -82,7 +82,7 @@ export default function Treasury() {
   useEffect(() => {
     if (account) {
       refreshBalances();
-      setSwapHist(getSwapHistory(account));
+      setSwapHist(getSwapHistory());
     }
   }, [account, refreshBalances]);
 
@@ -158,8 +158,8 @@ export default function Treasury() {
         return;
       }
 
-      saveSwapEntry({ tokenIn: swapFrom as string, tokenOut: swapTo as string, amountIn: swapAmount, ts: Date.now(), status: "completed" }, account);
-      const updated = getSwapHistory(account);
+      saveSwapEntry({ tokenIn: swapFrom as string, tokenOut: swapTo as string, amountIn: swapAmount, ts: Date.now(), status: "completed" });
+      const updated = getSwapHistory();
       setSwapHist(updated);
       setSwapStatus(`✅ Swap complete! ${swapAmount} ${swapFrom} → ${swapTo}`);
       refreshBalances();
@@ -167,8 +167,8 @@ export default function Treasury() {
       if (e?.code === 4001 || e?.message?.toLowerCase().includes("rejected") || e?.message?.toLowerCase().includes("cancel")) {
         setSwapStatus("Swap cancelled.");
       } else {
-        saveSwapEntry({ tokenIn: swapFrom as string, tokenOut: swapTo as string, amountIn: swapAmount, ts: Date.now(), status: "failed" }, account);
-        const updated = getSwapHistory(account);
+        saveSwapEntry({ tokenIn: swapFrom as string, tokenOut: swapTo as string, amountIn: swapAmount, ts: Date.now(), status: "failed" });
+        const updated = getSwapHistory();
         setSwapHist(updated);
         setSwapStatus(`❌ ${e.message || "Swap failed"}`);
       }

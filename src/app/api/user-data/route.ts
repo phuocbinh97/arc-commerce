@@ -26,6 +26,7 @@ const DATA_KEYS = [
   "arcCommerceInvoices",
   "arcCommerceSettings",
   "arcBridgeHistory",
+  "arcSwapHistory",
   "arcRecurringPayments",
   "arcRecurringInvoices",
   "arcMerchantSession",
