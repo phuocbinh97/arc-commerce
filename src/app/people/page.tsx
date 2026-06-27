@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Topbar from "@/components/Topbar";
 import { useWallet } from "@/hooks/useWallet";
 import { getContacts, saveContacts, Contact, getPayrollSessions, savePayrollSessions, PayrollSession, PayrollEntry } from "@/lib/storage";
-import { fetchGasPrice, waitForReceipt, USDC_ADDRESS, MULTICALL3FROM, MEMO_CONTRACT, encodeBatchTransfers, encodeMemoCallData, buildPayrollMemo, parseUsdcErc20, formatUsdc, timeAgo, ARC_EXPLORER, KIT_KEY } from "@/lib/arc";
+import { fetchGasPrice, waitForReceipt, USDC_ADDRESS, MULTICALL3FROM, MEMO_CONTRACT, encodeBatchTransfers, encodeMemoCallData, buildPayrollMemo, parseUsdcErc20, formatUsdc, timeAgo, ARC_EXPLORER, KIT_KEY, fetchContactPayments, ContactPayment } from "@/lib/arc";
 
 interface ImportRow {
   name: string;
@@ -180,6 +180,11 @@ export default function People() {
   const [paySource, setPaySource] = useState<"arc" | "unified">("arc");
   const [prlSelected, setPrlSelected] = useState<Set<number>>(new Set());
 
+  // ── Contact detail / payment history ──────────────────────────────────────
+  const [activeContact, setActiveContact]         = useState<Contact | null>(null);
+  const [contactHistory, setContactHistory]       = useState<ContactPayment[]>([]);
+  const [historyLoading, setHistoryLoading]       = useState(false);
+
   useEffect(() => {
     setContacts(getContacts());
     setSessions(getPayrollSessions());
@@ -260,6 +265,16 @@ export default function People() {
     const list = getContacts().map(c => c.id === updated.id ? updated : c);
     saveContacts(list);
     setContacts(list);
+  }
+
+  async function openContactDetail(c: Contact) {
+    setActiveContact(c);
+    setContactHistory([]);
+    setHistoryLoading(true);
+    if (!account) { setHistoryLoading(false); return; }
+    const hist = await fetchContactPayments(account, c.wallet);
+    setContactHistory(hist);
+    setHistoryLoading(false);
   }
 
   function startEdit(c: Contact) {
@@ -554,6 +569,90 @@ export default function People() {
   const batchTargets = batchMode ? contacts.filter(c => selected.has(c.id)) : [];
   const batchTotal = batchTargets.reduce((s, c) => s + (parseFloat(perAmt[c.id] || "0") || 0), 0);
   const batchReady = batchTargets.filter(c => parseFloat(perAmt[c.id] || "0") > 0).length;
+
+  // ── Contact detail / payment history view ──────────────────────────────────
+  if (tab === "contacts" && activeContact) {
+    const total = contactHistory.reduce((s,h)=>s+parseFloat(h.amount),0);
+    return (
+      <>
+        <Topbar title="People" />
+        <div className="p-4 lg:p-7 flex-1 max-w-[720px]">
+          <div className="flex gap-1 mb-6 border-b border-white/8 pb-0">
+            {(["contacts","payroll"] as const).map(t=>(
+              <button key={t} onClick={()=>{setTab(t);setActiveContact(null);}}
+                className={`px-4 py-2 text-[13px] font-semibold capitalize border-b-2 -mb-px transition-colors ${tab===t?"border-accent text-ink":"border-transparent text-muted hover:text-ink"}`}>
+                {t==="contacts"?"Contacts":"Payroll"}
+              </button>
+            ))}
+          </div>
+          <button onClick={()=>setActiveContact(null)} className="flex items-center gap-1.5 text-[12px] text-muted hover:text-ink mb-5 transition-colors">
+            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+            All contacts
+          </button>
+          {/* Contact header */}
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-12 h-12 rounded-full bg-surface2 border border-white/8 flex items-center justify-center text-[20px] font-bold text-muted shrink-0">
+              {activeContact.name.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <div className="text-[18px] font-bold">{activeContact.name}</div>
+              <div className="font-mono text-[12px] text-muted mt-0.5">{activeContact.wallet}</div>
+              <div className={`inline-block mt-1 text-[10.5px] font-semibold px-2 py-0.5 rounded-full border ${catMeta(activeContact.category).color}`}>
+                {catLabel(activeContact)}
+              </div>
+            </div>
+          </div>
+          {/* Stats */}
+          {!historyLoading && contactHistory.length > 0 && (
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              <div className="bg-surface border border-white/8 rounded-2xl p-4">
+                <div className="text-[11px] text-muted mb-1">Total Paid</div>
+                <div className="text-[20px] font-bold font-mono text-green">{total.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+                <div className="text-[11px] text-muted mt-0.5">USDC</div>
+              </div>
+              <div className="bg-surface border border-white/8 rounded-2xl p-4">
+                <div className="text-[11px] text-muted mb-1">Transactions</div>
+                <div className="text-[20px] font-bold font-mono text-ink">{contactHistory.length}</div>
+                <div className="text-[11px] text-muted mt-0.5">on Arc Testnet</div>
+              </div>
+            </div>
+          )}
+          {/* History table */}
+          <div className="bg-surface border border-white/8 rounded-2xl overflow-hidden">
+            <div className="px-5 py-3 border-b border-white/8 text-[11px] font-semibold text-muted uppercase tracking-wider flex items-center justify-between">
+              <span>Payment History</span>
+              {!historyLoading && <span className="text-[10px]">from Arc Testnet on-chain</span>}
+            </div>
+            {historyLoading ? (
+              <div className="flex items-center justify-center py-12 gap-2 text-muted text-[12px]">
+                <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
+                Fetching on-chain data…
+              </div>
+            ) : contactHistory.length === 0 ? (
+              <div className="flex flex-col items-center py-12 gap-2">
+                <div className="text-[32px] opacity-20">📭</div>
+                <div className="text-muted text-[12px]">No payments found on-chain for this contact.</div>
+              </div>
+            ) : (
+              contactHistory.map((h,i)=>(
+                <div key={i} className="grid grid-cols-[1fr_90px_120px] gap-2 items-center px-5 py-3 border-b border-white/5 last:border-0 hover:bg-surface2/40 transition-colors">
+                  <div>
+                    {h.label && <div className="text-[12px] font-semibold text-ink">{h.label}</div>}
+                    <div className="text-[11px] text-muted">{h.ts ? new Date(h.ts).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : `Block ${h.block}`}</div>
+                  </div>
+                  <div className="text-right font-mono text-[13px] font-semibold text-green">+{h.amount}</div>
+                  <div className="text-right">
+                    <a href={`${ARC_EXPLORER}/tx/${h.txHash}`} target="_blank" rel="noreferrer"
+                      className="text-[11px] font-mono text-accent hover:underline">{h.txHash.slice(0,8)}…</a>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </>
+    );
+  }
 
   // ── Payroll session detail view ─────────────────────────────────────────────
   if (tab === "payroll" && prlView === "session" && prlActive) {
@@ -854,8 +953,8 @@ export default function People() {
               const isSelected = selected.has(c.id);
               return (
                 <div key={c.id}
-                  onClick={() => batchMode && setSelected(prev => { const s = new Set(prev); s.has(c.id) ? s.delete(c.id) : s.add(c.id); return s; })}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all ${batchMode ? "cursor-pointer select-none" : ""} ${isSelected ? "bg-accent/10 border-accent/30" : "bg-surface border-white/8 hover:border-white/14"}`}>
+                  onClick={() => batchMode ? setSelected(prev => { const s = new Set(prev); s.has(c.id) ? s.delete(c.id) : s.add(c.id); return s; }) : openContactDetail(c)}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-2xl border transition-all cursor-pointer ${isSelected ? "bg-accent/10 border-accent/30" : "bg-surface border-white/8 hover:border-white/14"}`}>
                   {batchMode && (
                     <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${isSelected ? "bg-accent border-accent" : "border-white/20"}`}>
                       {isSelected && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 2.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}

@@ -211,6 +211,91 @@ export async function fetchGasPrice(provider: any) {
     return { maxFeePerGas:"0x"+max.toString(16), maxPriorityFeePerGas:"0x0" };
   } catch { return { maxFeePerGas:"0x4a817c800", maxPriorityFeePerGas:"0x0" }; }
 }
+const TRANSFER_SIG = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+const MEMO_SIG     = "0x60a0f5b4fe6d2d1a1e434f1d876eea4e2aae6b1a36c2ad2d14f93c9d8f9e3c5"; // Memo(address,address,bytes32,bytes32,bytes,uint256)
+
+function padAddr(a: string): string {
+  return "0x" + a.replace("0x","").toLowerCase().padStart(64,"0");
+}
+
+export interface ContactPayment {
+  txHash:   string;
+  amount:   string; // human-readable USDC
+  block:    number;
+  ts:       number; // unix ms
+  label?:   string; // decoded from Memo event if available
+}
+
+/** Query Arc RPC for all USDC transfers from `fromWallet` to `toWallet` */
+export async function fetchContactPayments(
+  fromWallet: string,
+  toWallet:   string,
+): Promise<ContactPayment[]> {
+  const rpc = ARC_RPC;
+
+  // 1. USDC Transfer logs: from=fromWallet, to=toWallet
+  const transferLogs: any[] = await fetch(rpc, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc:"2.0", id:1, method:"eth_getLogs", params:[{
+      address:   USDC_ADDRESS,
+      fromBlock: "0x0",
+      toBlock:   "latest",
+      topics:    [TRANSFER_SIG, padAddr(fromWallet), padAddr(toWallet)],
+    }]}),
+  }).then(r=>r.json()).then(r=>r.result||[]).catch(()=>[]);
+
+  if (transferLogs.length === 0) return [];
+
+  // 2. Fetch block timestamps for unique blocks
+  const blockNums = [...new Set(transferLogs.map((l:any)=>l.blockNumber))];
+  const blockMap: Record<string, number> = {};
+  await Promise.all(blockNums.map(async bn => {
+    const res = await fetch(rpc, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc:"2.0", id:2, method:"eth_getBlockByNumber", params:[bn, false] }),
+    }).then(r=>r.json()).catch(()=>null);
+    if (res?.result?.timestamp) blockMap[bn as string] = parseInt(res.result.timestamp, 16) * 1000;
+  }));
+
+  // 3. Memo events from MEMO_CONTRACT sent by fromWallet (to correlate txHash → label)
+  const memoLogs: any[] = await fetch(rpc, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc:"2.0", id:3, method:"eth_getLogs", params:[{
+      address:   MEMO_CONTRACT,
+      fromBlock: "0x0",
+      toBlock:   "latest",
+      topics:    [MEMO_SIG, padAddr(fromWallet)],
+    }]}),
+  }).then(r=>r.json()).then(r=>r.result||[]).catch(()=>[]);
+
+  const memoByTx: Record<string, string> = {};
+  for (const log of memoLogs) {
+    const decoded = decodeMemoData(log.data || "");
+    if (decoded) {
+      try {
+        const obj = JSON.parse(decoded);
+        memoByTx[log.transactionHash] = obj.lbl || obj.ord || decoded;
+      } catch { memoByTx[log.transactionHash] = decoded; }
+    }
+  }
+
+  // 4. Build result
+  return transferLogs.map((log: any) => {
+    const units = BigInt(log.data);
+    const amount = (Number(units) / 1_000_000).toFixed(2);
+    return {
+      txHash: log.transactionHash,
+      amount,
+      block:  parseInt(log.blockNumber, 16),
+      ts:     blockMap[log.blockNumber] ?? 0,
+      label:  memoByTx[log.transactionHash],
+    };
+  }).sort((a, b) => b.ts - a.ts);
+}
+
 export async function waitForReceipt(provider: any, txHash: string, ms=30000) {
   const start = Date.now();
   while (Date.now()-start < ms) {
