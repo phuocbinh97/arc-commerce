@@ -269,13 +269,19 @@ export function getContactPayments(wallet: string): ContactPaymentRecord[] {
   } catch { return []; }
 }
 
-export function saveContactPayments(records: ContactPaymentRecord[]) {
+export async function saveContactPayments(records: ContactPaymentRecord[]) {
   if (!isBrowser()) return;
   const existing: ContactPaymentRecord[] = (() => { try { return JSON.parse(localStorage.getItem("arcContactPayments") || "[]"); } catch { return []; } })();
   const newHashes = new Set(records.map(r => r.txHash + r.contactWallet));
   const merged = [...records, ...existing.filter(r => !newHashes.has(r.txHash + r.contactWallet))].slice(0, 500);
   localStorage.setItem("arcContactPayments", JSON.stringify(merged));
-  syncKey(getWallet(), "arcContactPayments", merged);
+  // Awaited — ensures KV write completes before caller continues
+  const wallet = getWallet();
+  if (wallet) await fetch("/api/user-data", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ wallet, arcContactPayments: merged }),
+  }).catch(() => {});
 }
 
 export function saveRecurringInvoice(inv: RecurringInvoice) {

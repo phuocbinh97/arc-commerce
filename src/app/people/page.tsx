@@ -339,7 +339,7 @@ export default function People() {
       const updated: PayrollSession = { ...prlActive, entries:updEntries, status:allPaid?"paid":"partial", txHash:allPaid?txHash:prlActive.txHash, paidAt:allPaid?now:prlActive.paidAt };
       const list = sessions.map(s=>s.id===updated.id?updated:s);
       savePayrollSessions(list); setSessions(list); setPrlActive(updated);
-      saveContactPayments(selectedEntries.map(e => ({
+      await saveContactPayments(selectedEntries.map(e => ({
         txHash, amount: e.amount, paidAt: now,
         sessionId: prlActive.id, sessionTitle: prlActive.title,
         contactWallet: e.wallet,
