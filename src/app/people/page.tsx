@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Topbar from "@/components/Topbar";
 import { useWallet } from "@/hooks/useWallet";
 import { getContacts, saveContacts, Contact, getPayrollSessions, savePayrollSessions, PayrollSession, PayrollEntry } from "@/lib/storage";
-import { fetchGasPrice, waitForReceipt, USDC_ADDRESS, MULTICALL3FROM, encodeBatchTransfers, parseUsdcErc20, formatUsdc, timeAgo, ARC_EXPLORER, KIT_KEY } from "@/lib/arc";
+import { fetchGasPrice, waitForReceipt, USDC_ADDRESS, MULTICALL3FROM, MEMO_CONTRACT, encodeBatchTransfers, encodeMemoCallData, buildPayrollMemo, parseUsdcErc20, formatUsdc, timeAgo, ARC_EXPLORER, KIT_KEY } from "@/lib/arc";
 
 interface ImportRow {
   name: string;
@@ -311,10 +311,13 @@ export default function People() {
       catch(e:any) { if(e.code===4902) await eth.request({ method:"wallet_addEthereumChain", params:[{chainId:"0x4CEF52",chainName:"Arc Testnet",rpcUrls:["https://rpc.testnet.arc.network"],nativeCurrency:{name:"USDC",symbol:"USDC",decimals:18},blockExplorerUrls:["https://testnet.arcscan.app"]}] }); else throw e; }
       const calls = selectedEntries.map(e => ({ recipient:e.wallet as `0x${string}`, units:parseUsdcErc20(e.amount) }));
       const batchData = encodeBatchTransfers(calls);
-      const gasLimit = "0x" + Math.min(selectedEntries.length*80000+60000, 2_000_000).toString(16);
+      const selTotal = selectedEntries.reduce((s,e)=>s+parseFloat(e.amount),0);
+      const memoContent = buildPayrollMemo({ sessionId: prlActive.id, title: prlActive.title, count: selectedEntries.length, total: selTotal.toFixed(2) });
+      const memoData = encodeMemoCallData(MULTICALL3FROM, batchData, prlActive.id, memoContent);
+      const gasLimit = "0x" + Math.min(selectedEntries.length*80000+80000, 2_000_000).toString(16);
       const gas = await fetchGasPrice(eth);
       setPrlStatus(`Confirm ${selectedEntries.length} payments in 1 MetaMask tx…`);
-      const txHash: string = await eth.request({ method:"eth_sendTransaction", params:[{from, to:MULTICALL3FROM, value:"0x0", data:batchData, gas:gasLimit, ...gas}] });
+      const txHash: string = await eth.request({ method:"eth_sendTransaction", params:[{from, to:MEMO_CONTRACT, value:"0x0", data:memoData, gas:gasLimit, ...gas}] });
       setPrlStatus("Confirming on Arc…");
       await waitForReceipt(eth, txHash);
       const now = Date.now();

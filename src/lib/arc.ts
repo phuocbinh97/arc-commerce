@@ -67,6 +67,40 @@ export function buildMemoContent(params: {
   return JSON.stringify(obj).slice(0, 125);
 }
 
+/** Build payroll memo JSON for a batch session — stays under 125 chars */
+export function buildPayrollMemo(params: {
+  sessionId: string;
+  title: string;
+  count: number;
+  total: string; // human-readable e.g. "12.50"
+}): string {
+  return JSON.stringify({
+    v:   1,
+    t:   "payroll",
+    sid: params.sessionId.slice(0, 16),
+    lbl: params.title.slice(0, 40),
+    n:   params.count,
+    amt: params.total,
+  }).slice(0, 125);
+}
+
+/** Build recurring payment memo JSON — stays under 125 chars */
+export function buildRecurringMemo(params: {
+  recurringId: string;
+  name: string;
+  interval: string;
+  period: string; // e.g. "2026-06"
+}): string {
+  return JSON.stringify({
+    v:   1,
+    t:   "recurring",
+    rid: params.recurringId.slice(0, 16),
+    lbl: params.name.slice(0, 32),
+    int: params.interval,
+    per: params.period,
+  }).slice(0, 125);
+}
+
 // ── Multicall3From — batch transfers preserving msg.sender (Arc v0.7.2+) ───────
 
 const MULTICALL3_ABI = [{

@@ -9,8 +9,8 @@ import {
 } from "@/lib/storage";
 import {
   fetchGasPrice, waitForReceipt, parseUsdcErc20, shortAddr,
-  ARC_EXPLORER, timeAgo, MULTICALL3FROM, encodeBatchTransfers,
-  USDC_ADDRESS,
+  ARC_EXPLORER, timeAgo, MULTICALL3FROM, MEMO_CONTRACT, encodeBatchTransfers,
+  encodeMemoCallData, buildRecurringMemo, USDC_ADDRESS,
 } from "@/lib/arc";
 
 const CATEGORIES = [
@@ -388,12 +388,17 @@ export default function Recurring() {
         units: parseUsdcErc20(rec.amount),
       }));
       const batchData = encodeBatchTransfers(calls);
-      const gasLimit = "0x" + Math.min(due.length * 80000 + 60000, 2_000_000).toString(16);
+      const period = new Date().toISOString().slice(0, 7); // "2026-06"
+      const batchMemo = due.length === 1
+        ? buildRecurringMemo({ recurringId: due[0].id, name: due[0].name, interval: due[0].interval, period })
+        : JSON.stringify({ v:1, t:"recurring-batch", n: due.length, per: period }).slice(0, 125);
+      const memoData = encodeMemoCallData(MULTICALL3FROM, batchData, `rec-${period}-${due.length}`, batchMemo);
+      const gasLimit = "0x" + Math.min(due.length * 80000 + 80000, 2_000_000).toString(16);
       const gas = await fetchGasPrice(eth);
       setBatchStatus(`Confirm ${due.length} payments in 1 MetaMask tx…`);
       const txHash = await eth.request({
         method: "eth_sendTransaction",
-        params: [{ from, to: MULTICALL3FROM, value: "0x0", data: batchData, gas: gasLimit, ...gas }],
+        params: [{ from, to: MEMO_CONTRACT, value: "0x0", data: memoData, gas: gasLimit, ...gas }],
       });
       setBatchStatus("Confirming on Arc…");
       await waitForReceipt(eth, txHash);
