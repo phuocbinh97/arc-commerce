@@ -3,7 +3,7 @@
 
 const LS_KEYS = [
   "arcCheckoutHistory","arcCommerceInvoices","arcCommerceSettings",
-  "arcBridgeHistory","arcRecurringPayments","arcRecurringInvoices","arcMerchantSession","arcPeopleContacts","arcPayrollSessions",
+  "arcBridgeHistory","arcRecurringPayments","arcRecurringInvoices","arcMerchantSession","arcPeopleContacts","arcPayrollSessions","arcContactPayments",
 ];
 
 /** Load all data from KV into localStorage. Call after wallet connects. */
@@ -250,6 +250,32 @@ export function saveContacts(list: Contact[]) {
   if (!isBrowser()) return;
   localStorage.setItem("arcPeopleContacts", JSON.stringify(list));
   syncKey(getWallet(), "arcPeopleContacts", list);
+}
+
+export interface ContactPaymentRecord {
+  txHash:       string;
+  amount:       string;
+  paidAt:       number;
+  sessionId:    string;
+  sessionTitle: string;
+  contactWallet: string;
+}
+
+export function getContactPayments(wallet: string): ContactPaymentRecord[] {
+  if (!isBrowser()) return [];
+  try {
+    const all: ContactPaymentRecord[] = JSON.parse(localStorage.getItem("arcContactPayments") || "[]");
+    return all.filter(r => r.contactWallet.toLowerCase() === wallet.toLowerCase());
+  } catch { return []; }
+}
+
+export function saveContactPayments(records: ContactPaymentRecord[]) {
+  if (!isBrowser()) return;
+  const existing: ContactPaymentRecord[] = (() => { try { return JSON.parse(localStorage.getItem("arcContactPayments") || "[]"); } catch { return []; } })();
+  const newHashes = new Set(records.map(r => r.txHash + r.contactWallet));
+  const merged = [...records, ...existing.filter(r => !newHashes.has(r.txHash + r.contactWallet))].slice(0, 500);
+  localStorage.setItem("arcContactPayments", JSON.stringify(merged));
+  syncKey(getWallet(), "arcContactPayments", merged);
 }
 
 export function saveRecurringInvoice(inv: RecurringInvoice) {

@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import Topbar from "@/components/Topbar";
 import { useWallet } from "@/hooks/useWallet";
-import { getContacts, saveContacts, Contact, getPayrollSessions, savePayrollSessions, PayrollSession, PayrollEntry } from "@/lib/storage";
-import { fetchGasPrice, waitForReceipt, USDC_ADDRESS, MULTICALL3FROM, MEMO_CONTRACT, encodeBatchTransfers, encodeMemoCallData, buildPayrollMemo, parseUsdcErc20, formatUsdc, timeAgo, ARC_EXPLORER, KIT_KEY, fetchContactPayments, ContactPayment } from "@/lib/arc";
+import { getContacts, saveContacts, Contact, getPayrollSessions, savePayrollSessions, PayrollSession, PayrollEntry, getContactPayments, saveContactPayments, ContactPaymentRecord } from "@/lib/storage";
+import { fetchGasPrice, waitForReceipt, USDC_ADDRESS, MULTICALL3FROM, MEMO_CONTRACT, encodeBatchTransfers, encodeMemoCallData, buildPayrollMemo, parseUsdcErc20, formatUsdc, timeAgo, ARC_EXPLORER, KIT_KEY } from "@/lib/arc";
 
 interface ImportRow {
   name: string;
@@ -182,7 +182,7 @@ export default function People() {
 
   // ── Contact detail / payment history ──────────────────────────────────────
   const [activeContact, setActiveContact]         = useState<Contact | null>(null);
-  const [contactHistory, setContactHistory]       = useState<ContactPayment[]>([]);
+  const [contactHistory, setContactHistory]       = useState<ContactPaymentRecord[]>([]);
   const [historyLoading, setHistoryLoading]       = useState(false);
 
   useEffect(() => {
@@ -267,14 +267,9 @@ export default function People() {
     setContacts(list);
   }
 
-  async function openContactDetail(c: Contact) {
+  function openContactDetail(c: Contact) {
     setActiveContact(c);
-    setContactHistory([]);
-    setHistoryLoading(true);
-    if (!account) { setHistoryLoading(false); return; }
-    const hist = await fetchContactPayments(account, c.wallet);
-    setContactHistory(hist);
-    setHistoryLoading(false);
+    setContactHistory(getContactPayments(c.wallet));
   }
 
   function startEdit(c: Contact) {
@@ -344,6 +339,11 @@ export default function People() {
       const updated: PayrollSession = { ...prlActive, entries:updEntries, status:allPaid?"paid":"partial", txHash:allPaid?txHash:prlActive.txHash, paidAt:allPaid?now:prlActive.paidAt };
       const list = sessions.map(s=>s.id===updated.id?updated:s);
       savePayrollSessions(list); setSessions(list); setPrlActive(updated);
+      saveContactPayments(selectedEntries.map(e => ({
+        txHash, amount: e.amount, paidAt: now,
+        sessionId: prlActive.id, sessionTitle: prlActive.title,
+        contactWallet: e.wallet,
+      })));
       setPrlStatus("");
     } catch(e:any) { setPrlStatus("Error: "+(e.message||"Failed")); }
     setPrlPaying(false);
@@ -603,7 +603,7 @@ export default function People() {
             </div>
           </div>
           {/* Stats */}
-          {!historyLoading && contactHistory.length > 0 && (
+          {contactHistory.length > 0 && (
             <div className="grid grid-cols-2 gap-3 mb-6">
               <div className="bg-surface border border-white/8 rounded-2xl p-4">
                 <div className="text-[11px] text-muted mb-1">Total Paid</div>
@@ -613,7 +613,7 @@ export default function People() {
               <div className="bg-surface border border-white/8 rounded-2xl p-4">
                 <div className="text-[11px] text-muted mb-1">Transactions</div>
                 <div className="text-[20px] font-bold font-mono text-ink">{contactHistory.length}</div>
-                <div className="text-[11px] text-muted mt-0.5">on Arc Testnet</div>
+                <div className="text-[11px] text-muted mt-0.5">sessions</div>
               </div>
             </div>
           )}
@@ -621,24 +621,18 @@ export default function People() {
           <div className="bg-surface border border-white/8 rounded-2xl overflow-hidden">
             <div className="px-5 py-3 border-b border-white/8 text-[11px] font-semibold text-muted uppercase tracking-wider flex items-center justify-between">
               <span>Payment History</span>
-              {!historyLoading && <span className="text-[10px]">from Arc Testnet on-chain</span>}
             </div>
-            {historyLoading ? (
-              <div className="flex items-center justify-center py-12 gap-2 text-muted text-[12px]">
-                <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>
-                Fetching on-chain data…
-              </div>
-            ) : contactHistory.length === 0 ? (
+            {contactHistory.length === 0 ? (
               <div className="flex flex-col items-center py-12 gap-2">
                 <div className="text-[32px] opacity-20">📭</div>
-                <div className="text-muted text-[12px]">No payments found on-chain for this contact.</div>
+                <div className="text-muted text-[12px]">No payments recorded for this contact yet.</div>
               </div>
             ) : (
-              contactHistory.map((h,i)=>(
+              contactHistory.sort((a,b)=>b.paidAt-a.paidAt).map((h,i)=>(
                 <div key={i} className="grid grid-cols-[1fr_90px_120px] gap-2 items-center px-5 py-3 border-b border-white/5 last:border-0 hover:bg-surface2/40 transition-colors">
                   <div>
-                    {h.label && <div className="text-[12px] font-semibold text-ink">{h.label}</div>}
-                    <div className="text-[11px] text-muted">{h.ts ? new Date(h.ts).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : `Block ${h.block}`}</div>
+                    {h.sessionTitle && <div className="text-[12px] font-semibold text-ink">{h.sessionTitle}</div>}
+                    <div className="text-[11px] text-muted">{new Date(h.paidAt).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</div>
                   </div>
                   <div className="text-right font-mono text-[13px] font-semibold text-green">+{h.amount}</div>
                   <div className="text-right">
