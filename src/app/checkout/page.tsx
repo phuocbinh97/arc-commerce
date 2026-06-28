@@ -60,6 +60,54 @@ function StatusLabel({ status }: { status: TokenDef["status"] }) {
   return <span className="text-[10px] text-muted">Coming soon</span>;
 }
 
+function ChainDropdown({ chains, selected, balances, amount, switching, onSelect }: {
+  chains: ChainConfig[]; selected: ChainConfig | null;
+  balances: Record<string, string>; amount: string;
+  switching: boolean; onSelect: (c: ChainConfig) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const cur = selected ?? chains[0];
+  const bal = balances[cur?.key ?? ""] ?? "…";
+  const hasBal = bal !== "—" && bal !== "…" && parseFloat(bal) >= parseFloat(amount);
+  return (
+    <div className="relative">
+      <button onClick={() => setOpen(v => !v)} disabled={switching}
+        className="w-full flex items-center gap-3 px-3 py-2.5 bg-surface2 border border-white/14 rounded-2xl hover:border-white/30 transition-colors">
+        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: cur?.color ?? "#7d8590" }} />
+        <div className="flex-1 text-left">
+          <div className="text-[13px] font-semibold text-ink">{cur?.shortLabel ?? "Select chain"}</div>
+        </div>
+        <div className={`font-mono text-[11.5px] mr-1 ${hasBal ? "text-green" : "text-muted/60"}`}>{bal} USDC</div>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted shrink-0">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+      {open && (
+        <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-surface border border-white/14 rounded-xl shadow-2xl overflow-hidden">
+          {chains.map(c => {
+            const b = balances[c.key] ?? "…";
+            const suf = b !== "—" && b !== "…" && parseFloat(b) >= parseFloat(amount);
+            const isSelected = cur?.key === c.key;
+            return (
+              <button key={c.key} disabled={switching}
+                onClick={() => { onSelect(c); setOpen(false); }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 border-b border-white/6 last:border-0 hover:bg-surface2 transition-colors text-left
+                  ${isSelected ? "bg-accent/8" : ""}`}>
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: c.color }} />
+                <div className="flex-1">
+                  <div className="text-[12.5px] font-semibold text-ink">{c.shortLabel}</div>
+                </div>
+                <div className={`font-mono text-[11px] ${suf ? "text-green" : "text-muted/50"}`}>{b} USDC</div>
+                {isSelected && <span className="text-accent text-[11px] font-bold">✓</span>}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TokenDropdown({ value, onChange, balances }: { value: PayToken; onChange: (t: PayToken) => void; balances: Partial<Record<PayToken, string>> }) {
   const [open, setOpen] = useState(false);
   const meta = TOKENS[value];
@@ -474,52 +522,38 @@ function CheckoutContent() {
               )}
             </div>
 
-            {/* Chain selector — shown when wallet connected, auto-fetches all balances */}
-            {isConnected && !bridgeMode && (
+            {/* Chain selector — dropdown */}
+            {isConnected && (
               <div className="mb-4">
                 <div className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2">
                   Pay from
                   {loadingBalances && <span className="ml-2 text-muted/60 normal-case font-normal">fetching balances…</span>}
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                  {SUPPORTED_CHAINS.map(c => {
-                    const bal = allBalances[c.key] ?? "…";
-                    const hasBal = bal !== "—" && bal !== "…" && parseFloat(bal) >= parseFloat(amount);
-                    const isActive = customerChain?.key === c.key;
-                    return (
-                      <button key={c.key}
-                        disabled={switching}
-                        onClick={async () => {
-                          if (c.key === ARC_CHAIN.key) {
-                            setBridgeMode(false);
-                            setSelectedPayChain(c);
-                            await switchToChain(c);
-                          } else {
-                            setSelectedPayChain(c);
-                            setBridgeMode(true);
-                            await switchToChain(c);
-                          }
-                        }}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-left transition-all
-                          ${isActive
-                            ? "border-accent/50 bg-accent/10"
-                            : hasBal
-                            ? "border-white/10 bg-surface2 hover:border-white/20"
-                            : "border-white/6 bg-surface2/50 opacity-60"
-                          }`}>
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: c.color }} />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-[11.5px] font-semibold text-ink truncate">{c.shortLabel}</div>
-                          <div className={`font-mono text-[10.5px] ${hasBal ? "text-green" : "text-muted/60"}`}>
-                            {bal} USDC
-                          </div>
-                        </div>
-                        {isActive && <span className="text-accent text-[10px]">✓</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-                {bridgeMode && selectedPayChain && selectedPayChain.key !== ARC_CHAIN.key && (
+                <ChainDropdown
+                  chains={SUPPORTED_CHAINS}
+                  selected={selectedPayChain || customerChain}
+                  balances={allBalances}
+                  amount={amount}
+                  switching={switching}
+                  onSelect={async (c) => {
+                    setSelectedPayChain(c);
+                    if (c.key === ARC_CHAIN.key) {
+                      setBridgeMode(false);
+                    } else {
+                      setBridgeMode(true);
+                    }
+                  }}
+                />
+                {/* Switch network prompt if selected != wallet chain */}
+                {selectedPayChain && customerChain && selectedPayChain.key !== customerChain.key && (
+                  <button
+                    disabled={switching}
+                    onClick={() => switchToChain(selectedPayChain)}
+                    className="mt-2 w-full py-2 rounded-xl border border-amber/30 bg-amber/8 text-amber text-[12.5px] font-semibold hover:bg-amber/15 transition-colors disabled:opacity-50">
+                    {switching ? "Switching…" : `Switch wallet to ${selectedPayChain.shortLabel}`}
+                  </button>
+                )}
+                {selectedPayChain && selectedPayChain.key !== ARC_CHAIN.key && (
                   <div className="mt-2 flex items-center gap-2 text-[11px] text-muted px-1">
                     <span className="px-2 py-0.5 rounded-full border border-white/8 bg-surface2 text-[10.5px]">{selectedPayChain.shortLabel}</span>
                     <span>→ Circle CCTP bridge →</span>
