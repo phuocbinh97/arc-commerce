@@ -493,9 +493,9 @@ function CheckoutContent() {
           <div className="w-14 h-14 rounded-full bg-green/15 flex items-center justify-center mx-auto mb-4">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3fb950" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
-          <h1 className="text-xl font-bold text-green mb-2">Đã thanh toán</h1>
-          <p className="text-muted text-sm mb-1">Hóa đơn <strong className="text-ink">{orderId}</strong> đã được thanh toán thành công.</p>
-          <p className="text-muted text-sm">Cảm ơn bạn đã thanh toán!</p>
+          <h1 className="text-xl font-bold text-green mb-2">Invoice Paid</h1>
+          <p className="text-muted text-sm mb-1">Invoice <strong className="text-ink">{orderId}</strong> has already been paid.</p>
+          <p className="text-muted text-sm">Thank you for your payment!</p>
         </div>
       </div>
     );
