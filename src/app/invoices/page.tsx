@@ -219,7 +219,9 @@ export default function Invoices() {
   const paidCount = invoices.filter(i => i.status === "paid").length;
   const pendCount = invoices.filter(i => i.status === "pending").length;
 
-  const filtered = filter === "all" ? invoices : invoices.filter(i => i.status === filter);
+  const active   = invoices.filter(i => !i.deleted);
+  const trashed  = invoices.filter(i => i.deleted);
+  const filtered = filter === "all" ? active : active.filter(i => i.status === filter);
   const sorted   = [...filtered].sort((a, b) => b.createdAt - a.createdAt);
 
   function create() {
@@ -258,6 +260,16 @@ export default function Invoices() {
   }
 
   function del(id: string) {
+    const updated = invoices.map(i => i.id === id ? { ...i, deleted: true, deletedAt: Date.now() } : i);
+    saveInvoices(updated); setInvoices(updated);
+  }
+
+  function restore(id: string) {
+    const updated = invoices.map(i => i.id === id ? { ...i, deleted: false, deletedAt: undefined } : i);
+    saveInvoices(updated); setInvoices(updated);
+  }
+
+  function permDelete(id: string) {
     const updated = invoices.filter(i => i.id !== id);
     saveInvoices(updated); setInvoices(updated);
   }
@@ -434,6 +446,36 @@ export default function Invoices() {
             </>
           )}
         </div>
+
+        {/* Trash */}
+        {trashed.length > 0 && (
+          <div className="bg-surface border border-white/8 rounded-2xl overflow-hidden opacity-70">
+            <div className="px-5 py-3.5 border-b border-white/8 flex items-center gap-2">
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="text-muted"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+              <span className="text-[13px] font-semibold text-muted">Trash ({trashed.length})</span>
+            </div>
+            <div className="divide-y divide-white/6">
+              {[...trashed].sort((a,b) => (b.deletedAt||0)-(a.deletedAt||0)).map(inv => (
+                <div key={inv.id} className="flex items-center gap-3 px-5 py-3 text-muted">
+                  <span className="font-mono text-[12px] w-16 shrink-0">{inv.id}</span>
+                  <span className="text-[12px] flex-1 truncate line-through">{inv.description}</span>
+                  <span className="font-mono text-[12px] shrink-0">{formatUsdc(inv.amount)} USDC</span>
+                  <span className="text-[11px] shrink-0">deleted {inv.deletedAt ? new Date(inv.deletedAt).toLocaleDateString() : ""}</span>
+                  <div className="flex gap-1.5 shrink-0" onClick={e => e.stopPropagation()}>
+                    <button onClick={() => restore(inv.id)}
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-surface2 border border-white/14 text-muted hover:text-ink transition-colors">
+                      Restore
+                    </button>
+                    <button onClick={() => { if (confirm("Permanently delete? Cannot undo.")) permDelete(inv.id); }}
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-red/8 border border-red/20 text-red hover:bg-red/15 transition-colors">
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* New Invoice form — slide-in panel */}

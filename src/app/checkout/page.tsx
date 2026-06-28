@@ -847,6 +847,16 @@ function CheckoutContent() {
               </div>
             ))}
 
+            {/* QR code — scan to open on mobile */}
+            <div className="mt-4 pt-4 border-t border-white/8 flex flex-col items-center gap-2">
+              <div className="text-[11px] font-semibold text-muted uppercase tracking-wider self-start mb-1">Scan to pay on mobile</div>
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(typeof window !== "undefined" ? window.location.href : "")}&bgcolor=161b22&color=e6edf3&margin=10`}
+                alt="QR code" className="w-[150px] h-[150px] rounded-xl border border-white/8"
+              />
+              <div className="text-[10.5px] text-muted">Customer scans this to open on phone</div>
+            </div>
+
             {/* Roadmap section */}
             <div className="mt-4 pt-4 border-t border-white/8">
               <div className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2">Multi-chain roadmap</div>

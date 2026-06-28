@@ -65,6 +65,7 @@ export interface Invoice {
   id: string; amount: string; description: string; memo: string;
   clientName?: string; status: "pending" | "paid" | "expired" | "void";
   createdAt: number; expiresAt: number | null;
+  deleted?: boolean; deletedAt?: number;
 }
 export interface MerchantSettings {
   businessName: string; merchantId: string; merchantWallet: string;
