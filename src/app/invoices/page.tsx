@@ -260,19 +260,22 @@ export default function Invoices() {
     saveInvoices(updated); setInvoices(updated);
   }
 
-  function del(id: string) {
+  async function del(id: string) {
     const updated = invoices.map(i => i.id === id ? { ...i, deleted: true, deletedAt: Date.now() } : i);
-    saveInvoices(updated); setInvoices(updated);
+    setInvoices(updated);
+    await saveInvoices(updated);
   }
 
-  function restore(id: string) {
+  async function restore(id: string) {
     const updated = invoices.map(i => i.id === id ? { ...i, deleted: false, deletedAt: undefined } : i);
-    saveInvoices(updated); setInvoices(updated);
+    setInvoices(updated);
+    await saveInvoices(updated);
   }
 
-  function permDelete(id: string) {
+  async function permDelete(id: string) {
     const updated = invoices.filter(i => i.id !== id);
-    saveInvoices(updated); setInvoices(updated);
+    setInvoices(updated);
+    await saveInvoices(updated);
   }
 
   function copyLink(inv: Invoice, e: React.MouseEvent) {
