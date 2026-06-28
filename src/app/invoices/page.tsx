@@ -6,9 +6,10 @@ import { formatUsdc } from "@/lib/arc";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-function nextInvoiceNumber(): string {
-  // Timestamp-based ID — unique across all users/merchants globally
-  return `INV-${Date.now()}`;
+function generateInvoiceId(): string {
+  // Timestamp (ms) + 6 random chars = globally unique, collision-proof
+  const rand = Math.random().toString(36).slice(2, 8).toUpperCase();
+  return `INV-${Date.now()}-${rand}`;
 }
 
 function buildUrl(inv: Invoice, settings: ReturnType<typeof getSettings>): string {
@@ -215,26 +216,27 @@ export default function Invoices() {
   const filtered = filter === "all" ? active : active.filter(i => i.status === filter);
   const sorted   = [...filtered].sort((a, b) => b.createdAt - a.createdAt);
 
-  function create() {
+  async function create() {
     if (!amount || !desc) return;
     const inv: Invoice = {
-      id: nextInvoiceNumber(),
+      id: generateInvoiceId(),
       amount, description: desc, memo,
       clientName: clientName || undefined,
       status: "pending",
       createdAt: Date.now(),
       expiresAt: parseInt(expiry) > 0 ? Date.now() + parseInt(expiry) : null,
     };
-    const updated = [...invoices, inv];
-    saveInvoices(updated);
-    setInvoices(updated);
+    // Write to Redis first (source of truth), then update local state
     if (settings.merchantId) {
-      fetch("/api/invoices", {
+      await fetch("/api/invoices", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...inv, merchantId: settings.merchantId }),
       }).catch(() => {});
     }
+    const updated = [...invoices, inv];
+    await saveInvoices(updated);
+    setInvoices(updated);
     setAmount(""); setDesc(""); setMemo(""); setClientName("");
     setShowForm(false);
     setSelected(inv);
