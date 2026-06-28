@@ -7,8 +7,13 @@ import { formatUsdc } from "@/lib/arc";
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 function nextInvoiceNumber(): string {
-  const n = parseInt(localStorage.getItem("arcInvoiceCounter") || "0") + 1;
-  localStorage.setItem("arcInvoiceCounter", String(n));
+  // Derive next number from existing invoices to avoid duplicates after localStorage reset
+  const existing = getInvoices();
+  const max = existing.reduce((m, inv) => {
+    const num = parseInt(inv.id.replace("INV-", "")) || 0;
+    return Math.max(m, num);
+  }, 0);
+  const n = max + 1;
   return `INV-${String(n).padStart(3, "0")}`;
 }
 

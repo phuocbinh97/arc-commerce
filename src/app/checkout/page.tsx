@@ -4,7 +4,7 @@ import { Suspense, useState, useEffect } from "react";
 import { useWallet } from "@/hooks/useWallet";
 import { useCheckout } from "@/hooks/useCheckout";
 import { formatUsdc, shortAddr, ARC_EXPLORER, EURC_ADDRESS } from "@/lib/arc";
-import { getSettings } from "@/lib/storage";
+import { getSettings, getInvoices } from "@/lib/storage";
 import WalletModal from "@/components/WalletModal";
 import { SUPPORTED_CHAINS, getChainByChainId, parseChainId, fetchUsdcBalance, ARC_CHAIN, type ChainConfig } from "@/lib/multichain";
 
@@ -171,15 +171,18 @@ function CheckoutContent() {
       .finally(() => setLoadingMerchant(false));
   }, [merchantParam]);
 
-  // Invoice expiry check
+  // Invoice expiry check — only block if invoice is found locally AND is invalid
   const [invoiceExpired, setInvoiceExpired] = useState(false);
   useEffect(() => {
     if (!orderId.startsWith("INV-")) return;
-    const { getInvoices } = require("@/lib/storage");
-    const inv = getInvoices().find((i: any) => i.id === orderId);
-    if (inv?.expiresAt && Date.now() > inv.expiresAt) setInvoiceExpired(true);
-    if (inv?.status === "paid" || inv?.status === "void") setInvoiceExpired(true);
-  }, [orderId]);
+    const invs = getInvoices();
+    // Match by id AND amount to avoid duplicate-ID false positives
+    const inv = invs.find(i => i.id === orderId && i.amount === amount)
+               ?? invs.find(i => i.id === orderId);
+    if (!inv) return; // not found locally (customer browser) — don't block
+    if (inv.expiresAt && Date.now() > inv.expiresAt) { setInvoiceExpired(true); return; }
+    if (inv.status === "paid" || inv.status === "void") setInvoiceExpired(true);
+  }, [orderId, amount]);
 
   // Detect customer's current chain — read directly from window.ethereum
   useEffect(() => {
