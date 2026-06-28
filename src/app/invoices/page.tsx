@@ -205,11 +205,7 @@ export default function Invoices() {
           ...inv,
           status: (redisMap[inv.id] || inv.status) as Invoice["status"],
         }));
-        const localIds = new Set(local.map(i => i.id));
-        const extra = data.invoices.filter((i: any) => !localIds.has(i.id));
-        const final = [...merged, ...extra];
-        saveInvoices(final);
-        setInvoices(final);
+        setInvoices(merged);
       })
       .catch(() => {});
   }, []);
