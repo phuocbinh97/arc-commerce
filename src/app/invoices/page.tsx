@@ -435,6 +435,10 @@ export default function Invoices() {
                                 className="px-2.5 py-1.5 rounded-2xl text-[11.5px] font-semibold bg-surface2 border border-white/8 text-muted hover:text-ink transition-colors">
                                 View
                               </button>
+                              <button onClick={() => del(inv.id)}
+                                className="px-2.5 py-1.5 rounded-2xl text-[11.5px] font-semibold bg-red/8 border border-red/20 text-red hover:bg-red/15 transition-colors">
+                                🗑
+                              </button>
                             </div>
                           </td>
                         </tr>
