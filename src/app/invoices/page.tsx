@@ -7,14 +7,8 @@ import { formatUsdc } from "@/lib/arc";
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 function nextInvoiceNumber(): string {
-  // Derive next number from existing invoices to avoid duplicates after localStorage reset
-  const existing = getInvoices();
-  const max = existing.reduce((m, inv) => {
-    const num = parseInt(inv.id.replace("INV-", "")) || 0;
-    return Math.max(m, num);
-  }, 0);
-  const n = max + 1;
-  return `INV-${String(n).padStart(3, "0")}`;
+  // Timestamp-based ID — unique across all users/merchants globally
+  return `INV-${Date.now()}`;
 }
 
 function buildUrl(inv: Invoice, settings: ReturnType<typeof getSettings>): string {
