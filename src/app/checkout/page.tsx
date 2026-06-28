@@ -4,7 +4,7 @@ import { Suspense, useState, useEffect } from "react";
 import { useWallet } from "@/hooks/useWallet";
 import { useCheckout } from "@/hooks/useCheckout";
 import { formatUsdc, shortAddr, ARC_EXPLORER, EURC_ADDRESS } from "@/lib/arc";
-import { getSettings, getInvoices } from "@/lib/storage";
+import { getSettings } from "@/lib/storage";
 import WalletModal from "@/components/WalletModal";
 import { SUPPORTED_CHAINS, getChainByChainId, parseChainId, fetchUsdcBalance, ARC_CHAIN, type ChainConfig } from "@/lib/multichain";
 
@@ -171,18 +171,6 @@ function CheckoutContent() {
       .finally(() => setLoadingMerchant(false));
   }, [merchantParam]);
 
-  // Invoice expiry check — only block if invoice is found locally AND is invalid
-  const [invoiceExpired, setInvoiceExpired] = useState(false);
-  useEffect(() => {
-    if (!orderId.startsWith("INV-")) return;
-    const invs = getInvoices();
-    // Match by id AND amount to avoid duplicate-ID false positives
-    const inv = invs.find(i => i.id === orderId && i.amount === amount)
-               ?? invs.find(i => i.id === orderId);
-    if (!inv) return; // not found locally (customer browser) — don't block
-    if (inv.expiresAt && Date.now() > inv.expiresAt) { setInvoiceExpired(true); return; }
-    if (inv.status === "paid" || inv.status === "void") setInvoiceExpired(true);
-  }, [orderId, amount]);
 
   // Detect customer's current chain — read directly from window.ethereum
   useEffect(() => {
@@ -415,19 +403,6 @@ function CheckoutContent() {
           </div>
           {redirect ? <p className="text-muted text-xs mb-3">Redirecting back to shop in 3s…</p> : null}
           <button onClick={reset} className="w-full py-3 border border-white/8 rounded-2xl font-semibold text-sm text-ink hover:bg-surface2">← New Payment</button>
-        </div>
-      </div>
-    );
-  }
-
-  if (invoiceExpired) {
-    return (
-      <div className="min-h-screen bg-bg flex items-center justify-center p-6">
-        <div className="bg-surface border border-white/8 rounded-xl p-8 w-full max-w-sm text-center shadow-2xl">
-          <div className="text-5xl mb-3">⏱</div>
-          <h1 className="text-xl font-bold text-amber mb-2">Invoice Expired</h1>
-          <p className="text-muted text-sm mb-2">This invoice (<strong className="text-ink">{orderId}</strong>) is no longer valid.</p>
-          <p className="text-muted text-sm">Please contact the merchant to request a new payment link.</p>
         </div>
       </div>
     );
