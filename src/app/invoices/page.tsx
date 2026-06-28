@@ -454,16 +454,16 @@ export default function Invoices() {
 
         {/* Trash — collapsible */}
         {trashed.length > 0 && (
-          <div className="bg-surface border border-white/14 rounded-2xl overflow-hidden">
+          <div className="overflow-hidden">
             <button onClick={() => setShowTrash(v => !v)}
-              className="px-4 py-2.5 flex items-center gap-2 w-full hover:bg-surface2/40 transition-colors">
+              className="mx-auto flex items-center gap-2 px-4 py-2 border border-white/14 rounded-2xl bg-surface hover:bg-surface2 transition-colors">
               <span className="text-[13px] font-semibold text-ink">Trash ({trashed.length})</span>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={`text-ink transition-transform ${showTrash ? "rotate-180" : ""}`}>
                 <polyline points="6 9 12 15 18 9"/>
               </svg>
             </button>
             {showTrash && (
-              <div className="border-t border-white/8 divide-y divide-white/6 opacity-80">
+              <div className="mt-2 bg-surface border border-white/8 rounded-2xl divide-y divide-white/6 opacity-80">
                 {[...trashed].sort((a,b) => (b.deletedAt||0)-(a.deletedAt||0)).map(inv => (
                   <div key={inv.id} className="flex items-center gap-3 px-5 py-3 text-muted">
                     <span className="font-mono text-[12px] w-16 shrink-0">{inv.id}</span>
