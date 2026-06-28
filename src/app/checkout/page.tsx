@@ -225,14 +225,29 @@ function CheckoutContent() {
   const [invoiceAlreadyPaid, setInvoiceAlreadyPaid] = useState(false);
   useEffect(() => {
     if (!orderId.startsWith("INV-")) return;
+
+    // 1. Check local first (merchant browser — instant)
     const invs = getInvoices();
-    if (!invs.length) return; // customer browser — no merchant data, don't block
-    const inv = invs.find(i => i.id === orderId && parseFloat(i.amount) === parseFloat(amount))
-               ?? invs.find(i => i.id === orderId);
-    if (!inv) return;
-    if (inv.status === "paid") { setInvoiceAlreadyPaid(true); return; }
-    if (inv.status === "void") { setInvoiceExpired(true); return; }
-    if (inv.expiresAt && Date.now() > inv.expiresAt) { setInvoiceExpired(true); return; }
+    const local = invs.find(i => i.id === orderId && parseFloat(i.amount) === parseFloat(amount))
+                ?? invs.find(i => i.id === orderId);
+    if (local) {
+      if (local.status === "paid") { setInvoiceAlreadyPaid(true); return; }
+      if (local.status === "void") { setInvoiceExpired(true); return; }
+      if (local.expiresAt && Date.now() > local.expiresAt) { setInvoiceExpired(true); return; }
+      return; // found locally and valid
+    }
+
+    // 2. Customer browser — check Redis via API
+    fetch(`/api/invoices/lookup?invoiceId=${orderId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data?.invoice) return;
+        const inv = data.invoice;
+        if (inv.status === "paid") { setInvoiceAlreadyPaid(true); return; }
+        if (inv.status === "void") { setInvoiceExpired(true); return; }
+        if (inv.expiresAt && Date.now() > inv.expiresAt) setInvoiceExpired(true);
+      })
+      .catch(() => {});
   }, [orderId, amount]);
 
   // Detect customer's current chain — read directly from window.ethereum
