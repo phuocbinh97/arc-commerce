@@ -220,18 +220,19 @@ function CheckoutContent() {
   }, [merchantParam]);
 
 
-  // Invoice expiry check
+  // Invoice expiry / paid check
   const [invoiceExpired, setInvoiceExpired] = useState(false);
+  const [invoiceAlreadyPaid, setInvoiceAlreadyPaid] = useState(false);
   useEffect(() => {
     if (!orderId.startsWith("INV-")) return;
     const invs = getInvoices();
     if (!invs.length) return; // customer browser — no merchant data, don't block
-    // Match by id + amount (parseFloat to handle "10" vs "10.00")
     const inv = invs.find(i => i.id === orderId && parseFloat(i.amount) === parseFloat(amount))
                ?? invs.find(i => i.id === orderId);
     if (!inv) return;
+    if (inv.status === "paid") { setInvoiceAlreadyPaid(true); return; }
+    if (inv.status === "void") { setInvoiceExpired(true); return; }
     if (inv.expiresAt && Date.now() > inv.expiresAt) { setInvoiceExpired(true); return; }
-    if (inv.status === "paid" || inv.status === "void") setInvoiceExpired(true);
   }, [orderId, amount]);
 
   // Detect customer's current chain — read directly from window.ethereum
@@ -465,6 +466,21 @@ function CheckoutContent() {
           </div>
           {redirect ? <p className="text-muted text-xs mb-3">Redirecting back to shop in 3s…</p> : null}
           <button onClick={reset} className="w-full py-3 border border-white/8 rounded-2xl font-semibold text-sm text-ink hover:bg-surface2">← New Payment</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (invoiceAlreadyPaid) {
+    return (
+      <div className="min-h-screen bg-bg flex items-center justify-center p-6">
+        <div className="bg-surface border border-white/8 rounded-xl p-8 w-full max-w-sm text-center shadow-2xl">
+          <div className="w-14 h-14 rounded-full bg-green/15 flex items-center justify-center mx-auto mb-4">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3fb950" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <h1 className="text-xl font-bold text-green mb-2">Đã thanh toán</h1>
+          <p className="text-muted text-sm mb-1">Hóa đơn <strong className="text-ink">{orderId}</strong> đã được thanh toán thành công.</p>
+          <p className="text-muted text-sm">Cảm ơn bạn đã thanh toán!</p>
         </div>
       </div>
     );
