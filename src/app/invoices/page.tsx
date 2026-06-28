@@ -454,12 +454,11 @@ export default function Invoices() {
 
         {/* Trash — collapsible */}
         {trashed.length > 0 && (
-          <div className="bg-surface border border-white/8 rounded-2xl overflow-hidden">
+          <div className="bg-surface border border-white/14 rounded-2xl overflow-hidden">
             <button onClick={() => setShowTrash(v => !v)}
-              className="px-4 py-2.5 flex items-center gap-2 hover:bg-surface2/40 transition-colors">
-              <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" className="text-muted shrink-0"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
-              <span className="text-[12px] font-medium text-muted">Trash ({trashed.length})</span>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`text-muted transition-transform ${showTrash ? "rotate-180" : ""}`}>
+              className="px-4 py-2.5 flex items-center gap-2 w-full hover:bg-surface2/40 transition-colors">
+              <span className="text-[13px] font-semibold text-ink">Trash ({trashed.length})</span>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={`text-ink transition-transform ${showTrash ? "rotate-180" : ""}`}>
                 <polyline points="6 9 12 15 18 9"/>
               </svg>
             </button>
