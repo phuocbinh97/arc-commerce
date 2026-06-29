@@ -252,12 +252,12 @@ function openNexmerCheckout() {
                 </button>
               </div>
               <div className="mt-3 text-[12px] text-muted">
-                Replace <code className="text-ink bg-surface2 px-1 rounded">{"{{order.total}}"}</code> and <code className="text-ink bg-surface2 px-1 rounded">{"{{order.id}}"}</code> with real values from your system.
+                Replace <code className="text-ink bg-surface2 px-1 rounded">YOUR_AMOUNT</code>, <code className="text-ink bg-surface2 px-1 rounded">YOUR_ORDER_ID</code> and <code className="text-ink bg-surface2 px-1 rounded">YOUR_MERCHANT_ID</code> with real values from your system.
               </div>
               <div className="mt-3 p-3 bg-accent/10 border border-accent/20 rounded-2xl text-[12.5px] text-[#6ea8fe]">
                 💡 Direct payment link:{" "}
                 <span className="font-mono break-all">
-                  {`https://arcpay-desk.vercel.app/checkout?merchant=${form.merchantId}&amount=10.00&order=ORDER_ID`}
+                  {`https://nexmer.xyz/checkout?merchant=${form.merchantId}&amount=YOUR_AMOUNT&order=YOUR_ORDER_ID`}
                 </span>
               </div>
             </div>
