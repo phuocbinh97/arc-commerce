@@ -11,6 +11,7 @@ const NAV = [
   { href: "/customers",        icon: "◎", label: "Customers",        section: "Merchant" },
   { href: "/people",           icon: "👥", label: "People",            section: "Merchant" },
   { href: "/analytics",        icon: "◉", label: "Analytics",        section: "Analytics" },
+  { href: "/reports",          icon: "📋", label: "Reports",           section: "Analytics" },
   { href: "/bridge",           icon: "⇄", label: "Bridge",           section: "Tools" },
   { href: "/send",             icon: "↗", label: "Send",             section: "Tools" },
   { href: "/recurring",        icon: "↻", label: "Recurring",        section: "Tools" },
