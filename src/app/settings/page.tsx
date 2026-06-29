@@ -133,7 +133,7 @@ export default function Settings() {
   }
 
   function copySnippet() {
-    const snippet = `<script src="https://arcpay-desk.vercel.app/widget.js"\n  data-merchant="${form.merchantId}"\n  data-amount="{{order.total}}"\n  data-order="{{order.id}}"\n  data-redirect="https://yourshop.com/success">\n</script>`;
+    const snippet = `<!-- Nexmer Checkout Button -->\n<button onclick="openNexmerCheckout()" style="\n  background:#0757f9; color:#fff; border:none; border-radius:10px;\n  padding:12px 24px; font-size:15px; font-weight:700; cursor:pointer;">\n  Pay with USDC\n</button>\n\n<script>\nfunction openNexmerCheckout() {\n  const amount   = "10.00";          // amount in USDC\n  const orderId  = "ORDER_123";      // your order ID\n  const merchant = "${form.merchantId}";  // your merchant ID\n  const redirect = window.location.href;\n\n  const url = \`https://nexmer.xyz/checkout?amount=\${amount}&order=\${orderId}&merchant=\${merchant}&redirect=\${encodeURIComponent(redirect)}\`;\n  window.open(url, "_blank");\n}\n<\/script>`;
     navigator.clipboard?.writeText(snippet);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -145,12 +145,25 @@ export default function Settings() {
     ["Explorer", "testnet.arcscan.app"], ["Faucet", "faucet.circle.com"],
   ];
 
-  const snippet = `<script src="https://arcpay-desk.vercel.app/widget.js"
-  data-merchant="${form.merchantId || "mer_xxxxxxx"}"
-  data-amount="{{order.total}}"
-  data-order="{{order.id}}"
-  data-redirect="https://yourshop.com/success">
-</script>`;
+  const mid = form.merchantId || "mer_xxxxxxx";
+  const snippet = `<!-- Nexmer Checkout Button -->
+<button onclick="openNexmerCheckout()" style="
+  background:#0757f9; color:#fff; border:none; border-radius:10px;
+  padding:12px 24px; font-size:15px; font-weight:700; cursor:pointer;">
+  Pay with USDC
+</button>
+
+<script>
+function openNexmerCheckout() {
+  const amount   = "10.00";          // amount in USDC
+  const orderId  = "ORDER_123";      // your order ID
+  const merchant = "${mid}";         // your merchant ID
+  const redirect = window.location.href;
+
+  const url = \`https://nexmer.xyz/checkout?amount=\${amount}&order=\${orderId}&merchant=\${merchant}&redirect=\${encodeURIComponent(redirect)}\`;
+  window.open(url, "_blank");
+}
+<\/script>`;
 
   return (
     <>
