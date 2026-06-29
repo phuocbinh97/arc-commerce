@@ -42,13 +42,24 @@ export default function Sidebar() {
     } catch { /* ignore */ }
   }, []);
 
-  const embedCode = `<!-- Nexmer Payment Button -->
-<script src="https://nexmer.xyz/widget.js"
-  data-merchant="${merchantId}"
-  data-amount="10.00"
-  data-order="ORDER_123"
-  data-redirect="https://yoursite.com/success">
-</script>`;
+  const embedCode = `<!-- Nexmer Checkout Button -->
+<button onclick="openNexmerCheckout()" style="
+  background:#0757f9; color:#fff; border:none; border-radius:10px;
+  padding:12px 24px; font-size:15px; font-weight:700; cursor:pointer;">
+  Pay with USDC
+</button>
+
+<script>
+function openNexmerCheckout() {
+  const amount   = "10.00";          // amount in USDC
+  const orderId  = "ORDER_123";      // your order ID
+  const merchant = "${merchantId}";  // your merchant ID
+  const redirect = window.location.href; // return URL after payment
+
+  const url = \`https://nexmer.xyz/checkout?amount=\${amount}&order=\${orderId}&merchant=\${merchant}&redirect=\${encodeURIComponent(redirect)}\`;
+  window.open(url, "_blank");
+}
+<\/script>`;
 
   const paymentLink = `https://nexmer.xyz/checkout?merchant=${merchantId}&amount=10.00&order=ORDER_123`;
 
@@ -96,6 +107,7 @@ export default function Sidebar() {
                   </div>
                 )}
                 <Link href={item.href} onClick={close}
+                  {...(item.href === "/checkout" ? { target:"_blank", rel:"noopener noreferrer" } : {})}
                   className={`flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-[13.5px] font-medium transition-all
                     ${active
                       ? "bg-accent/15 text-[#6ea8fe] shadow-[0_0_12px_rgba(7,87,249,0.15)]"
@@ -127,7 +139,7 @@ export default function Sidebar() {
                   <span className="text-[11px]">{"</>"}</span>
                   Embed Code
                 </button>
-                <Link href="/shop" onClick={close}
+                <Link href="/shop" target="_blank" rel="noopener noreferrer"
                   className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-[12.5px] text-muted hover:bg-white/5 hover:text-ink transition-all">
                   <span className="text-[11px]">↗</span>
                   Visit Shop
