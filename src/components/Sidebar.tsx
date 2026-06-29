@@ -5,18 +5,22 @@ import { useEffect, useState } from "react";
 import { useSidebar } from "@/components/SidebarContext";
 
 const NAV = [
-  { href: "/dashboard",        icon: "▦", label: "Overview",         section: "Merchant" },
-  { href: "/checkout",         icon: "⊕", label: "Accept Payment",   section: "Merchant" },
-  { href: "/invoices",         icon: "◧", label: "Invoices",         section: "Merchant" },
-  { href: "/customers",        icon: "◎", label: "Customers",        section: "Merchant" },
-  { href: "/people",           icon: "👥", label: "People",            section: "Merchant" },
-  { href: "/analytics",        icon: "◉", label: "Analytics",        section: "Analytics" },
-  { href: "/reports",          icon: "📋", label: "Reports",           section: "Analytics" },
-  { href: "/bridge",           icon: "⇄", label: "Bridge",           section: "Tools" },
-  { href: "/send",             icon: "↗", label: "Send",             section: "Tools" },
-  { href: "/recurring",        icon: "↻", label: "Recurring",        section: "Tools" },
-  { href: "/treasury",         icon: "◈", label: "Treasury",         section: "Tools" },
-  { href: "/unified-balance",  icon: "⬡", label: "Unified Balance",  section: "Tools" },
+  // Payments — cá nhân
+  { href: "/send",             icon: "↗", label: "Send",             section: "Payments" },
+  { href: "/bridge",           icon: "⇄", label: "Bridge",           section: "Payments" },
+  { href: "/unified-balance",  icon: "⬡", label: "Unified Balance",  section: "Payments" },
+  { href: "/treasury",         icon: "◈", label: "Treasury",         section: "Payments" },
+  // Commerce — chủ shop
+  { href: "/dashboard",        icon: "▦", label: "Overview",         section: "Commerce" },
+  { href: "/checkout",         icon: "⊕", label: "Accept Payment",   section: "Commerce" },
+  { href: "/invoices",         icon: "◧", label: "Invoices",         section: "Commerce" },
+  { href: "/customers",        icon: "◎", label: "Customers",        section: "Commerce" },
+  { href: "/analytics",        icon: "◉", label: "Analytics",        section: "Commerce" },
+  { href: "/reports",          icon: "📋", label: "Reports",          section: "Commerce" },
+  // Business Ops — doanh nghiệp
+  { href: "/people",           icon: "👥", label: "People",           section: "Business Ops" },
+  { href: "/recurring",        icon: "↻", label: "Recurring",        section: "Business Ops" },
+  // Other
   { href: "/settings",         icon: "⊙", label: "Settings",         section: "Other" },
 ];
 
