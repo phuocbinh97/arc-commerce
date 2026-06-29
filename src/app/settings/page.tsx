@@ -133,7 +133,7 @@ export default function Settings() {
   }
 
   function copySnippet() {
-    const snippet = `<script>\nfunction openNexmerCheckout(amount, orderId) {\n  const merchant = "YOUR_MERCHANT_ID"; // from Nexmer Settings\n  const redirect = window.location.href;\n  const url = \`https://nexmer.xyz/checkout?amount=\${amount}&order=\${orderId}&merchant=\${merchant}&redirect=\${encodeURIComponent(redirect)}\`;\n  window.open(url, "_blank");\n}\n<\/script>`;
+    const snippet = `<script>\nfunction openNexmerCheckout(amount, orderId) {\n  const merchant = "${form.merchantId || "YOUR_MERCHANT_ID"}";\n  const redirect = window.location.href;\n  const url = \`https://nexmer.xyz/checkout?amount=\${amount}&order=\${orderId}&merchant=\${merchant}&redirect=\${encodeURIComponent(redirect)}\`;\n  window.open(url, "_blank");\n}\n<\/script>`;
     navigator.clipboard?.writeText(snippet);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -147,7 +147,7 @@ export default function Settings() {
 
   const snippet = `<script>
 function openNexmerCheckout(amount, orderId) {
-  const merchant = "YOUR_MERCHANT_ID"; // from Nexmer Settings
+  const merchant = "${form.merchantId || "YOUR_MERCHANT_ID"}";
   const redirect = window.location.href;
   const url = \`https://nexmer.xyz/checkout?amount=\${amount}&order=\${orderId}&merchant=\${merchant}&redirect=\${encodeURIComponent(redirect)}\`;
   window.open(url, "_blank");
