@@ -12,7 +12,7 @@ const NAV = [
   { href: "/treasury",         icon: "◈", label: "Treasury",         section: "Payments" },
   // Commerce — chủ shop
   { href: "/dashboard",        icon: "▦", label: "Overview",         section: "Commerce" },
-  { href: "/checkout",         icon: "⊕", label: "Accept Payment",   section: "Commerce" },
+  { href: "/settings",         icon: "⊙", label: "Merchant Settings", section: "Commerce" },
   { href: "/invoices",         icon: "◧", label: "Invoices",         section: "Commerce" },
   { href: "/customers",        icon: "◎", label: "Customers",        section: "Commerce" },
   { href: "/analytics",        icon: "◉", label: "Analytics",        section: "Commerce" },
@@ -20,8 +20,8 @@ const NAV = [
   // Business Ops — doanh nghiệp
   { href: "/people",           icon: "👥", label: "People",           section: "Business Ops" },
   { href: "/recurring",        icon: "↻", label: "Recurring",        section: "Business Ops" },
-  // Other
-  { href: "/settings",         icon: "⊙", label: "Settings",         section: "Other" },
+  // Demo
+  { href: "/checkout",         icon: "⊕", label: "Payment Demo",     section: "Demo" },
 ];
 
 export default function Sidebar() {
@@ -110,9 +110,6 @@ export default function Sidebar() {
 
           {/* Demo Shop dropdown */}
           <div className="mt-1">
-            <div className="text-[10px] font-semibold text-muted/60 uppercase tracking-[0.8px] px-2.5 pt-3 pb-1">
-              Demo
-            </div>
             <button onClick={() => setDemoOpen(v => !v)}
               className="w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-xl text-[13.5px] font-medium text-muted hover:bg-white/5 hover:text-ink transition-all">
               <div className="flex items-center gap-2.5">
