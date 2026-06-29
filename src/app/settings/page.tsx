@@ -133,7 +133,7 @@ export default function Settings() {
   }
 
   function copySnippet() {
-    const snippet = `<!-- Nexmer Checkout Button -->\n<button onclick="openNexmerCheckout()" style="\n  background:#0757f9; color:#fff; border:none; border-radius:10px;\n  padding:12px 24px; font-size:15px; font-weight:700; cursor:pointer;">\n  Pay with USDC\n</button>\n\n<script>\nfunction openNexmerCheckout() {\n  const amount   = "YOUR_AMOUNT";    // e.g. "10.00"\n  const orderId  = "YOUR_ORDER_ID";  // e.g. "ORDER_123"\n  const merchant = "YOUR_MERCHANT_ID"; // from Nexmer Settings\n  const redirect = window.location.href;\n\n  const url = \`https://nexmer.xyz/checkout?amount=\${amount}&order=\${orderId}&merchant=\${merchant}&redirect=\${encodeURIComponent(redirect)}\`;\n  window.open(url, "_blank");\n}\n<\/script>`;
+    const snippet = `<script>\nfunction openNexmerCheckout(amount, orderId) {\n  const merchant = "YOUR_MERCHANT_ID"; // from Nexmer Settings\n  const redirect = window.location.href;\n  const url = \`https://nexmer.xyz/checkout?amount=\${amount}&order=\${orderId}&merchant=\${merchant}&redirect=\${encodeURIComponent(redirect)}\`;\n  window.open(url, "_blank");\n}\n<\/script>`;
     navigator.clipboard?.writeText(snippet);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -145,20 +145,10 @@ export default function Settings() {
     ["Explorer", "testnet.arcscan.app"], ["Faucet", "faucet.circle.com"],
   ];
 
-  const snippet = `<!-- Nexmer Checkout Button -->
-<button onclick="openNexmerCheckout()" style="
-  background:#0757f9; color:#fff; border:none; border-radius:10px;
-  padding:12px 24px; font-size:15px; font-weight:700; cursor:pointer;">
-  Pay with USDC
-</button>
-
-<script>
-function openNexmerCheckout() {
-  const amount   = "YOUR_AMOUNT";    // e.g. "10.00"
-  const orderId  = "YOUR_ORDER_ID";  // e.g. "ORDER_123"
+  const snippet = `<script>
+function openNexmerCheckout(amount, orderId) {
   const merchant = "YOUR_MERCHANT_ID"; // from Nexmer Settings
   const redirect = window.location.href;
-
   const url = \`https://nexmer.xyz/checkout?amount=\${amount}&order=\${orderId}&merchant=\${merchant}&redirect=\${encodeURIComponent(redirect)}\`;
   window.open(url, "_blank");
 }
