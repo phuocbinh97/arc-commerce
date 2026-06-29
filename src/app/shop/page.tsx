@@ -41,20 +41,19 @@ export default function Shop() {
   }
   function remove(uid: number) { setCart(c => c.filter(i=>i.uid!==uid)); }
 
+  // Same logic as the embed snippet shops copy from Merchant Settings
+  function openNexmerCheckout(amount: string, orderId: string) {
+    const merchant = "mer_fd28ie0";
+    const order = orderId || ("REF-" + Date.now());
+    const redirect = window.location.href + "?order_success=1";
+    const url = `/checkout?amount=${amount}&order=${order}&merchant=${merchant}&redirect=${encodeURIComponent(redirect)}`;
+    window.open(url, "_blank");
+  }
+
   function checkout() {
     if (!cart.length) return;
     const orderId = "moc-" + Date.now();
-    const memo = cart.map(i=>i.name).join(", ");
-    const redirect = window.location.href + "?order_success=1";
-    const url = new URL("/checkout", window.location.origin);
-    url.searchParams.set("amount", total.toFixed(2));
-    url.searchParams.set("order", orderId);
-    url.searchParams.set("memo", memo);
-    url.searchParams.set("merchantName", "Moc Craft");
-    url.searchParams.set("merchant", "mer_fd28ie0");
-    url.searchParams.set("redirect", redirect);
-    // Same as openNexmerCheckout() in the embed snippet
-    window.open(url.pathname + url.search, "_blank");
+    openNexmerCheckout(total.toFixed(2), orderId);
   }
 
   return (
