@@ -242,7 +242,7 @@ function openNexmerCheckout(amount, orderId) {
                 </button>
               </div>
               <div className="mt-3 text-[12px] text-muted">
-                Replace <code className="text-ink bg-surface2 px-1 rounded">YOUR_AMOUNT</code>, <code className="text-ink bg-surface2 px-1 rounded">YOUR_ORDER_ID</code> and <code className="text-ink bg-surface2 px-1 rounded">YOUR_MERCHANT_ID</code> with real values from your system.
+                Call <code className="text-ink bg-surface2 px-1 rounded">{"openNexmerCheckout(amount, orderId)"}</code> from your checkout button. Your merchant ID is already embedded.
               </div>
               <div className="mt-3 p-3 bg-accent/10 border border-accent/20 rounded-2xl text-[12.5px] text-[#6ea8fe]">
                 💡 Direct payment link:{" "}
