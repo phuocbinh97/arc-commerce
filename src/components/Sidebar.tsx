@@ -42,21 +42,12 @@ export default function Sidebar() {
     } catch { /* ignore */ }
   }, []);
 
-  const embedCode = `<!-- Nexmer Checkout Button -->
-<button onclick="openNexmerCheckout()" style="
-  background:#0757f9; color:#fff; border:none; border-radius:10px;
-  padding:12px 24px; font-size:15px; font-weight:700; cursor:pointer;">
-  Pay with USDC
-</button>
-
-<script>
-function openNexmerCheckout() {
-  const amount   = "10.00";          // amount in USDC
-  const orderId  = "ORDER_123";      // your order ID
-  const merchant = "${merchantId}";  // your merchant ID
-  const redirect = window.location.href; // return URL after payment
-
-  const url = \`https://nexmer.xyz/checkout?amount=\${amount}&order=\${orderId}&merchant=\${merchant}&redirect=\${encodeURIComponent(redirect)}\`;
+  const embedCode = `<script>
+function openNexmerCheckout(amount, orderId) {
+  const merchant = "${merchantId}";
+  const order = orderId || ("REF-" + Date.now());
+  const redirect = window.location.href;
+  const url = \`https://nexmer.xyz/checkout?amount=\${amount}&order=\${order}&merchant=\${merchant}&redirect=\${encodeURIComponent(redirect)}\`;
   window.open(url, "_blank");
 }
 <\/script>`;
