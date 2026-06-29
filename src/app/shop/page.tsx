@@ -43,18 +43,18 @@ export default function Shop() {
 
   function checkout() {
     if (!cart.length) return;
-    const settings = getSettings();
     const orderId = "moc-" + Date.now();
     const memo = cart.map(i=>i.name).join(", ");
-    const returnUrl = window.location.href + "?order_success=1";
+    const redirect = window.location.href + "?order_success=1";
     const url = new URL("/checkout", window.location.origin);
     url.searchParams.set("amount", total.toFixed(2));
     url.searchParams.set("order", orderId);
     url.searchParams.set("memo", memo);
     url.searchParams.set("merchantName", "Moc Craft");
     url.searchParams.set("merchant", "mer_fd28ie0");
-    url.searchParams.set("redirect", returnUrl);
-    router.push(url.pathname + url.search);
+    url.searchParams.set("redirect", redirect);
+    // Same as openNexmerCheckout() in the embed snippet
+    window.open(url.pathname + url.search, "_blank");
   }
 
   return (
