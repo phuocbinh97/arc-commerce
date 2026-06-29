@@ -8,7 +8,7 @@ const NAV = [
   // Payments — cá nhân
   { href: "/send",             icon: "↗", label: "Send",             section: "Payments" },
   { href: "/bridge",           icon: "⇄", label: "Bridge",           section: "Payments" },
-  { href: "/unified-balance",  icon: "⬡", label: "Unified Balance",  section: "Payments" },
+  { href: "/unified-balance",  icon: "⬡", label: "Unified Balance",  section: "Payments", dividerBefore: true },
   { href: "/treasury",         icon: "◈", label: "Treasury",         section: "Payments" },
   // Commerce — chủ shop
   { href: "/dashboard",        icon: "▦", label: "Overview",         section: "Commerce" },
@@ -96,6 +96,9 @@ function openNexmerCheckout(amount, orderId) {
                   <div className="text-[10px] font-semibold text-muted/60 uppercase tracking-[0.8px] px-2.5 pt-3 pb-1">
                     {item.section}
                   </div>
+                )}
+                {"dividerBefore" in item && item.dividerBefore && !showSection && (
+                  <div className="mx-2.5 my-1.5 border-t border-white/8" />
                 )}
                 <Link href={item.href} onClick={close}
                   {...(item.href === "/checkout" ? { target:"_blank", rel:"noopener noreferrer" } : {})}
