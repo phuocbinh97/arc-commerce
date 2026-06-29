@@ -148,8 +148,9 @@ export default function Settings() {
   const snippet = `<script>
 function openNexmerCheckout(amount, orderId) {
   const merchant = "${form.merchantId || "YOUR_MERCHANT_ID"}";
+  const order = orderId || ("REF-" + Date.now());
   const redirect = window.location.href;
-  const url = \`https://nexmer.xyz/checkout?amount=\${amount}&order=\${orderId}&merchant=\${merchant}&redirect=\${encodeURIComponent(redirect)}\`;
+  const url = \`https://nexmer.xyz/checkout?amount=\${amount}&order=\${order}&merchant=\${merchant}&redirect=\${encodeURIComponent(redirect)}\`;
   window.open(url, "_blank");
 }
 <\/script>`;
